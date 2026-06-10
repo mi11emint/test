@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>画像と音声の合成アプリ (複数音声対応)</title>
+    <title>動画合成アプリ (エコー＆イコライザー版)</title>
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <style>
         body {
@@ -75,15 +75,8 @@
             cursor: not-allowed;
         }
 
-        input[type="file"] {
-            display: none;
-        }
-        
-        .file-label {
-            background-color: #e2e8f0;
-            color: #4a5568;
-        }
-
+        input[type="file"] { display: none; }
+        .file-label { background-color: #e2e8f0; color: #4a5568; }
         .btn-record { background-color: #ef4444; }
         .btn-recording {
             background-color: #b91c1c !important;
@@ -96,7 +89,6 @@
             100% { opacity: 1; }
         }
 
-        /* 音声リストのスタイル */
         .audio-list {
             margin-top: 15px;
             background-color: #f8fafc;
@@ -104,28 +96,58 @@
             padding: 10px;
         }
 
+        /* 拡張されたコントロールパネルのデザイン */
         .audio-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             background: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             font-size: 0.85rem;
         }
+        
+        .audio-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 6px;
+        }
 
-        .audio-item:last-child { margin-bottom: 0; }
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            color: #4a5568;
+        }
+
+        .control-row span:first-child {
+            width: 50px;
+            font-size: 0.8rem;
+        }
+
+        .effect-slider {
+            flex-grow: 1;
+            accent-color: #4f46e5;
+            margin: 0 10px;
+        }
+
+        .value-disp {
+            width: 40px;
+            text-align: right;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
 
         .delete-btn {
             background-color: #fee2e2;
             color: #ef4444;
             border: none;
-            padding: 6px 10px;
+            padding: 4px 8px;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
         }
 
         .preview-area {
@@ -161,7 +183,7 @@
 <body>
 
     <div class="app-container">
-        <h1>動画合成アプリ (複数音声版)</h1>
+        <h1>動画合成アプリ (音響エフェクト版)</h1>
 
         <div class="section">
             <label>① 画像を選ぶ</label>
@@ -170,26 +192,28 @@
         </div>
 
         <div class="section">
-            <label>② 音声を入れる（複数追加できます）</label>
+            <label>② 音声を入れてエフェクト調整</label>
             <button id="record-btn" class="btn btn-record" style="margin-bottom: 10px;">🔴 マイクで録音スタート</button>
             
             <label for="audio-input" class="btn file-label">音声ファイルをアップロード</label>
             <input type="file" id="audio-input" accept="audio/*" multiple>
             
             <div id="audio-list-container" class="audio-list" style="display: none;">
-                <label style="font-size: 0.8rem; color: #64748b;">追加済みの音声：</label>
+                <label style="font-size: 0.8rem; color: #64748b;">音響コントロールパネル：</label>
                 <div id="items-box"></div>
             </div>
         </div>
 
         <div class="section">
-            <label>③ 動画を作って保存する</label>
+            <label>③ 確認と保存</label>
             <div id="preview-box" class="preview-area">
                 <span>ここに画像または完成した動画が表示されます</span>
             </div>
             
             <div id="status-msg"></div>
-            <button id="create-video-btn" class="btn btn-save" style="margin-top: 15px;">🎬 複数の音声を混ぜて合成する</button>
+            
+            <button id="play-preview-btn" class="btn" style="margin-top: 15px; background-color: #3b82f6;">🎵 エフェクトを聴く（同時再生）</button>
+            <button id="create-video-btn" class="btn btn-save">🎬 エフェクトを反映して動画を合成</button>
         </div>
     </div>
 
@@ -200,6 +224,7 @@
         const audioListContainer = document.getElementById('audio-list-container');
         const itemsBox = document.getElementById('items-box');
         const previewBox = document.getElementById('preview-box');
+        const playPreviewBtn = document.getElementById('play-preview-btn');
         const createVideoBtn = document.getElementById('create-video-btn');
         const statusMsg = document.getElementById('status-msg');
 
@@ -207,9 +232,12 @@
         const ffmpeg = createFFmpeg({ log: true });
 
         let imageFile = null;
-        let audioFilesList = []; // 追加された音声ファイルを溜める配列
+        let audioFilesList = []; 
         let mediaRecorder = null;
         let audioChunks = [];
+
+        let audioCtx = null;
+        let activeSources = []; 
 
         // --- ① 画像選択 ---
         imageInput.addEventListener('change', (e) => {
@@ -220,13 +248,11 @@
             }
         });
 
-        // --- ② 音声ファイル追加（アップロード） ---
+        // --- ② 音声ファイル追加 ---
         audioInput.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
-            files.forEach((file, index) => {
-                addAudioToList(file, file.name);
-            });
-            audioInput.value = ''; // 連続で同じファイルを選べるようにリセット
+            files.forEach(file => addAudioToList(file, file.name));
+            audioInput.value = ''; 
         });
 
         // --- ③ マイク録音 ---
@@ -237,10 +263,7 @@
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
 
-                    mediaRecorder.addEventListener('dataavailable', (e) => {
-                        audioChunks.push(e.data);
-                    });
-
+                    mediaRecorder.addEventListener('dataavailable', (e) => audioChunks.push(e.data));
                     mediaRecorder.addEventListener('stop', () => {
                         const recordedBlob = new Blob(audioChunks);
                         const count = audioFilesList.length + 1;
@@ -261,18 +284,21 @@
             }
         });
 
-        // 音声をリストに追加して画面を更新する共通関数
+        // データ構造にエコーとイコライザーの設定を追加
         function addAudioToList(fileOrBlob, displayName) {
-            // 配列に保存
             audioFilesList.push({
-                id: Date.now() + Math.random(), // 被らないユニークなID
+                id: Date.now() + Math.random(), 
                 data: fileOrBlob,
-                name: displayName
+                name: displayName,
+                volume: 1.0,
+                echo: 0.0,      // エコーの強さ (0〜0.8)
+                bass: 0,        // 低音の増減 (-10dB 〜 +10dB)
+                treble: 0       // 高音の増減 (-10dB 〜 +10dB)
             });
             renderAudioList();
         }
 
-        // 音声リストの画面表示を更新する
+        // コントロールつまみを4つに増やす
         function renderAudioList() {
             if (audioFilesList.length === 0) {
                 audioListContainer.style.display = 'none';
@@ -281,71 +307,178 @@
             audioListContainer.style.display = 'block';
             itemsBox.innerHTML = '';
 
-            audioFilesList.forEach((audio, index) => {
+            audioFilesList.forEach((audio) => {
                 const item = document.createElement('div');
                 item.className = 'audio-item';
                 item.innerHTML = `
-                    <span>${audio.name}</span>
-                    <button class="delete-btn" onclick="deleteAudio(${audio.id})">削除</button>
+                    <div class="audio-item-top">
+                        <span>${audio.name}</span>
+                        <button class="delete-btn" onclick="deleteAudio(${audio.id})">削除</button>
+                    </div>
+                    <div class="control-row">
+                        <span>音量</span>
+                        <input type="range" class="effect-slider" min="0" max="1.5" step="0.05" value="${audio.volume}" oninput="updateParam(${audio.id}, 'volume', this.value)">
+                        <span class="value-disp" id="vol-txt-${audio.id}">${Math.round(audio.volume * 100)}%</span>
+                    </div>
+                    <div class="control-row">
+                        <span>エコー</span>
+                        <input type="range" class="effect-slider" min="0" max="0.8" step="0.05" value="${audio.echo}" oninput="updateParam(${audio.id}, 'echo', this.value)">
+                        <span class="value-disp" id="echo-txt-${audio.id}">${Math.round(audio.echo * 100)}</span>
+                    </div>
+                    <div class="control-row">
+                        <span>低音</span>
+                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.bass}" oninput="updateParam(${audio.id}, 'bass', this.value)">
+                        <span class="value-disp" id="bass-txt-${audio.id}">${audio.bass}dB</span>
+                    </div>
+                    <div class="control-row">
+                        <span>高音</span>
+                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.treble}" oninput="updateParam(${audio.id}, 'treble', this.value)">
+                        <span class="value-disp" id="treble-txt-${audio.id}">${audio.treble}dB</span>
+                    </div>
                 `;
                 itemsBox.appendChild(item);
             });
         }
 
-        // 削除ボタンが押された時の処理（HTMLから直接呼ばれます）
+        // パラメータ調整の共通処理
+        window.updateParam = function(id, type, val) {
+            const audio = audioFilesList.find(a => a.id === id);
+            if (audio) {
+                audio[type] = parseFloat(val);
+                const suffix = type === 'volume' ? '%' : (type === 'echo' ? '' : 'dB');
+                const displayVal = type === 'volume' ? Math.round(val * 100) : val;
+                document.getElementById(`${type}-txt-${id}`).textContent = `${displayVal}${suffix}`;
+            }
+        };
+
         window.deleteAudio = function(id) {
             audioFilesList = audioFilesList.filter(audio => audio.id !== id);
             renderAudioList();
         };
 
-        // --- 🎬 ④ 複数音声の合成処理 ---
+        // --- 🎵 ⑤ リアルタイムエフェクト同時再生（方法Bの真骨頂） ---
+        playPreviewBtn.addEventListener('click', async () => {
+            if (activeSources.length > 0) {
+                activeSources.forEach(src => { try { src.stop(); } catch(e){} });
+                activeSources = [];
+                playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
+                return;
+            }
+
+            if (audioFilesList.length === 0) { alert('音声を追加してください。'); return; }
+
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            playPreviewBtn.textContent = '⏹️ 再生をストップ';
+
+            for (const audio of audioFilesList) {
+                const arrayBuffer = await audio.data.arrayBuffer();
+                
+                audioCtx.decodeAudioData(arrayBuffer, (audioBuffer) => {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = audioBuffer;
+
+                    // 1. 音量ノード
+                    const gainNode = audioCtx.createGain();
+                    gainNode.gain.value = audio.volume;
+
+                    // 2. イコライザー（低音: lowshelf）
+                    const bassNode = audioCtx.createBiquadFilter();
+                    bassNode.type = 'lowshelf';
+                    bassNode.frequency.value = 200; // 200Hz以下をコントロール
+                    bassNode.gain.value = audio.bass;
+
+                    // 3. イコライザー（高音: highshelf）
+                    const trebleNode = audioCtx.createBiquadFilter();
+                    trebleNode.type = 'highshelf';
+                    trebleNode.frequency.value = 3000; // 3000Hz以上をコントロール
+                    trebleNode.gain.value = audio.treble;
+
+                    // 4. エコー（Delay）用ノード群
+                    const delayNode = audioCtx.createDelay();
+                    delayNode.delayTime.value = 0.3; // 0.3秒遅らせる
+                    
+                    const feedbackNode = audioCtx.createGain();
+                    feedbackNode.gain.value = audio.echo; // エコーの強さ（フィードバック量）
+
+                    // --- 音の配線（パッチング） ---
+                    // 基本ルート: 音源 -> 低音調節 -> 高音調節 -> 音量調節 -> スピーカー
+                    source.connect(bassNode);
+                    bassNode.connect(trebleNode);
+                    trebleNode.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    // エコールート（音がループする輪を作ります）
+                    if (audio.echo > 0) {
+                        gainNode.connect(delayNode);      // メイン音の一部をディレイに流す
+                        delayNode.connect(feedbackNode);  // 遅れた音をフィードバックに流す
+                        feedbackNode.connect(delayNode);  // さらにそれをディレイに戻してループさせる
+                        feedbackNode.connect(audioCtx.destination); // エコー音をスピーカーに混ぜる
+                    }
+
+                    source.start(0);
+                    activeSources.push(source);
+                    
+                    source.onended = () => {
+                        activeSources = activeSources.filter(s => s !== source);
+                        if (activeSources.length === 0) {
+                            playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
+                        }
+                    };
+                });
+            }
+        });
+
+        // --- 🎬 ⑥ 動画合成処理（エコーとイコライザーの設定をFFmpegのフィルターに翻訳） ---
         createVideoBtn.addEventListener('click', async () => {
-            if (!imageFile) {
-                alert('画像を設定してください！');
-                return;
-            }
-            if (audioFilesList.length === 0) {
-                alert('音声を少なくとも1つ以上追加してください！');
-                return;
-            }
+            if (!imageFile) { alert('画像を設定してください！'); return; }
+            if (audioFilesList.length === 0) { alert('音声を追加してください！'); return; }
+
+            if (activeSources.length > 0) playPreviewBtn.click();
 
             try {
                 createVideoBtn.disabled = true;
                 statusMsg.textContent = "準備中...";
+                if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
-                if (!ffmpeg.isLoaded()) {
-                    await ffmpeg.load();
-                }
+                statusMsg.textContent = "エフェクトを動画に焼き付け中...（少し時間がかかります）";
 
-                statusMsg.textContent = "複数の音声を合成して動画を作成中...";
-
-                // 1. 画像ファイルを仮想メモリに書き込み
                 ffmpeg.FS('writeFile', 'input_image.png', await fetchFile(imageFile));
 
-                // 2. すべての音声ファイルを仮想メモリに書き込みつつ、FFmpeg用のコマンドを組み立てる
                 const ffmpegArgs = ['-loop', '1', '-i', 'input_image.png'];
                 
-                audioFilesList.forEach((audio, index) => {
+                for (let index = 0; index < audioFilesList.length; index++) {
                     const virtualName = `audio_${index}.wav`;
-                    // 仮想空間に保存
-                    ffmpeg.FS('writeFile', virtualName, fetchFile(audio.data));
-                    // 入力コマンドを追加 (-i audio_0.wav みたいな形を人数分ループ)
+                    ffmpeg.FS('writeFile', virtualName, await fetchFile(audioFilesList[index].data));
                     ffmpegArgs.push('-i', virtualName);
-                });
+                }
 
-                // 3. 複雑な合成（フィルター）コマンドの組み立て
-                // 例：2つの音なら、[1:a][2:a]amix=inputs=2[aout] という命令になります
+                // FFmpegの音声フィルター（aecho と equalizer）を動的に組み立て
                 let filterComplex = '';
-                audioFilesList.forEach((_, index) => {
-                    filterComplex += `[${index + 1}:a]`; // 0番目は画像なので 1番目からが音声
+                audioFilesList.forEach((audio, index) => {
+                    let audioFilter = `[${index + 1}:a]`;
+                    
+                    // 音量設定
+                    audioFilter += `volume=${audio.volume}`;
+                    
+                    // イコライザー設定 (lowshelf と highshelf)
+                    audioFilter += `,equalizer=f=200:width_type=h:width=200:g=${audio.bass}`;
+                    audioFilter += `,equalizer=f=3000:width_type=h:width=1000:g=${audio.treble}`;
+                    
+                    // エコー設定 (aecho=イン音量:アウト音量:遅延時間:減衰量)
+                    if (audio.echo > 0) {
+                        audioFilter += `,aecho=1.0:0.7:300:${audio.echo}`;
+                    }
+                    
+                    filterComplex += `${audioFilter}[a${index}];`;
                 });
-                filterComplex += `amix=inputs=${audioFilesList.length}[aout]`;
+                
+                audioFilesList.forEach((_, index) => { filterComplex += `[a${index}]`; });
+                filterComplex += `amix=inputs=${audioFilesList.length}:normalize=0[aout];[aout]aresample=async=1[aout_sync]`;
 
-                // コマンド配列にフィルター設定を合流させる
                 ffmpegArgs.push(
                     '-filter_complex', filterComplex,
-                    '-map', '0:v',        // 0番目の入力（画像）をビデオに使用
-                    '-map', '[aout]',     // ミックスした音（[aout]）をオーディオに使用
+                    '-map', '0:v',        
+                    '-map', '[aout_sync]', 
                     '-vcodec', 'libx264', 
                     '-tune', 'stillimage',
                     '-c:a', 'aac', 
@@ -355,12 +488,9 @@
                     'output.mp4'
                 );
 
-                // コマンド実行！
                 await ffmpeg.run(...ffmpegArgs);
-
                 statusMsg.textContent = "完成！ 保存します。";
 
-                // 4. ダウンロード処理
                 const data = ffmpeg.FS('readFile', 'output.mp4');
                 const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
                 const videoURL = URL.createObjectURL(videoBlob);
@@ -369,7 +499,7 @@
 
                 const downloadLink = document.createElement('a');
                 downloadLink.href = videoURL;
-                downloadLink.download = 'mixed_movie.mp4';
+                downloadLink.download = 'effect_movie.mp4';
                 document.body.appendChild(downloadLink);
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
