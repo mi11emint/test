@@ -182,4 +182,206 @@
             </div>
         </div>
 
-        
+        <div class="section">
+            <label>③ 動画を作って保存する</label>
+            <div id="preview-box" class="preview-area">
+                <span>ここに画像または完成した動画が表示されます</span>
+            </div>
+            
+            <div id="status-msg"></div>
+            <button id="create-video-btn" class="btn btn-save" style="margin-top: 15px;">🎬 複数の音声を混ぜて合成する</button>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('image-input');
+        const audioInput = document.getElementById('audio-input');
+        const recordBtn = document.getElementById('record-btn');
+        const audioListContainer = document.getElementById('audio-list-container');
+        const itemsBox = document.getElementById('items-box');
+        const previewBox = document.getElementById('preview-box');
+        const createVideoBtn = document.getElementById('create-video-btn');
+        const statusMsg = document.getElementById('status-msg');
+
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        let imageFile = null;
+        let audioFilesList = []; // 追加された音声ファイルを溜める配列
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        // --- ① 画像選択 ---
+        imageInput.addEventListener('change', (e) => {
+            imageFile = e.target.files[0];
+            if (imageFile) {
+                const url = URL.createObjectURL(imageFile);
+                previewBox.innerHTML = `<img src="${url}" alt="Preview">`;
+            }
+        });
+
+        // --- ② 音声ファイル追加（アップロード） ---
+        audioInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach((file, index) => {
+                addAudioToList(file, file.name);
+            });
+            audioInput.value = ''; // 連続で同じファイルを選べるようにリセット
+        });
+
+        // --- ③ マイク録音 ---
+        recordBtn.addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.addEventListener('dataavailable', (e) => {
+                        audioChunks.push(e.data);
+                    });
+
+                    mediaRecorder.addEventListener('stop', () => {
+                        const recordedBlob = new Blob(audioChunks);
+                        const count = audioFilesList.length + 1;
+                        addAudioToList(recordedBlob, `ボイス録音 #${count}`);
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+
+                    mediaRecorder.start();
+                    recordBtn.textContent = '⏹️ 録音を止める';
+                    recordBtn.classList.add('btn-recording');
+                } catch (err) {
+                    alert('マイクの許可が得られませんでした。');
+                }
+            } else {
+                mediaRecorder.stop();
+                recordBtn.textContent = '🔴 マイクで録音スタート';
+                recordBtn.classList.remove('btn-recording');
+            }
+        });
+
+        // 音声をリストに追加して画面を更新する共通関数
+        function addAudioToList(fileOrBlob, displayName) {
+            // 配列に保存
+            audioFilesList.push({
+                id: Date.now() + Math.random(), // 被らないユニークなID
+                data: fileOrBlob,
+                name: displayName
+            });
+            renderAudioList();
+        }
+
+        // 音声リストの画面表示を更新する
+        function renderAudioList() {
+            if (audioFilesList.length === 0) {
+                audioListContainer.style.display = 'none';
+                return;
+            }
+            audioListContainer.style.display = 'block';
+            itemsBox.innerHTML = '';
+
+            audioFilesList.forEach((audio, index) => {
+                const item = document.createElement('div');
+                item.className = 'audio-item';
+                item.innerHTML = `
+                    <span>${audio.name}</span>
+                    <button class="delete-btn" onclick="deleteAudio(${audio.id})">削除</button>
+                `;
+                itemsBox.appendChild(item);
+            });
+        }
+
+        // 削除ボタンが押された時の処理（HTMLから直接呼ばれます）
+        window.deleteAudio = function(id) {
+            audioFilesList = audioFilesList.filter(audio => audio.id !== id);
+            renderAudioList();
+        };
+
+        // --- 🎬 ④ 複数音声の合成処理 ---
+        createVideoBtn.addEventListener('click', async () => {
+            if (!imageFile) {
+                alert('画像を設定してください！');
+                return;
+            }
+            if (audioFilesList.length === 0) {
+                alert('音声を少なくとも1つ以上追加してください！');
+                return;
+            }
+
+            try {
+                createVideoBtn.disabled = true;
+                statusMsg.textContent = "準備中...";
+
+                if (!ffmpeg.isLoaded()) {
+                    await ffmpeg.load();
+                }
+
+                statusMsg.textContent = "複数の音声を合成して動画を作成中...";
+
+                // 1. 画像ファイルを仮想メモリに書き込み
+                ffmpeg.FS('writeFile', 'input_image.png', await fetchFile(imageFile));
+
+                // 2. すべての音声ファイルを仮想メモリに書き込みつつ、FFmpeg用のコマンドを組み立てる
+                const ffmpegArgs = ['-loop', '1', '-i', 'input_image.png'];
+                
+                audioFilesList.forEach((audio, index) => {
+                    const virtualName = `audio_${index}.wav`;
+                    // 仮想空間に保存
+                    ffmpeg.FS('writeFile', virtualName, fetchFile(audio.data));
+                    // 入力コマンドを追加 (-i audio_0.wav みたいな形を人数分ループ)
+                    ffmpegArgs.push('-i', virtualName);
+                });
+
+                // 3. 複雑な合成（フィルター）コマンドの組み立て
+                // 例：2つの音なら、[1:a][2:a]amix=inputs=2[aout] という命令になります
+                let filterComplex = '';
+                audioFilesList.forEach((_, index) => {
+                    filterComplex += `[${index + 1}:a]`; // 0番目は画像なので 1番目からが音声
+                });
+                filterComplex += `amix=inputs=${audioFilesList.length}[aout]`;
+
+                // コマンド配列にフィルター設定を合流させる
+                ffmpegArgs.push(
+                    '-filter_complex', filterComplex,
+                    '-map', '0:v',        // 0番目の入力（画像）をビデオに使用
+                    '-map', '[aout]',     // ミックスした音（[aout]）をオーディオに使用
+                    '-vcodec', 'libx264', 
+                    '-tune', 'stillimage',
+                    '-c:a', 'aac', 
+                    '-strict', 'experimental',
+                    '-pix_fmt', 'yuv420p', 
+                    '-shortest', 
+                    'output.mp4'
+                );
+
+                // コマンド実行！
+                await ffmpeg.run(...ffmpegArgs);
+
+                statusMsg.textContent = "完成！ 保存します。";
+
+                // 4. ダウンロード処理
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+                const videoURL = URL.createObjectURL(videoBlob);
+
+                previewBox.innerHTML = `<video src="${videoURL}" controls></video>`;
+
+                const downloadLink = document.createElement('a');
+                downloadLink.href = videoURL;
+                downloadLink.download = 'mixed_movie.mp4';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+            } catch (error) {
+                console.error(error);
+                alert('合成中にエラーが発生しました。');
+            } finally {
+                createVideoBtn.disabled = false;
+                statusMsg.textContent = "";
+            }
+        });
+    </script>
+</body>
+</html>
