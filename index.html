@@ -1,538 +1,540 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>動画合成アプリ (文字入れ＆エフェクト完全版)</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f7fa;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>動画合成アプリ</title>
 
-        .app-container {
-            background-color: #ffffff;
-            width: 100%;
-            max-width: 450px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            padding: 25px;
-            box-sizing: border-box;
-        }
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
 
-        h1 {
-            font-size: 1.4rem;
-            color: #333;
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 25px;
-        }
+<style>
 
-        .section {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #edf2f7;
-        }
+body{
+background:#f5f7fa;
+font-family:sans-serif;
+max-width:500px;
+margin:auto;
+padding:20px;
+}
 
-        .section:last-of-type { border-bottom: none; }
+h1{
+text-align:center;
+}
 
-        label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #4a5568;
-            margin-bottom: 8px;
-        }
+.box{
+background:white;
+padding:20px;
+border-radius:15px;
+margin-bottom:20px;
+box-shadow:0 3px 10px rgba(0,0,0,.1);
+}
 
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            box-sizing: border-box;
-            transition: background-color 0.2s;
-        }
+button{
+width:100%;
+padding:15px;
+border:none;
+border-radius:10px;
+background:#4f46e5;
+color:white;
+font-size:16px;
+margin-top:10px;
+}
 
-        .btn:disabled { background-color: #cbd5e1 !important; cursor: not-allowed; }
-        input[type="file"] { display: none; }
-        .file-label { background-color: #e2e8f0; color: #4a5568; }
-        .btn-record { background-color: #ef4444; }
-        .btn-recording {
-            background-color: #b91c1c !important;
-            animation: pulse 1.5s infinite;
-        }
+.preview{
+width:100%;
+aspect-ratio:16/9;
+background:#ddd;
+display:flex;
+justify-content:center;
+align-items:center;
+overflow:hidden;
+border-radius:15px;
+}
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+.preview canvas,
+.preview video{
+width:100%;
+height:100%;
+object-fit:contain;
+}
 
-        /* 文字入れコントロールのスタイル */
-        .text-input-group {
-            background-color: #f8fafc;
-            padding: 12px;
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-        .text-field {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
-        .text-options {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            font-size: 0.8rem;
-            color: #4a5568;
-        }
-        .text-options input[type="color"] {
-            border: none;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            background: none;
-        }
+input[type=file]{
+width:100%;
+margin-top:10px;
+}
 
-        /* 音声リスト */
-        .audio-list {
-            margin-top: 15px;
-            background-color: #f8fafc;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        .audio-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            font-size: 0.85rem;
-        }
-        .audio-item-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        .control-row { display: flex; align-items: center; margin-bottom: 4px; color: #4a5568; }
-        .control-row span:first-child { width: 45px; font-size: 0.8rem; }
-        .effect-slider { flex-grow: 1; accent-color: #4f46e5; margin: 0 8px; }
-        .value-disp { width: 35px; text-align: right; font-size: 0.8rem; color: #94a3b8; }
-        .delete-btn { background-color: #fee2e2; color: #ef4444; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+input[type=text]{
+width:100%;
+padding:10px;
+font-size:16px;
+box-sizing:border-box;
+}
 
-        /* プレビューエリア */
-        .preview-area {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background-color: #1e293b;
-            border-radius: 12px;
-            margin-top: 10px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #94a3b8;
-            font-size: 0.9rem;
-            overflow: hidden;
-        }
-        .preview-area img, .preview-area video, .preview-area canvas {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
+#status{
+margin-top:15px;
+text-align:center;
+color:#4f46e5;
+font-weight:bold;
+}
 
-        .btn-save { background-color: #10b981; margin-top: 10px; }
-        #status-msg { text-align: center; font-size: 0.9rem; color: #4f46e5; font-weight: bold; margin-top: 10px; }
-    </style>
+</style>
+
 </head>
+
 <body>
 
-    <div class="app-container">
-        <h1>動画合成アプリ (完全版)</h1>
+<h1>動画合成アプリ</h1>
 
-        <div class="section">
-            <label>① 画像を選んで文字を入れる</label>
-            <label for="image-input" class="btn file-label">カメラロールから選択</label>
-            <input type="file" id="image-input" accept="image/*">
-            
-            <div class="text-input-group">
-                <input type="text" id="text-input" class="text-field" placeholder="ここに動画に入れる文字を入力" disabled>
-                <div class="text-options">
-                    <span>色:</span>
-                    <input type="color" id="text-color" value="#ffffff">
-                    <span>サイズ:</span>
-                    <input type="range" id="text-size" min="20" max="80" value="40" style="flex-grow:1; accent-color:#4f46e5;">
-                </div>
-            </div>
-        </div>
+<div class="box">
 
-        <div class="section">
-            <label>② 音声を入れてエフェクト調整</label>
-            <button id="record-btn" class="btn btn-record" style="margin-bottom: 10px;">🔴 マイクで録音スタート</button>
-            
-            <label for="audio-input" class="btn file-label">音声ファイルをアップロード</label>
-            <input type="file" id="audio-input" accept="audio/*" multiple>
-            
-            <div id="audio-list-container" class="audio-list" style="display: none;">
-                <label style="font-size: 0.8rem; color: #64748b;">音響コントロールパネル：</label>
-                <div id="items-box"></div>
-            </div>
-        </div>
+<h3>①画像を選ぶ</h3>
 
-        <div class="section">
-            <label>③ 確認と保存</label>
-            <div id="preview-box" class="preview-area">
-                <span>ここに画像または完成した動画が表示されます</span>
-            </div>
-            
-            <div id="status-msg"></div>
-            
-            <button id="play-preview-btn" class="btn" style="margin-top: 15px; background-color: #3b82f6;">🎵 エフェクトを聴く（同時再生）</button>
-            <button id="create-video-btn" class="btn btn-save">🎬 文字とエフェクトを反映して動画合成</button>
-        </div>
-    </div>
+<input
+type="file"
+id="imageInput"
+accept="image/*">
 
-    <script>
-        const imageInput = document.getElementById('image-input');
-        const textInput = document.getElementById('text-input');
-        const textColor = document.getElementById('text-color');
-        const textSize = document.getElementById('text-size');
-        
-        const audioInput = document.getElementById('audio-input');
-        const recordBtn = document.getElementById('record-btn');
-        const audioListContainer = document.getElementById('audio-list-container');
-        const itemsBox = document.getElementById('items-box');
-        const previewBox = document.getElementById('preview-box');
-        const playPreviewBtn = document.getElementById('play-preview-btn');
-        const createVideoBtn = document.getElementById('create-video-btn');
-        const statusMsg = document.getElementById('status-msg');
+<br><br>
 
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+<input
+type="text"
+id="textInput"
+placeholder="文字を入力">
 
-        let originalImage = null; // 読み込んだ元の画像オブジェクト
-        let audioFilesList = []; 
-        let mediaRecorder = null;
-        let audioChunks = [];
+</div>
 
-        let audioCtx = null;
-        let activeSources = []; 
+<div class="box">
 
-        // 文字合成用のCanvasをプログラム内で作成
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+<h3>②音声を選ぶ</h3>
 
-        // --- ① 画像選択 ＆ Canvasでの文字描画 ---
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                originalImage = new Image();
-                originalImage.src = URL.createObjectURL(file);
-                originalImage.onload = () => {
-                    textInput.disabled = false; // 画像が読み込まれたら文字入力を解禁
-                    drawCanvas(); // Canvasに描画
-                    previewBox.innerHTML = '';
-                    previewBox.appendChild(canvas); // プレビューエリアにCanvasを表示
-                };
-            }
-        });
+<input
+type="file"
+id="audioInput"
+accept="audio/*">
 
-        // 文字や色、サイズが変わったらリアルタイムに画像を再描画する
-        textInput.addEventListener('input', drawCanvas);
-        textColor.addEventListener('input', drawCanvas);
-        textSize.addEventListener('input', drawCanvas);
+<button id="recordBtn">
 
-        function drawCanvas() {
-            if (!originalImage) return;
+🎤録音開始
 
-            // 動画に適した16:9（例: 1280x720）のサイズにCanvasの大きさを固定
-            canvas.width = 1280;
-            canvas.height = 720;
+</button>
 
-            // 1. 背景画像をCanvasにぴったり収まるように描画
-            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+</div>
 
-            // 2. 文字が入力されていれば描画
-            const text = textInput.value;
-            if (text) {
-                const size = textSize.value;
-                ctx.font = `bold ${size}px 'Helvetica Neue', Arial, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+<div class="box">
 
-                // 文字の長さを計算
-                const textWidth = ctx.measureText(text).width;
-                
-                // 文字の後ろに半透明の黒い帯（座布団）を敷いて見やすくする
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 550 - size, canvas.width, parseInt(size) + 40);
+<h3>③確認</h3>
 
-                // 文字本体を描画（画面の下の方、中央に配置）
-                ctx.fillStyle = textColor.value;
-                ctx.fillText(text, canvas.width / 2, 570 - size / 2);
-            }
-        }
+<div
+class="preview"
+id="preview">
 
-        // --- ② 音声ファイル追加 ---
-        audioInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            files.forEach(file => addAudioToList(file, file.name));
-            audioInput.value = ''; 
-        });
+画像を選択してください
 
-        // --- ③ マイク録音 ---
-        recordBtn.addEventListener('click', async () => {
-            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
+</div>
 
-                    mediaRecorder.addEventListener('dataavailable', (e) => audioChunks.push(e.data));
-                    mediaRecorder.addEventListener('stop', () => {
-                        const recordedBlob = new Blob(audioChunks);
-                        const count = audioFilesList.length + 1;
-                        addAudioToList(recordedBlob, `ボイス録音 #${count}`);
-                        stream.getTracks().forEach(track => track.stop());
-                    });
+<div id="status"></div>
 
-                    mediaRecorder.start();
-                    recordBtn.textContent = '⏹️ 録音を止める';
-                    recordBtn.classList.add('btn-recording');
-                } catch (err) {
-                    alert('マイクの許可が得られませんでした。');
-                }
-            } else {
-                mediaRecorder.stop();
-                recordBtn.textContent = '🔴 マイクで録音スタート';
-                recordBtn.classList.remove('btn-recording');
-            }
-        });
+<button id="createBtn">
 
-        function addAudioToList(fileOrBlob, displayName) {
-            audioFilesList.push({
-                id: Date.now() + Math.random(), 
-                data: fileOrBlob,
-                name: displayName,
-                volume: 1.0,
-                echo: 0.0,
-                bass: 0,
-                treble: 0
-            });
-            renderAudioList();
-        }
+🎬動画作成
 
-        function renderAudioList() {
-            if (audioFilesList.length === 0) {
-                audioListContainer.style.display = 'none';
-                return;
-            }
-            audioListContainer.style.display = 'block';
-            itemsBox.innerHTML = '';
+</button>
 
-            audioFilesList.forEach((audio) => {
-                const item = document.createElement('div');
-                item.className = 'audio-item';
-                item.innerHTML = `
-                    <div class="audio-item-top">
-                        <span>${audio.name}</span>
-                        <button class="delete-btn" onclick="deleteAudio(${audio.id})">削除</button>
-                    </div>
-                    <div class="control-row">
-                        <span>音量</span>
-                        <input type="range" class="effect-slider" min="0" max="1.5" step="0.05" value="${audio.volume}" oninput="updateParam(${audio.id}, 'volume', this.value)">
-                        <span class="value-disp" id="volume-txt-${audio.id}">${Math.round(audio.volume * 100)}%</span>
-                    </div>
-                    <div class="control-row">
-                        <span>エコー</span>
-                        <input type="range" class="effect-slider" min="0" max="0.8" step="0.05" value="${audio.echo}" oninput="updateParam(${audio.id}, 'echo', this.value)">
-                        <span class="value-disp" id="echo-txt-${audio.id}">${Math.round(audio.echo * 100)}</span>
-                    </div>
-                    <div class="control-row">
-                        <span>低音</span>
-                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.bass}" oninput="updateParam(${audio.id}, 'bass', this.value)">
-                        <span class="value-disp" id="bass-txt-${audio.id}">${audio.bass}dB</span>
-                    </div>
-                    <div class="control-row">
-                        <span>高音</span>
-                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.treble}" oninput="updateParam(${audio.id}, 'treble', this.value)">
-                        <span class="value-disp" id="treble-txt-${audio.id}">${audio.treble}dB</span>
-                    </div>
-                `;
-                itemsBox.appendChild(item);
-            });
-        }
+</div>
 
-        window.updateParam = function(id, type, val) {
-            const audio = audioFilesList.find(a => a.id === id);
-            if (audio) {
-                audio[type] = parseFloat(val);
-                const suffix = type === 'volume' ? '%' : (type === 'echo' ? '' : 'dB');
-                const displayVal = type === 'volume' ? Math.round(val * 100) : val;
-                document.getElementById(`${type}-txt-${id}`).textContent = `${displayVal}${suffix}`;
-            }
-        };
+<script>
 
-        window.deleteAudio = function(id) {
-            audioFilesList = audioFilesList.filter(audio => audio.id !== id);
-            renderAudioList();
-        };
+const imageInput=
+document.getElementById(
+"imageInput"
+);
 
-        // --- 🎵 リアルタイム同時再生 ---
-        playPreviewBtn.addEventListener('click', async () => {
-            if (activeSources.length > 0) {
-                activeSources.forEach(src => { try { src.stop(); } catch(e){} });
-                activeSources = [];
-                playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
-                return;
-            }
+const textInput=
+document.getElementById(
+"textInput"
+);
 
-            if (audioFilesList.length === 0) { alert('音声を追加してください。'); return; }
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            playPreviewBtn.textContent = '⏹️ 再生をストップ';
+const audioInput=
+document.getElementById(
+"audioInput"
+);
 
-            for (const audio of audioFilesList) {
-                const arrayBuffer = await audio.data.arrayBuffer();
-                audioCtx.decodeAudioData(arrayBuffer, (audioBuffer) => {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = audioBuffer;
+const preview=
+document.getElementById(
+"preview"
+);
 
-                    const gainNode = audioCtx.createGain();
-                    gainNode.gain.value = audio.volume;
+const status=
+document.getElementById(
+"status"
+);
 
-                    const bassNode = audioCtx.createBiquadFilter();
-                    bassNode.type = 'lowshelf';
-                    bassNode.frequency.value = 200;
-                    bassNode.gain.value = audio.bass;
+const recordBtn=
+document.getElementById(
+"recordBtn"
+);
 
-                    const trebleNode = audioCtx.createBiquadFilter();
-                    trebleNode.type = 'highshelf';
-                    trebleNode.frequency.value = 3000;
-                    trebleNode.gain.value = audio.treble;
+const createBtn=
+document.getElementById(
+"createBtn"
+);
 
-                    const delayNode = audioCtx.createDelay();
-                    delayNode.delayTime.value = 0.3;
-                    const feedbackNode = audioCtx.createGain();
-                    feedbackNode.gain.value = audio.echo;
+let imageFile=null;
 
-                    source.connect(bassNode);
-                    bassNode.connect(trebleNode);
-                    trebleNode.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
+let audioFile=null;
 
-                    if (audio.echo > 0) {
-                        gainNode.connect(delayNode);
-                        delayNode.connect(feedbackNode);
-                        feedbackNode.connect(delayNode);
-                        feedbackNode.connect(audioCtx.destination);
-                    }
+let mediaRecorder=null;
 
-                    source.start(0);
-                    activeSources.push(source);
-                    source.onended = () => {
-                        activeSources = activeSources.filter(s => s !== source);
-                        if (activeSources.length === 0) playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
-                    };
-                });
-            }
-        });
+let chunks=[];
 
-        // --- 🎬 ⑥ 動画合成処理 (Canvasの文字入り画像をFFmpegに渡す) ---
-        createVideoBtn.addEventListener('click', async () => {
-            if (!originalImage) { alert('画像を設定してください！'); return; }
-            if (audioFilesList.length === 0) { alert('音声を追加してください！'); return; }
+const canvas=
+document.createElement(
+"canvas"
+);
 
-            if (activeSources.length > 0) playPreviewBtn.click();
+const ctx=
+canvas.getContext(
+"2d"
+);
 
-            try {
-                createVideoBtn.disabled = true;
-                statusMsg.textContent = "準備中...";
-                if (!ffmpeg.isLoaded()) await ffmpeg.load();
+canvas.width=1280;
 
-                statusMsg.textContent = "文字と音声を動画に焼き付け中...";
+canvas.height=720;
 
-                // 【ここがポイント！】Canvasに描かれている「文字入りの絵」をデータ（Blob）化する
-                const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+function drawCanvas(img){
 
-                // 文字入り画像を仮想メモリに書き込み
-                ffmpeg.FS('writeFile', 'input_image.png', await fetchFile(canvasBlob));
+ctx.clearRect(
+0,
+0,
+1280,
+720
+);
 
-                const ffmpegArgs = ['-loop', '1', '-i', 'input_image.png'];
-                
-                for (let index = 0; index < audioFilesList.length; index++) {
-                    const virtualName = `audio_${index}.wav`;
-                    ffmpeg.FS('writeFile', virtualName, await fetchFile(audioFilesList[index].data));
-                    ffmpegArgs.push('-i', virtualName);
-                }
+ctx.drawImage(
+img,
+0,
+0,
+1280,
+720
+);
 
-                // 前回の安全版音声フィルターコマンド
-                let filterComplex = '';
-                audioFilesList.forEach((audio, index) => {
-                    let inputLabel = `[${index + 1}:a]`;
-                    let filterStr = `aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${audio.volume}`;
-                    filterStr += `,equalizer=f=200:width_type=h:width=200:g=${audio.bass}`;
-                    filterStr += `,equalizer=f=3000:width_type=h:width=1000:g=${audio.treble}`;
-                    if (audio.echo > 0) filterStr += `,aecho=0.8:0.7:300:${audio.echo}`;
-                    filterComplex += `${inputLabel}${filterStr}[clean_a${index}];`;
-                });
-                
-                audioFilesList.forEach((_, index) => { filterComplex += `[clean_a${index}]`; });
-                filterComplex += `amix=inputs=${audioFilesList.length}:normalize=0[aout];[aout]aresample=async=1[aout_sync]`;
+if(textInput.value!=""){
 
-                ffmpegArgs.push(
-                    '-filter_complex', filterComplex,
-                    '-map', '0:v',        
-                    '-map', '[aout_sync]', 
-                    '-vcodec', 'libx264', 
-                    '-tune', 'stillimage',
-                    '-c:a', 'aac', 
-                    '-strict', 'experimental',
-                    '-pix_fmt', 'yuv420p', 
-                    '-shortest', 
-                    'output.mp4'
-                );
+ctx.fillStyle=
+"rgba(0,0,0,0.5)";
 
-                await ffmpeg.run(...ffmpegArgs);
-                statusMsg.textContent = "完成！ 保存します。";
+ctx.fillRect(
+0,
+600,
+1280,
+120
+);
 
-                const data = ffmpeg.FS('readFile', 'output.mp4');
-                const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-                const videoURL = URL.createObjectURL(videoBlob);
+ctx.fillStyle=
+"white";
 
-                previewBox.innerHTML = `<video src="${videoURL}" controls></video>`;
+ctx.font=
+"bold 50px sans-serif";
 
-                const downloadLink = document.createElement('a');
-                downloadLink.href = videoURL;
-                downloadLink.download = 'final_movie.mp4';
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
+ctx.textAlign=
+"center";
 
-            } catch (error) {
-                console.error(error);
-                alert('合成中にエラーが発生しました。');
-            } finally {
-                createVideoBtn.disabled = false;
-                statusMsg.textContent = "";
-            }
-        });
-    </script>
+ctx.fillText(
+textInput.value,
+640,
+670
+);
+
+}
+
+}
+
+imageInput.addEventListener(
+"change",
+()=>{
+
+imageFile=
+imageInput.files[0];
+
+if(!imageFile)return;
+
+const img=
+new Image();
+
+img.src=
+URL.createObjectURL(
+imageFile
+);
+
+img.onload=()=>{
+
+drawCanvas(
+img
+);
+
+preview.innerHTML="";
+
+preview.appendChild(
+canvas
+);
+
+};
+
+}
+);
+
+textInput.addEventListener(
+"input",
+()=>{
+
+if(!imageFile)return;
+
+const img=
+new Image();
+
+img.src=
+URL.createObjectURL(
+imageFile
+);
+
+img.onload=()=>{
+
+drawCanvas(
+img
+);
+
+};
+
+}
+);
+
+audioInput.addEventListener(
+"change",
+()=>{
+
+audioFile=
+audioInput.files[0];
+
+}
+);
+
+recordBtn.addEventListener(
+"click",
+async()=>{
+
+if(
+!mediaRecorder||
+mediaRecorder.state==="inactive"
+){
+
+const stream=
+await navigator.mediaDevices.getUserMedia(
+{
+audio:true
+}
+);
+
+chunks=[];
+
+mediaRecorder=
+new MediaRecorder(
+stream
+);
+
+mediaRecorder.ondataavailable=e=>{
+
+chunks.push(
+e.data
+);
+
+};
+
+mediaRecorder.onstop=()=>{
+
+audioFile=
+new Blob(
+chunks,
+{
+type:"audio/webm"
+}
+);
+
+};
+
+mediaRecorder.start();
+
+recordBtn.innerHTML=
+"■録音停止";
+
+}else{
+
+mediaRecorder.stop();
+
+recordBtn.innerHTML=
+"🎤録音開始";
+
+}
+});
+const {
+FFmpeg
+}=FFmpegWASM;
+
+const ffmpeg=
+new FFmpeg();
+
+createBtn.addEventListener(
+"click",
+async()=>{
+
+try{
+
+if(!imageFile){
+
+alert(
+"画像を選択してください"
+);
+
+return;
+
+}
+
+if(!audioFile){
+
+alert(
+"音声を選択してください"
+);
+
+return;
+
+}
+
+createBtn.disabled=true;
+
+status.innerHTML=
+"FFmpeg読込中...";
+
+await ffmpeg.load({
+coreURL:
+"https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js"
+});
+
+status.innerHTML=
+"画像準備中...";
+
+const imageBlob=
+await new Promise(
+resolve=>
+canvas.toBlob(
+resolve,
+"image/png"
+)
+);
+
+await ffmpeg.writeFile(
+"image.png",
+new Uint8Array(
+await imageBlob.arrayBuffer()
+)
+);
+
+status.innerHTML=
+"音声準備中...";
+
+await ffmpeg.writeFile(
+"audio.webm",
+new Uint8Array(
+await audioFile.arrayBuffer()
+)
+);
+
+status.innerHTML=
+"動画生成中...";
+
+await ffmpeg.exec([
+
+"-loop","1",
+
+"-i","image.png",
+
+"-i","audio.webm",
+
+"-c:v","libx264",
+
+"-tune","stillimage",
+
+"-pix_fmt","yuv420p",
+
+"-shortest",
+
+"output.mp4"
+
+]);
+
+status.innerHTML=
+"完成";
+
+const data=
+await ffmpeg.readFile(
+"output.mp4"
+);
+
+const blob=
+new Blob(
+[data.buffer],
+{
+type:
+"video/mp4"
+}
+);
+
+const url=
+URL.createObjectURL(
+blob
+);
+
+preview.innerHTML=
+`<video
+controls
+src="${url}"> </video>`;
+
+const a=
+document.createElement(
+"a"
+);
+
+a.href=url;
+
+a.download=
+"movie.mp4";
+
+a.click();
+
+}
+catch(error){
+
+console.error(
+error
+);
+
+status.innerHTML=
+"エラー";
+
+alert(
+error.message
+);
+
+}
+finally{
+
+createBtn.disabled=false;
+
+}
+
+});
+
+</script>
+
 </body>
+
 </html>
