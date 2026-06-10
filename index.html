@@ -257,8 +257,8 @@
         function drawCanvas() {
             if (!originalImage) return;
 
-            canvas.width = 1280;
-            canvas.height = 720;
+            canvas.width = 640;
+            canvas.height = 360;
             ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
 
             const text = textInput.value;
