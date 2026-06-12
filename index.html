@@ -3,532 +3,1080 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>動画合成アプリ (完全エラー対策版)</title>
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <title>Voice Wave Movie Maker</title>
     <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f5f7fa;
+        @font-face {
+            font-family: 'Cinecaption';
+            src: url('https://dl.dropboxusercontent.com/scl/fi/gbyay8c3as3f0l2e2q2un/cinecaption_2.28.woff2?rlkey=pgaofit9g6699gsww2m3p9l7b&raw=1') format('woff2');
+            font-display: swap;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+        }
+        
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Cinecaption', 'Courier New', sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            box-sizing: border-box;
+            padding: 20px 5px; 
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
-        .app-container {
-            background-color: #ffffff;
+        .info-text-area {
             width: 100%;
-            max-width: 450px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            padding: 25px;
-            box-sizing: border-box;
+            max-width: 420px; 
+            text-align: left;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin-bottom: 12px;
+            padding: 0 12px;
         }
 
-        h1 {
-            font-size: 1.4rem;
-            color: #333;
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 25px;
-        }
-
-        .section {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #edf2f7;
-        }
-
-        .section:last-of-type { border-bottom: none; }
-
-        label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: bold;
-            color: #4a5568;
-            margin-bottom: 8px;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            box-sizing: border-box;
-            transition: background-color 0.2s;
-        }
-
-        .btn:disabled { background-color: #cbd5e1 !important; cursor: not-allowed; }
-        input[type="file"] { display: none; }
-        .file-label { background-color: #e2e8f0; color: #4a5568; }
-        .btn-record { background-color: #ef4444; }
-        .btn-recording {
-            background-color: #b91c1c !important;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-        .text-input-group {
-            background-color: #f8fafc;
-            padding: 12px;
-            border-radius: 10px;
+        .info-attention {
             margin-top: 10px;
-        }
-        .text-field {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-        }
-        .text-options {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            font-size: 0.8rem;
-            color: #4a5568;
-        }
-        .text-options input[type="color"] {
-            border: none;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            background: none;
+            margin-bottom: 10px;
+            opacity: 0.7;
         }
 
-        .audio-list {
-            margin-top: 15px;
-            background-color: #f8fafc;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        .audio-item {
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            font-size: 0.85rem;
-        }
-        .audio-item-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        .control-row { display: flex; align-items: center; margin-bottom: 4px; color: #4a5568; }
-        .control-row span:first-child { width: 45px; font-size: 0.8rem; }
-        .effect-slider { flex-grow: 1; accent-color: #4f46e5; margin: 0 8px; }
-        .value-disp { width: 35px; text-align: right; font-size: 0.8rem; color: #94a3b8; }
-        .delete-btn { background-color: #fee2e2; color: #ef4444; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
-
-        .preview-area {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background-color: #1e293b;
-            border-radius: 12px;
+        .info-brand {
             margin-top: 10px;
+            letter-spacing: 2px;
+            text-align: right;
+        }
+
+        .header-zone {
+            text-align: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 1.1rem; 
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        
+        .decoration-line {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            white-space: nowrap;
+            line-height: 1.5;
+        }
+
+        .main-container {
             display: flex;
+            width: 100%;
+            max-width: 420px; 
+            background-color: #000000;
+            align-items: stretch; 
             justify-content: center;
-            align-items: center;
-            color: #94a3b8;
-            font-size: 0.9rem;
-            overflow: hidden;
+            margin: 10px 0 15px 0;
         }
-        .preview-area img, .preview-area video, .preview-area canvas {
+
+        .left-composite-zone {
+            flex: 1.1; 
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .player-panel {
+            width: 100%;
+            background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg'); 
+            background-color: silver;
+            padding: 12px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #000000;
+            border-radius: 30px; 
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .canvas-container.theme-white {
+            background-color: #ffffff;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .timer-display {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 0.9rem;
+            color: #ff4488;
+            display: none;
+            z-index: 10;
+        }
+
+        .volume-row-zone {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            margin-top: 14px;
+            margin-bottom: 2px;
+            padding: 0 4px;
+            gap: 10px;
+        }
+        .volume-label {
+            font-size: 0.75rem;
+            color: #777777; 
+            width: 32px;
+            flex-shrink: 0;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        .volume-slider-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .top-icons {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            margin-top: 18px; 
+            margin-bottom: 6px;
+        }
+        
+        .top-icons span { 
+            cursor: pointer; 
+            transition: transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 23.75px; 
+            height: 23.75px; 
+        }
+        .top-icons span:active { transform: scale(0.8); }
+        
+        .btn-img {
             width: 100%;
             height: 100%;
             object-fit: contain;
+            pointer-events: none;
         }
 
-        .btn-save { background-color: #10b981; margin-top: 10px; }
-        #status-msg { text-align: center; font-size: 0.9rem; color: #4f46e5; font-weight: bold; margin-top: 10px; }
+        .control-bar-zone {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            margin: 10px 0 8px 0;
+            gap: 10px;
+        }
+
+        .mini-play-btn {
+            width: 30.8px; 
+            height: 30.8px; 
+            cursor: pointer;
+            transition: transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .mini-play-btn:active { transform: scale(0.8); }
+
+        .seekbar-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+        .seekbar {
+            width: 100%;
+            accent-color: #777777; 
+            cursor: pointer;
+        }
+
+        .compact-eq-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.07); 
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .eq-main-label {
+            font-size: 0.85rem;
+            color: #777777; 
+            width: 28px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: top;
+            margin-top: 2px;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .eq-rows-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .eq-item-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .eq-sub-label {
+            font-size: 0.6rem;
+            color: #777777; 
+            width: 36px;
+            flex-shrink: 0;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .audio-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            background: #cccccc; 
+            height: 4px;
+            border-radius: 2px;
+            cursor: pointer;
+            outline: none;
+        }
+        .audio-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #777777; 
+            cursor: pointer;
+        }
+        .audio-slider::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #777777;
+            cursor: pointer;
+            border: none;
+        }
+
+        .audio-reset-btn {
+            width: 100%;
+            background: transparent;
+            color: #777777; 
+            border: 1px solid rgba(119, 119, 119, 0.4); 
+            padding: 5px 0;
+            font-family: 'Cinecaption', 'Courier New', sans-serif;
+            font-size: 0.65rem;
+            letter-spacing: 1.5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px; 
+            border-radius: 4px;
+        }
+        .audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
+        .audio-reset-btn:active { transform: scale(0.98); }
+
+        .bottom-info-zone {
+            width: 100%;
+            max-width: 420px; 
+            padding: 5px 12px 20px 12px; 
+            text-align: left;
+        }
+        .bottom-notice-text {
+            font-size: 0.58rem;
+            line-height: 1.6;
+            letter-spacing: 0.5px;
+            opacity: 0.6;
+        }
+
+        .side-panel {
+            flex: 0.9;
+            padding: 2px 0px 10px 12px; 
+            display: flex;
+            flex-direction: column;
+            font-size: 0.75rem; 
+            letter-spacing: 1px;
+            justify-content: flex-start;
+            overflow-y: auto; 
+            scrollbar-width: none; 
+        }
+        .side-panel::-webkit-scrollbar { display: none; }
+
+        .setting-section {
+            margin-bottom: 15px; 
+            flex-shrink: 0; 
+            transition: opacity 0.3s;
+        }
+        .setting-title {
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 3px;
+        }
+        .color-option, .style-option {
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .color-option.active, .style-option.active { opacity: 1; }
+        .pointer { visibility: hidden; margin-right: 4px; }
+        .color-option.active .pointer, .style-option.active .pointer { visibility: visible; }
+
+        .setting-section.locked {
+            opacity: 0.3 !important;
+            pointer-events: none !important;
+            cursor: not-allowed !important;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 5px;
+            max-width: 110px;
+        }
+        .palette-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .palette-circle.selected {
+            border-color: #ffffff;
+            transform: scale(1.1);
+        }
+        
+        /* 薄い・明るいトーン（上層） */
+        .cp1 { background: linear-gradient(135deg, #dfe9f3, white); }
+        .cp2 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
+        .cp3 { background: linear-gradient(135deg, #fff1eb, #ace0f9); }
+        .cp4 { background: linear-gradient(135deg, #fddb92, #d1fdff); }
+        .cp5 { background: linear-gradient(135deg, #f8f8ff, #b0c4de); }
+        .cp6 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
+        .cp7 { background: linear-gradient(135deg, #fff3b0, #cae7e3); }
+        .cp8 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
+        
+        /* 中間・鮮やかトーン（中層） */
+        .cp9 { background: linear-gradient(135deg, #FFF6B7, #F6416C); }
+        .cp10 { background: linear-gradient(135deg, #a6c0fe, #f68084); }
+        .cp11 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
+        .cp12 { background: linear-gradient(135deg, #ff4e50, #f9d423); }
+        .cp13 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
+        .cp14 { background: linear-gradient(135deg, #00ffff, #00008b); }
+        .cp15 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
+        .cp16 { background: linear-gradient(135deg, #16a085, #f4d03f); }
+
+        /* 渋い・深いトーン（下層） */
+        .cp17 { background: linear-gradient(135deg, #800080, #f08080); }
+        .cp18 { background: linear-gradient(135deg, #a8caba, #5d4157); }
+        .cp19 { background: linear-gradient(135deg, #8b5a2b, #2e8b57); }
+        .cp20 { background: linear-gradient(135deg, #243949, #517fa4); }
+        .cp21 { background: linear-gradient(135deg, #4b0082, #6495ed); }
+        .cp22 { background: linear-gradient(135deg, #dc143c, #8b0000); }
+        .cp23 { background: linear-gradient(135deg, #191970, #fffacd); }
+        .cp24 { background: linear-gradient(135deg, #eeeeee, #111111); } 
+        
     </style>
 </head>
 <body>
+    <div class="info-text-area">
+        <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a></p>
+        <p>録音は２分まで</p>
+        <p>お使いの端末にのみ、動画として保存されます</p>
+        <p>動画は保存後に編集ＯＫ</p>
+        <p>使用許可不要　クレジット不要　アップロード先自由</p>
+        <p></p>
+        <p>告知なくサービスを変更・停止することがあります</p>
+        <p class="info-attention">声が盗られるとか、そういうのはないです</p>
+    </div>
 
-    <div class="app-container">
-        <h1>動画合成アプリ (完全版)</h1>
+    <div class="header-zone">
+        <div class="title">2min VOICE and MUSIC WAVE MOVIE</div>
+        <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。</div>
+    </div>
 
-        <div class="section">
-            <label>① 画像を選んで文字を入れる</label>
-            <label for="image-input" class="btn file-label">カメラロールから選択</label>
-            <input type="file" id="image-input" accept="image/*">
-            
-            <div class="text-input-group">
-                <input type="text" id="text-input" class="text-field" placeholder="ここに動画に入れる文字を入力" disabled>
-                <div class="text-options">
-                    <span>色:</span>
-                    <input type="color" id="text-color" value="#ffffff">
-                    <span>サイズ:</span>
-                    <input type="range" id="text-size" min="20" max="80" value="40" style="flex-grow:1; accent-color:#4f46e5;">
+    <div class="main-container">
+        <div class="left-composite-zone">
+            <div class="player-panel" id="playerPanel">
+                <div id="canvasBg" class="canvas-container">
+                    <canvas id="waveCanvas" width="600" height="600"></canvas>
+                    <div id="timer" class="timer-display">02:00</div>
+                </div>
+                
+                <div class="volume-row-zone">
+                    <div class="volume-label">Vol</div>
+                    <div class="volume-slider-container">
+                        <input type="range" id="volSlider" class="audio-slider" min="0" max="1.5" step="0.05" value="1.0">
+                    </div>
+                </div>
+
+                <div class="top-icons">
+                    <span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
+                    <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
+                    <span id="topPauseBtn" title="録音一時停止"><img src="https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png" class="btn-img" alt="一時停止"></span>
+                    <span id="stopBtn" title="録音停止"><img src="https://img1.mitemin.net/aq/o0/hcbj1ot13v3khand2j5c6jbf3yan_ywe_3c_3c_g9i.png" class="btn-img" alt="停止"></span>
+                    <span id="recBtn" title="録音開始"><img src="https://img1.mitemin.net/3b/lr/2ql3dcgbdt6s9skvmfdso1m8621_ema_3c_3c_jwr.png" class="btn-img" alt="録音"></span>
+                </div>
+
+                <div class="control-bar-zone">
+                    <span id="playPauseBtn" class="mini-play-btn" title="再生">
+                        <img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" id="playPauseImg" class="btn-img" alt="再生">
+                    </span>
+                    <div class="seekbar-container">
+                        <input type="range" id="seekBar" class="seekbar" value="0" min="0" max="100" step="0.1">
+                    </div>
+                </div>
+
+                <div class="compact-eq-container">
+                    <div class="eq-main-label">EQ</div>
+                    <div class="eq-rows-wrapper">
+                        <div class="eq-item-row">
+                            <div class="eq-sub-label">LOW</div>
+                            <input type="range" id="eqLowSlider" class="audio-slider" min="-12" max="12" step="1" value="-7">
+                        </div>
+                        <div class="eq-item-row">
+                            <div class="eq-sub-label">MID</div>
+                            <input type="range" id="eqMidSlider" class="audio-slider" min="-12" max="12" step="1" value="3">
+                        </div>
+                        <div class="eq-item-row">
+                            <div class="eq-sub-label">HIGH</div>
+                            <input type="range" id="eqHighSlider" class="audio-slider" min="-12" max="12" step="1" value="-4">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="audioResetBtn" class="audio-reset-btn">RESET AUDIO</button>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="setting-section" id="menuBg">
+                <div class="setting-title">BACK COLOR</div>
+                <div id="btnBlack" class="color-option active"><span class="pointer">▶</span>BLACK</div>
+                <div id="btnWhite" class="color-option"><span class="pointer">▶</span>WHITE</div>
+            </div>
+
+            <div class="setting-section" id="menuStyle">
+                <div class="setting-title">WAVE STYLE</div>
+                <div id="styleCircle" class="style-option active" data-style="circle"><span class="pointer">▶</span>CIRCLE</div>
+                <div id="styleDigitalCircle" class="style-option" data-style="digital_circle"><span class="pointer">▶</span>DIGITAL</div>
+                <div id="styleAurora" class="style-option" data-style="aurora"><span class="pointer">▶</span>AURORA</div>
+            </div>
+
+            <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
+                <div class="setting-title">WAVE COLOR</div>
+                <div class="palette-grid">
+                    <div class="palette-circle cp1 selected" data-colors='["#dfe9f3", "#ffffff"]'></div>
+                    <div class="palette-circle cp2" data-colors='["#fff0f5", "#faf0e6"]'></div>
+                    <div class="palette-circle cp3" data-colors='["#fff1eb", "#ace0f9"]'></div>
+                    <div class="palette-circle cp4" data-colors='["#fddb92", "#d1fdff"]'></div>
+                    <div class="palette-circle cp5" data-colors='["#f8f8ff", "#b0c4de"]'></div>
+                    <div class="palette-circle cp6" data-colors='["#f0fff0", "#40e0d0"]'></div>
+                    <div class="palette-circle cp7" data-colors='["#fff3b0", "#cae7e3"]'></div>
+                    <div class="palette-circle cp8" data-colors='["#bc8f8f", "#ffe4e1"]'></div>
+                    <div class="palette-circle cp9" data-colors='["#FFF6B7", "#F6416C"]'></div>
+                    <div class="palette-circle cp10" data-colors='["#a6c0fe", "#f68084"]'></div>
+                    <div class="palette-circle cp11" data-colors='["#ffee00", "#ffaa00"]'></div>
+                    <div class="palette-circle cp12" data-colors='["#ff4e50", "#f9d423"]'></div>
+                    <div class="palette-circle cp13" data-colors='["#4682b4", "#f0f8ff"]'></div>
+                    <div class="palette-circle cp14" data-colors='["#00ffff", "#00008b"]'></div>
+                    <div class="palette-circle cp15" data-colors='["#f107a3", "#7b2ff7"]'></div>
+                    <div class="palette-circle cp16" data-colors='["#16a085", "#f4d03f"]'></div>
+                    <div class="palette-circle cp17" data-colors='["#800080", "#f08080"]'></div>
+                    <div class="palette-circle cp18" data-colors='["#a8caba", "#5d4157"]'></div>
+                    <div class="palette-circle cp19" data-colors='["#8b5a2b", "#2e8b57"]'></div>
+                    <div class="palette-circle cp20" data-colors='["#243949", "#517fa4"]'></div>
+                    <div class="palette-circle cp21" data-colors='["#4b0082", "#6495ed"]'></div>
+                    <div class="palette-circle cp22" data-colors='["#dc143c", "#8b0000"]'></div>
+                    <div class="palette-circle cp23" data-colors='["#191970", "#fffacd"]'></div>
+                    <div class="palette-circle cp24" data-colors='["#eeeeee", "#111111"]'></div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="section">
-            <label>② 音声を入れてエフェクト調整</label>
-            <button id="record-btn" class="btn btn-record" style="margin-bottom: 10px;">🔴 マイクで録音スタート</button>
-            
-            <label for="audio-input" class="btn file-label">音声ファイルをアップロード</label>
-            <input type="file" id="audio-input" accept="audio/*" multiple>
-            
-            <div id="audio-list-container" class="audio-list" style="display: none;">
-                <label style="font-size: 0.8rem; color: #64748b;">音響コントロールパネル：</label>
-                <div id="items-box"></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <label>③ 確認と保存</label>
-            <div id="preview-box" class="preview-area">
-                <span>ここに画像または完成した動画が表示されます</span>
-            </div>
-            
-            <div id="status-msg"></div>
-            
-            <button id="play-preview-btn" class="btn" style="margin-top: 15px; background-color: #3b82f6;">🎵 エフェクトを聴く（同時再生）</button>
-            <button id="create-video-btn" class="btn btn-save">🎬 文字とエフェクトを反映して動画合成</button>
+    <div class="bottom-info-zone">
+        <div class="bottom-notice-text">
+            ⋆☄録音中に色、波のパターン、イコライザ、音量を操作できますが、最終的に保存されるのは最後に選択した値になります<br>
+            ⋆☄イコライザと音量は、録音後も調整できます<br>
+            ⋆☄︎動画の書き出しには数秒かかります<br>
+            ⋆☄保存された動画ファイルの読込や再生、編集の可否は、お使いの動画プレイヤーや編集アプリの仕様に準じます
         </div>
     </div>
 
     <script>
-        const imageInput = document.getElementById('image-input');
-        const textInput = document.getElementById('text-input');
-        const textColor = document.getElementById('text-color');
-        const textSize = document.getElementById('text-size');
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
         
-        const audioInput = document.getElementById('audio-input');
-        const recordBtn = document.getElementById('record-btn');
-        const audioListContainer = document.getElementById('audio-list-container');
-        const itemsBox = document.getElementById('items-box');
-        const previewBox = document.getElementById('preview-box');
-        const playPreviewBtn = document.getElementById('play-preview-btn');
-        const createVideoBtn = document.getElementById('create-video-btn');
-        const statusMsg = document.getElementById('status-msg');
+        const recBtn = document.getElementById('recBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const timerDisplay = document.getElementById('timer');
+        const canvasBg = document.getElementById('canvasBg');
+        const btnBlack = document.getElementById('btnBlack');
+        const btnWhite = document.getElementById('btnWhite');
+        const palettes = document.querySelectorAll('.palette-circle');
+        const styleOptions = document.querySelectorAll('.style-option');
+        
+        const menuBg = document.getElementById('menuBg');
+        const menuStyle = document.getElementById('menuStyle');
+        const menuColor = document.getElementById('menuColor');
 
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playPauseImg = document.getElementById('playPauseImg'); 
+        const seekBar = document.getElementById('seekBar');
 
-        let originalImage = null; 
-        let audioFilesList = []; 
-        let mediaRecorder = null;
-        let audioChunks = [];
+        const volSlider = document.getElementById('volSlider');
+        const eqLowSlider = document.getElementById('eqLowSlider');
+        const eqMidSlider = document.getElementById('eqMidSlider');
+        const eqHighSlider = document.getElementById('eqHighSlider');
+        const audioResetBtn = document.getElementById('audioResetBtn'); 
+        
+        const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
+        const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
 
         let audioCtx = null;
-        let activeSources = []; 
+        let analyser = null;
+        let source = null;
+        let dataArray = null;
+        let stream = null;
+        let animationId = null;
+        
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let audioBlob = null;
+        let audioBlobUrl = null; 
+        let playbackAudio = null; 
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        let timerInterval = null;
+        let timeLeft = 120;
 
-        // --- ① 画像選択 ＆ Canvasでの文字描画 ---
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                originalImage = new Image();
-                originalImage.src = URL.createObjectURL(file);
-                originalImage.onload = () => {
-                    textInput.disabled = false; 
-                    drawCanvas(); 
-                    previewBox.innerHTML = '';
-                    previewBox.appendChild(canvas); 
-                };
-            }
-        });
+        let currentBgColor = 'black';
+        let currentWaveColors = ["#dfe9f3", "#ffffff"];
+        let currentWaveStyle = 'circle'; 
+        let isUserChangingIndex = false;
+        let isRecording = false;
+        let isPlayingRecorded = false;
 
-        textInput.addEventListener('input', drawCanvas);
-        textColor.addEventListener('input', drawCanvas);
-        textSize.addEventListener('input', drawCanvas);
+        let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, recordDestination = null;
 
-        function drawCanvas() {
-            if (!originalImage) return;
+        unlockMenus();
+        drawStaticWave();
 
-            canvas.width = 640;
-            canvas.height = 360;
-            ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-
-            const text = textInput.value;
-            if (text) {
-                const size = textSize.value;
-                ctx.font = `bold ${size}px 'Helvetica Neue', Arial, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 550 - size, canvas.width, parseInt(size) + 40);
-
-                ctx.fillStyle = textColor.value;
-                ctx.fillText(text, canvas.width / 2, 570 - size / 2);
+        function triggerUIRefresh() {
+            if (!isRecording && !isPlayingRecorded) {
+                drawStaticWave();
             }
         }
 
-        // --- ② 音声ファイル追加 ---
-        audioInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            files.forEach(file => addAudioToList(file, file.name));
-            audioInput.value = ''; 
+        btnBlack.addEventListener('click', () => {
+            currentBgColor = 'black';
+            btnBlack.classList.add('active');
+            btnWhite.classList.remove('active');
+            canvasBg.classList.remove('theme-white');
+            triggerUIRefresh();
+        });
+        btnWhite.addEventListener('click', () => {
+            currentBgColor = 'white';
+            btnWhite.classList.add('active');
+            btnBlack.classList.remove('active');
+            canvasBg.classList.add('theme-white');
+            triggerUIRefresh();
         });
 
-        // --- ③ マイク録音 ---
-        recordBtn.addEventListener('click', async () => {
-            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
+        styleOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                styleOptions.forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+                currentWaveStyle = opt.dataset.style;
+                triggerUIRefresh();
+            });
+        });
 
-                    mediaRecorder.addEventListener('dataavailable', (e) => audioChunks.push(e.data));
-                    mediaRecorder.addEventListener('stop', () => {
-                        const recordedBlob = new Blob(audioChunks);
-                        const count = audioFilesList.length + 1;
-                        addAudioToList(recordedBlob, `ボイス録音 #${count}`);
-                        stream.getTracks().forEach(track => track.stop());
-                    });
+        palettes.forEach(palette => {
+            palette.addEventListener('click', () => {
+                palettes.forEach(p => p.classList.remove('selected'));
+                palette.classList.add('selected');
+                currentWaveColors = JSON.parse(palette.dataset.colors);
+                triggerUIRefresh();
+            });
+        });
 
-                    mediaRecorder.start();
-                    recordBtn.textContent = '⏹️ 録音を止める';
-                    recordBtn.classList.add('btn-recording');
-                } catch (err) {
-                    alert('マイクの許可が得られませんでした。');
+        function syncAudioParams() {
+            if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
+            if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
+            if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
+            if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
+        }
+
+        volSlider.addEventListener('input', syncAudioParams);
+        eqLowSlider.addEventListener('input', syncAudioParams);
+        eqMidSlider.addEventListener('input', syncAudioParams);
+        eqHighSlider.addEventListener('input', syncAudioParams);
+
+        audioResetBtn.addEventListener('click', () => {
+            volSlider.value = 1.0; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
+            syncAudioParams();
+        });
+
+        function clearCanvas(targetCtx, w, h) {
+            targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+            targetCtx.fillRect(0, 0, w, h);
+        }
+
+        function drawStaticWave() {
+            clearCanvas(ctx, canvas.width, canvas.height);
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, currentWaveColors[0]);
+            gradient.addColorStop(1, currentWaveColors[1]);
+            ctx.fillStyle = gradient;
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+
+            if (currentWaveStyle === 'circle') {
+                ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
+            } else if (currentWaveStyle === 'digital_circle') {
+                const centerX = canvas.width / 2; const centerY = canvas.height / 2;
+                const baseRadius = 140;
+                for (let i = 0; i < 45; i++) {
+                    const angle = (i / 45) * Math.PI * 2;
+                    const startX = centerX + Math.cos(angle) * baseRadius;
+                    const startY = centerY + Math.sin(angle) * baseRadius;
+                    const endX = centerX + Math.cos(angle) * (baseRadius + 8);
+                    const endY = centerY + Math.sin(angle) * (baseRadius + 8);
+                    ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
                 }
-            } else {
-                mediaRecorder.stop();
-                recordBtn.textContent = '🔴 マイクで録音スタート';
-                recordBtn.classList.remove('btn-recording');
-            }
-        });
+            } else if (currentWaveStyle === 'aurora') {
+                const barCount = 128;
+                const spacing = (canvas.width - 100) / (barCount - 1);
+                const centerY = canvas.height / 2;
 
-        function addAudioToList(fileOrBlob, displayName) {
-            audioFilesList.push({
-                id: Date.now() + Math.random(), 
-                data: fileOrBlob,
-                name: displayName,
-                volume: 1.0,
-                echo: 0.0,
-                bass: 0,
-                treble: 0
-            });
-            renderAudioList();
+                ctx.save();
+                ctx.globalAlpha = 0.35; // 内側の塗りつぶし透明度
+
+                ctx.beginPath();
+                ctx.moveTo(50, centerY);
+
+                for (let i = 0; i < barCount; i++) {
+                    const x = 50 + i * spacing;
+                    ctx.lineTo(x, centerY - 5);
+                }
+                for (let i = barCount - 1; i >= 0; i--) {
+                    const x = 50 + i * spacing;
+                    ctx.lineTo(x, centerY + 5);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                for (let i = 0; i < barCount; i++) {
+                    const x = 50 + i * spacing;
+                    ctx.fillRect(x, centerY - 5, 2.5, 10);
+                }
+            }
         }
 
-        function renderAudioList() {
-            if (audioFilesList.length === 0) {
-                audioListContainer.style.display = 'none';
-                return;
-            }
-            audioListContainer.style.display = 'block';
-            itemsBox.innerHTML = '';
+        function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
+            const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
+            gradient.addColorStop(0, currentWaveColors[0]);
+            gradient.addColorStop(1, currentWaveColors[1]);
+            targetCtx.strokeStyle = gradient;
+            targetCtx.fillStyle = gradient;
+            targetCtx.lineWidth = 5;
+            targetCtx.lineCap = 'round';
+            
+            const points = dataArr.length;
 
-            audioFilesList.forEach((audio) => {
-                const item = document.createElement('div');
-                item.className = 'audio-item';
-                item.innerHTML = `
-                    <div class="audio-item-top">
-                        <span>${audio.name}</span>
-                        <button class="delete-btn" onclick="deleteAudio(${audio.id})">削除</button>
-                    </div>
-                    <div class="control-row">
-                        <span>音量</span>
-                        <input type="range" class="effect-slider" min="0" max="1.5" step="0.05" value="${audio.volume}" oninput="updateParam(${audio.id}, 'volume', this.value)">
-                        <span class="value-disp" id="volume-txt-${audio.id}">${Math.round(audio.volume * 100)}%</span>
-                    </div>
-                    <div class="control-row">
-                        <span>エコー</span>
-                        <input type="range" class="effect-slider" min="0" max="0.8" step="0.05" value="${audio.echo}" oninput="updateParam(${audio.id}, 'echo', this.value)">
-                        <span class="value-disp" id="echo-txt-${audio.id}">${Math.round(audio.echo * 100)}</span>
-                    </div>
-                    <div class="control-row">
-                        <span>低音</span>
-                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.bass}" oninput="updateParam(${audio.id}, 'bass', this.value)">
-                        <span class="value-disp" id="bass-txt-${audio.id}">${audio.bass}dB</span>
-                    </div>
-                    <div class="control-row">
-                        <span>高音</span>
-                        <input type="range" class="effect-slider" min="-15" max="15" step="1" value="${audio.treble}" oninput="updateParam(${audio.id}, 'treble', this.value)">
-                        <span class="value-disp" id="treble-txt-${audio.id}">${audio.treble}dB</span>
-                    </div>
-                `;
-                itemsBox.appendChild(item);
-            });
+            if (currentWaveStyle === 'circle') {
+                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
+                const baseRadius = 140;
+                for (let i = 0; i < points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    const audioValue = dataArr[i] / 255; 
+                    const waveLength = audioValue * 95; 
+                    const startX = centerX + Math.cos(angle) * baseRadius;
+                    const startY = centerY + Math.sin(angle) * baseRadius;
+                    const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+                    const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                }
+            } else if (currentWaveStyle === 'digital_circle') {
+                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
+                const baseRadius = 135;
+                const barCount = 48; 
+                for (let i = 0; i < barCount; i++) {
+                    const angle = (i / barCount) * Math.PI * 2;
+                    const dataIndex = Math.floor((i / barCount) * points);
+                    const audioValue = dataArr[dataIndex] / 255;
+                    const waveLength = Math.max(6, audioValue * 100); 
+                    const startX = centerX + Math.cos(angle) * baseRadius;
+                    const startY = centerY + Math.sin(angle) * baseRadius;
+                    const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+                    const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                }
+            } else if (currentWaveStyle === 'aurora') {
+                const barCount = 128;
+                const spacing = (targetCanvas.width - 100) / (barCount - 1);
+                const centerY = targetCanvas.height / 2;
+
+                const upper = [];
+                const lower = [];
+
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
+                    const audioValue = dataArr[dataIndex] / 255;
+                    const h = Math.max(8, audioValue * 280);
+                    const x = 50 + i * spacing;
+
+                    upper.push([x, centerY - h / 2]);
+                    lower.push([x, centerY + h / 2]);
+                }
+
+                // 1. グラデーションで内側を波状に塗りつぶす
+                targetCtx.save();
+                targetCtx.beginPath();
+                targetCtx.moveTo(upper[0][0], centerY);
+
+                upper.forEach(p => targetCtx.lineTo(p[0], p[1]));
+                for (let i = lower.length - 1; i >= 0; i--) {
+                    targetCtx.lineTo(lower[i][0], lower[i][1]);
+                }
+
+                targetCtx.closePath();
+                targetCtx.globalAlpha = 0.35; // 参考画像の透明感を意識した設定
+                targetCtx.fill();
+                targetCtx.restore();
+
+                // 2. 音の解像度を保つためのメインバー（縦の細線）群を描画
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
+                    const audioValue = dataArr[dataIndex] / 255;
+                    const h = Math.max(8, audioValue * 280);
+                    const x = 50 + i * spacing;
+
+                    targetCtx.fillRect(x, centerY - h / 2, 2.5, h);
+                }
+            }
         }
 
-        window.updateParam = function(id, type, val) {
-            const audio = audioFilesList.find(a => a.id === id);
-            if (audio) {
-                audio[type] = parseFloat(val);
-                const suffix = type === 'volume' ? '%' : (type === 'echo' ? '' : 'dB');
-                const displayVal = type === 'volume' ? Math.round(val * 100) : val;
-                document.getElementById(`${type}-txt-${id}`).textContent = `${displayVal}${suffix}`;
-            }
-        };
-
-        window.deleteAudio = function(id) {
-            audioFilesList = audioFilesList.filter(audio => audio.id !== id);
-            renderAudioList();
-        };
-
-        // --- 🎵 リアルタイム同時再生 ---
-        playPreviewBtn.addEventListener('click', async () => {
-            if (activeSources.length > 0) {
-                activeSources.forEach(src => { try { src.stop(); } catch(e){} });
-                activeSources = [];
-                playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
-                return;
-            }
-
-            if (audioFilesList.length === 0) { alert('音声を追加してください。'); return; }
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            playPreviewBtn.textContent = '⏹️ 再生をストップ';
-
-            for (const audio of audioFilesList) {
-                const arrayBuffer = await audio.data.arrayBuffer();
-                audioCtx.decodeAudioData(arrayBuffer, (audioBuffer) => {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = audioBuffer;
-
-                    const gainNode = audioCtx.createGain();
-                    gainNode.gain.value = audio.volume;
-
-                    const bassNode = audioCtx.createBiquadFilter();
-                    bassNode.type = 'lowshelf';
-                    bassNode.frequency.value = 200;
-                    bassNode.gain.value = audio.bass;
-
-                    const trebleNode = audioCtx.createBiquadFilter();
-                    trebleNode.type = 'highshelf';
-                    trebleNode.frequency.value = 3000;
-                    trebleNode.gain.value = audio.treble;
-
-                    const delayNode = audioCtx.createDelay();
-                    delayNode.delayTime.value = 0.3;
-                    const feedbackNode = audioCtx.createGain();
-                    feedbackNode.gain.value = audio.echo;
-
-                    source.connect(bassNode);
-                    bassNode.connect(trebleNode);
-                    trebleNode.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-
-                    if (audio.echo > 0) {
-                        gainNode.connect(delayNode);
-                        delayNode.connect(feedbackNode);
-                        feedbackNode.connect(delayNode);
-                        feedbackNode.connect(audioCtx.destination);
-                    }
-
-                    source.start(0);
-                    activeSources.push(source);
-                    source.onended = () => {
-                        activeSources = activeSources.filter(s => s !== source);
-                        if (activeSources.length === 0) playPreviewBtn.textContent = '🎵 エフェクトを聴く（同時再生）';
-                    };
-                });
-            }
-        });
-
-        // --- 🎬 ⑥ 動画合成処理 (超軽量・エラー対策版) ---
-        createVideoBtn.addEventListener('click', async () => {
-            if (!originalImage) { alert('画像を設定してください！'); return; }
-            if (audioFilesList.length === 0) { alert('音声を追加してください！'); return; }
-
-            if (activeSources.length > 0) playPreviewBtn.click();
+        recBtn.addEventListener('click', async () => {
+            if (isRecording) return;
+            resetDataWithoutPrompt();
 
             try {
-                createVideoBtn.disabled = true;
-                statusMsg.textContent = "準備中...";
-                
-                if (!ffmpeg.isLoaded()) {
-                    await ffmpeg.load();
-                }
+                unlockMenus();
 
-                statusMsg.textContent = "文字と音声を動画に焼き付け中（軽量処理中）...";
-
-                // Canvasの画像を軽量なJPEGにしてメモリを節約
-                const canvasBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-                ffmpeg.FS('writeFile', 'input_image.jpg', await fetchFile(canvasBlob));
-
-                const ffmpegArgs = ['-loop', '1', '-i', 'input_image.jpg'];
-                
-                for (let index = 0; index < audioFilesList.length; index++) {
-                    const virtualName = `audio_${index}.wav`;
-                    ffmpeg.FS('writeFile', virtualName, await fetchFile(audioFilesList[index].data));
-                    ffmpegArgs.push('-i', virtualName);
-                }
-
-                let filterComplex = '';
-                audioFilesList.forEach((audio, index) => {
-                    let inputLabel = `[${index + 1}:a]`;
-                    let filterStr = `aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${audio.volume}`;
-                    
-                    if (audio.bass !== 0) filterStr += `,equalizer=f=200:g=${audio.bass}`;
-                    if (audio.treble !== 0) filterStr += `,equalizer=f=3000:g=${audio.treble}`;
-                    if (audio.echo > 0) filterStr += `,aecho=0.8:0.5:300:${audio.echo}`;
-                    
-                    filterComplex += `${inputLabel}${filterStr}[clean_a${index}];`;
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
                 });
                 
-                audioFilesList.forEach((_, index) => { filterComplex += `[clean_a${index}]`; });
-                filterComplex += `amix=inputs=${audioFilesList.length}:normalize=0[aout];[aout]aresample=async=1[aout_sync]`;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                source = audioCtx.createMediaStreamSource(stream);
+                
+                setupAudioNodes(source, true);
 
-                // 超高速・超軽量モード設定
-                ffmpegArgs.push(
-                    '-filter_complex', filterComplex,
-                    '-map', '0:v',        
-                    '-map', '[aout_sync]', 
-                    '-vcodec', 'libx264', 
-                    '-preset', 'ultrafast', 
-                    '-tune', 'stillimage',
-                    '-c:a', 'aac', 
-                    '-b:a', '128k',         
-                    '-pix_fmt', 'yuv420p', 
-                    '-shortest', 
-                    'output.mp4'
-                );
+                recordDestination = audioCtx.createMediaStreamDestination();
+                gainNode.connect(recordDestination);
 
-                await ffmpeg.run(...ffmpegArgs);
-                statusMsg.textContent = "完成！ 保存します。";
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                isRecording = true;
+                draw();
 
-                const data = ffmpeg.FS('readFile', 'output.mp4');
-                const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-                const videoURL = URL.createObjectURL(videoBlob);
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                
+                mediaRecorder.onstop = () => {
+                    audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                    audioBlobUrl = URL.createObjectURL(audioBlob);
+                    
+                    playbackAudio = new Audio(audioBlobUrl);
+                    playbackAudio.preload = "auto";
+                    
+                    const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+                    setupAudioNodes(playbackSource, false);
 
-                previewBox.innerHTML = `<video src="${videoURL}" controls playsinline style="width:100%;"></video>`;
+                    playbackAudio.addEventListener('loadedmetadata', () => {
+                        seekBar.max = playbackAudio.duration;
+                        seekBar.value = 0;
+                    });
+                    playbackAudio.addEventListener('timeupdate', () => {
+                        if (!isUserChangingIndex && playbackAudio.duration) {
+                            seekBar.value = playbackAudio.currentTime;
+                        }
+                    });
+                    playbackAudio.addEventListener('ended', () => {
+                        playPauseImg.src = IMG_PLAY;
+                        isPlayingRecorded = false;
+                        if (animationId) cancelAnimationFrame(animationId);
+                        playbackAudio.currentTime = 0;
+                        seekBar.value = 0;
+                        drawStaticWave();
+                    });
 
-                const downloadLink = document.createElement('a');
-                downloadLink.href = videoURL;
-                downloadLink.download = 'final_movie.mp4';
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
+                    downloadBtn.classList.add('ready');
+                    playPauseImg.src = IMG_PLAY;
 
-                // 使用済みの仮想メモリを解放
-                audioFilesList.forEach((_, index) => {
-                    try { ffmpeg.FS('unlink', `audio_${index}.wav`); } catch(e){}
-                });
-                try { ffmpeg.FS('unlink', 'input_image.jpg'); } catch(e){}
-                try { ffmpeg.FS('unlink', 'output.mp4'); } catch(e){}
+                    lockMenus();
+                };
 
-            } catch (error) {
-                console.error(error);
-                alert('スマホのメモリが不足しました。エコーを0にするか、動画にする音声を減らして再度お試しください。');
-            } finally {
-                createVideoBtn.disabled = false;
-                statusMsg.textContent = "";
+                mediaRecorder.start();
+                recBtn.classList.add('recording');
+                timerDisplay.style.display = 'block';
+                timeLeft = 120;
+                updateTimerText();
+
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateTimerText();
+                    if (timeLeft <= 0) stopRecording();
+                }, 1000);
+
+            } catch (err) {
+                alert("マイクの起動に失敗しました꙳☄︎ 端末の権限設定をご確認ください: " + err);
             }
+        });
+
+        stopBtn.addEventListener('click', () => { stopRecording(); });
+
+        function stopRecording() {
+            if (!isRecording) return;
+            isRecording = false;
+            if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            clearInterval(timerInterval);
+            recBtn.classList.remove('recording');
+            timerDisplay.style.display = 'none';
+            drawStaticWave();
+        }
+
+        function setupAudioNodes(audioSource, isMuteSpeaker) {
+            if (!audioCtx || !audioSource) return;
+            
+            eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+            eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+            eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+            gainNode = audioCtx.createGain();
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+
+            audioSource.connect(eqLow);
+            eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(gainNode);
+            
+            gainNode.connect(analyser);
+            
+            if (!isMuteSpeaker) {
+                gainNode.connect(audioCtx.destination);
+            }
+            
+            syncAudioParams();
+        }
+
+        function updateTimerText() {
+            const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+            timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function lockMenus() {
+            menuBg.classList.add('locked');
+            menuStyle.classList.add('locked');
+            menuColor.classList.add('locked');
+        }
+
+        function unlockMenus() {
+            menuBg.classList.remove('locked');
+            menuStyle.classList.remove('locked');
+            menuColor.classList.remove('locked');
+        }
+
+        resetBtn.addEventListener('click', () => {
+            if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
+                resetDataWithoutPrompt();
+                alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
+            }
+        });
+
+        function resetDataWithoutPrompt() {
+            if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+            if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
+            audioBlob = null;
+            seekBar.value = 0;
+            playPauseImg.src = IMG_PLAY; 
+            downloadBtn.classList.remove('ready');
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            isPlayingRecorded = false; isRecording = false;
+            audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
+            
+            unlockMenus();
+            drawStaticWave();
+        }
+
+        playPauseBtn.addEventListener('click', () => {
+            if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください^.ˬ.^ฅⳊ"); return; }
+            
+            if (playbackAudio.paused) {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                playbackAudio.play().then(() => {
+                    isPlayingRecorded = true;
+                    playPauseImg.src = IMG_PAUSE; 
+                    draw();
+                }).catch(err => {
+                    alert("再生に失敗しました。画面を一度タップしてからもう一度お試しください^.ˬ.^ฅⳊ");
+                });
+            } else {
+                playbackAudio.pause();
+                playPauseImg.src = IMG_PLAY; 
+            }
+        });
+
+        seekBar.addEventListener('input', () => { 
+            if (!playbackAudio) return; 
+            isUserChangingIndex = true; 
+            playbackAudio.currentTime = seekBar.value; 
+        });
+        seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
+
+        function draw() {
+            if (!isRecording && !isPlayingRecorded) {
+                animationId = null;
+                return;
+            }
+            
+            animationId = requestAnimationFrame(draw);
+            
+            if (analyser && dataArray) {
+                analyser.getByteFrequencyData(dataArray);
+            }
+            clearCanvas(ctx, canvas.width, canvas.height);
+            if (dataArray) {
+                drawWaveLogic(ctx, canvas, dataArray);
+            }
+        }
+
+        downloadBtn.addEventListener('click', async () => {
+            if (!audioBlob) { alert("保存する動画がありません。先に○ボタンから録音を完了させてください.꙳☄︎ᐧ"); return; }
+            
+            downloadBtn.style.pointerEvents = 'none';
+            alert("動画の書き出しを開始します。完了するまでブラウザを閉じずにお待ちください･･･✶⋆.˚꩜");
+
+            const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
+
+            const bufferSource = renderAudioCtx.createBufferSource();
+            bufferSource.buffer = audioBuffer;
+
+            const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
+            const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
+            const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
+            const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
+            const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
+
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rGain.connect(rAnalyser);
+            rGain.connect(renderAudioCtx.destination);
+
+            const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
+            
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = 600; captureCanvas.height = 600;
+            const rCtx = captureCanvas.getContext('2d');
+            const canvasStream = captureCanvas.captureStream(30);
+
+            const renderDest = renderAudioCtx.createMediaStreamDestination();
+            rGain.connect(renderDest);
+
+            const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
+            const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+            const movieRecorder = new MediaRecorder(combinedStream, options);
+            const movieChunks = [];
+
+            movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
+            
+            movieRecorder.onstop = () => {
+                const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
+                const finalVideoUrl = URL.createObjectURL(finalBlob);
+                const a = document.createElement('a');
+                a.href = finalVideoUrl;
+                a.download = `voice-wave-${Date.now()}.webm`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                
+                downloadBtn.style.pointerEvents = 'auto';
+                alert("動画の保存が完了しました！^.ˬ.^ฅⳊ");
+            };
+
+            movieRecorder.start();
+            bufferSource.start(0);
+
+            const startTime = performance.now();
+            const duration = audioBuffer.duration * 1000;
+
+            function renderFrame() {
+                const now = performance.now();
+                const elapsed = now - startTime;
+
+                rAnalyser.getByteFrequencyData(rDataArray);
+                
+                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
+
+                drawWaveLogic(rCtx, captureCanvas, rDataArray);
+
+                if (elapsed < duration) {
+                    requestAnimationFrame(renderFrame);
+                } else {
+                    bufferSource.stop();
+                    movieRecorder.stop();
+                    renderAudioCtx.close();
+                }
+            }
+            renderFrame();
         });
     </script>
 </body>
