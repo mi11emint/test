@@ -114,7 +114,7 @@
         }
         
         .canvas-container.theme-white {
-            background-color: #ffffff;
+            background-color: #ffffff
         }
 
         canvas {
@@ -401,34 +401,39 @@
         }
         
         /* 薄い・明るいトーン（上層） */
-        .cp1 { background: linear-gradient(135deg, #dfe9f3, white); }
-        .cp2 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
+        .cp1 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
+        .cp2 { background: linear-gradient(135deg, #dfe9f3, white ); }
         .cp3 { background: linear-gradient(135deg, #fff1eb, #ace0f9); }
         .cp4 { background: linear-gradient(135deg, #fddb92, #d1fdff); }
-        .cp5 { background: linear-gradient(135deg, #f8f8ff, #b0c4de); }
-        .cp6 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
-        .cp7 { background: linear-gradient(135deg, #fff3b0, #cae7e3); }
-        .cp8 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
+        .cp5 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
+        .cp6 { background: linear-gradient(135deg, #eebbcb, #cee4ae); }
+        .cp7 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
+        .cp8 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
         
         /* 中間・鮮やかトーン（中層） */
         .cp9 { background: linear-gradient(135deg, #FFF6B7, #F6416C); }
         .cp10 { background: linear-gradient(135deg, #a6c0fe, #f68084); }
-        .cp11 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
+        .cp11 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
         .cp12 { background: linear-gradient(135deg, #ff4e50, #f9d423); }
-        .cp13 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
-        .cp14 { background: linear-gradient(135deg, #00ffff, #00008b); }
-        .cp15 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
+        .cp13 { background: linear-gradient(135deg, #800080, #f08080); }
+        .cp14 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
+        .cp15 { background: linear-gradient(135deg, #00ffff, #00008b); }
         .cp16 { background: linear-gradient(135deg, #16a085, #f4d03f); }
 
         /* 渋い・深いトーン（下層） */
-        .cp17 { background: linear-gradient(135deg, #800080, #f08080); }
-        .cp18 { background: linear-gradient(135deg, #a8caba, #5d4157); }
-        .cp19 { background: linear-gradient(135deg, #8b5a2b, #2e8b57); }
-        .cp20 { background: linear-gradient(135deg, #243949, #517fa4); }
-        .cp21 { background: linear-gradient(135deg, #4b0082, #6495ed); }
-        .cp22 { background: linear-gradient(135deg, #dc143c, #8b0000); }
-        .cp23 { background: linear-gradient(135deg, #191970, #fffacd); }
+        .cp17 { background: linear-gradient(135deg, #dc143c, #8b0000); }
+        .cp18 { background: linear-gradient(135deg, #4b0082, #6495ed); }
+        .cp19 { background: linear-gradient(135deg, #243949, #517fa4); }
+        .cp20 { background: linear-gradient(135deg, #8b5a2b, #2e8b57); }
+        .cp21 { background: linear-gradient(135deg, #dbd0e6, #250d00); }
+        .cp22 { background: linear-gradient(135deg, #191970, #fffacd ); }
+        .cp23 { background: linear-gradient(135deg, #a8caba, #5d4157); }
         .cp24 { background: linear-gradient(135deg, #eeeeee, #111111); } 
+        
+        /* マンスリー限定セクションの追加スタイル */
+        .monthly-section {
+            margin-top: 15px;
+        }
         
     </style>
 </head>
@@ -513,39 +518,45 @@
 
             <div class="setting-section" id="menuStyle">
                 <div class="setting-title">WAVE STYLE</div>
-                <div id="styleCircle" class="style-option active" data-style="circle"><span class="pointer">▶</span>CIRCLE</div>
-                <div id="styleDigitalCircle" class="style-option" data-style="digital_circle"><span class="pointer">▶</span>DIGITAL</div>
+                <div id="styleCorona" class="style-option active" data-style="corona"><span class="pointer">▶</span>CORONA</div>
+                <div id="styleStar" class="style-option" data-style="star"><span class="pointer">▶</span>STAR</div>
                 <div id="styleAurora" class="style-option" data-style="aurora"><span class="pointer">▶</span>AURORA</div>
             </div>
 
             <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
                 <div class="setting-title">WAVE COLOR</div>
                 <div class="palette-grid">
-                    <div class="palette-circle cp1 selected" data-colors='["#dfe9f3", "#ffffff"]'></div>
-                    <div class="palette-circle cp2" data-colors='["#fff0f5", "#faf0e6"]'></div>
+                    <div class="palette-circle cp1 selected" data-colors='["#fff0f5", "#faf0e6"]'></div>
+                    <div class="palette-circle cp2" data-colors='["#dfe9f3", "#ffffff"]'></div>
                     <div class="palette-circle cp3" data-colors='["#fff1eb", "#ace0f9"]'></div>
                     <div class="palette-circle cp4" data-colors='["#fddb92", "#d1fdff"]'></div>
-                    <div class="palette-circle cp5" data-colors='["#f8f8ff", "#b0c4de"]'></div>
-                    <div class="palette-circle cp6" data-colors='["#f0fff0", "#40e0d0"]'></div>
-                    <div class="palette-circle cp7" data-colors='["#fff3b0", "#cae7e3"]'></div>
-                    <div class="palette-circle cp8" data-colors='["#bc8f8f", "#ffe4e1"]'></div>
+                    <div class="palette-circle cp5" data-colors='["#bc8f8f", "#ffe4e1"]'></div>
+                    <div class="palette-circle cp6" data-colors='["#eebbcb", "#cee4ae"]'></div>
+                    <div class="palette-circle cp7" data-colors='["#4682b4", "#f0f8ff"]'></div>
+                    <div class="palette-circle cp8" data-colors='["#ffee00", "#ffaa00"]'></div>
                     <div class="palette-circle cp9" data-colors='["#FFF6B7", "#F6416C"]'></div>
                     <div class="palette-circle cp10" data-colors='["#a6c0fe", "#f68084"]'></div>
-                    <div class="palette-circle cp11" data-colors='["#ffee00", "#ffaa00"]'></div>
+                    <div class="palette-circle cp11" data-colors='["#f0fff0", "#40e0d0"]'></div>
                     <div class="palette-circle cp12" data-colors='["#ff4e50", "#f9d423"]'></div>
-                    <div class="palette-circle cp13" data-colors='["#4682b4", "#f0f8ff"]'></div>
-                    <div class="palette-circle cp14" data-colors='["#00ffff", "#00008b"]'></div>
-                    <div class="palette-circle cp15" data-colors='["#f107a3", "#7b2ff7"]'></div>
+                    <div class="palette-circle cp13" data-colors='["#800080", "#f08080"]'></div>
+                    <div class="palette-circle cp14" data-colors='["#f107a3", "#7b2ff7"]'></div>
+                    <div class="palette-circle cp15" data-colors='["#00ffff", "#00008b"]'></div>
                     <div class="palette-circle cp16" data-colors='["#16a085", "#f4d03f"]'></div>
-                    <div class="palette-circle cp17" data-colors='["#800080", "#f08080"]'></div>
-                    <div class="palette-circle cp18" data-colors='["#a8caba", "#5d4157"]'></div>
-                    <div class="palette-circle cp19" data-colors='["#8b5a2b", "#2e8b57"]'></div>
-                    <div class="palette-circle cp20" data-colors='["#243949", "#517fa4"]'></div>
-                    <div class="palette-circle cp21" data-colors='["#4b0082", "#6495ed"]'></div>
-                    <div class="palette-circle cp22" data-colors='["#dc143c", "#8b0000"]'></div>
-                    <div class="palette-circle cp23" data-colors='["#191970", "#fffacd"]'></div>
+                    <div class="palette-circle cp17" data-colors='["#dc143c", "#8b0000"]'></div>
+                    <div class="palette-circle cp18" data-colors='["#4b0082", "#6495ed"]'></div>
+                    <div class="palette-circle cp19" data-colors='["#243949", "#517fa4"]'></div>
+                    <div class="palette-circle cp20" data-colors='["#8b5a2b", "#2e8b57"]'></div>
+                    <div class="palette-circle cp21" data-colors='["#dbd0e6", "#250d00"]'></div>
+                    <div class="palette-circle cp22" data-colors='["#191970", "#fffacd"]'></div>
+                    <div class="palette-circle cp23" data-colors='["#a8caba", "#5d4157"]'></div>
                     <div class="palette-circle cp24" data-colors='["#eeeeee", "#111111"]'></div>
                 </div>
+            </div>
+
+            <div class="setting-section monthly-section" id="menuMonthlyColor">
+                <div class="setting-title" id="monthlyTitle">JUNE COLOR</div>
+                <div class="palette-grid" id="monthlyGrid">
+                    </div>
             </div>
         </div>
     </div>
@@ -560,6 +571,19 @@
     </div>
 
     <script>
+        // ==========================================
+        // 毎月の変更はここを書き換えるだけでOK！
+        // ==========================================
+        const MONTHLY_SETTING = {
+            title: "JUNE COLOR", // 表示するタイトル
+            patterns: [
+                ["#DEDDD5", "#9B99A6", "#FEFEFE"],
+                ["#A5A5BD", "#86AAEB", "#B1E2EF"],
+                ["#BDCFE7", "#BA97DB", "#EC99CF"],
+                ["#D2140B", "#F8481F", "		#ECD3B5"]
+            ]
+        };
+
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
         
@@ -571,12 +595,12 @@
         const canvasBg = document.getElementById('canvasBg');
         const btnBlack = document.getElementById('btnBlack');
         const btnWhite = document.getElementById('btnWhite');
-        const palettes = document.querySelectorAll('.palette-circle');
         const styleOptions = document.querySelectorAll('.style-option');
         
         const menuBg = document.getElementById('menuBg');
         const menuStyle = document.getElementById('menuStyle');
         const menuColor = document.getElementById('menuColor');
+        const menuMonthlyColor = document.getElementById('menuMonthlyColor');
 
         const playPauseBtn = document.getElementById('playPauseBtn');
         const playPauseImg = document.getElementById('playPauseImg'); 
@@ -610,14 +634,45 @@
         let timeLeft = 120;
 
         let currentBgColor = 'black';
-        let currentWaveColors = ["#dfe9f3", "#ffffff"];
-        let currentWaveStyle = 'circle'; 
+        let currentWaveColors = ["#fff0f5", "#faf0e6"];
+        let currentWaveStyle = 'corona'; 
         let isUserChangingIndex = false;
         let isRecording = false;
         let isPlayingRecorded = false;
         let isNoiseCancelOn = false; 
 
         let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
+
+        // --- マンスリーカラーの自動生成と初期化 ---
+        function initMonthlyColors() {
+            document.getElementById('monthlyTitle').innerText = MONTHLY_SETTING.title;
+            const grid = document.getElementById('monthlyGrid');
+            grid.innerHTML = ''; // クリア
+            
+            MONTHLY_SETTING.patterns.forEach((colors, index) => {
+                const circle = document.createElement('div');
+                circle.className = 'palette-circle';
+                // 3色グラデーションの背景CSSを作成
+                circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
+                circle.dataset.colors = JSON.stringify(colors);
+                grid.appendChild(circle);
+            });
+        }
+        initMonthlyColors();
+
+        // パレット全体のイベント登録（通常24色 + 新設4色）
+        function setupPaletteEvents() {
+            const allPalettes = document.querySelectorAll('.palette-circle');
+            allPalettes.forEach(palette => {
+                palette.addEventListener('click', () => {
+                    allPalettes.forEach(p => p.classList.remove('selected'));
+                    palette.classList.add('selected');
+                    currentWaveColors = JSON.parse(palette.dataset.colors);
+                    triggerUIRefresh();
+                });
+            });
+        }
+        setupPaletteEvents();
 
         unlockMenus();
         drawStaticWave();
@@ -648,15 +703,6 @@
                 styleOptions.forEach(o => o.classList.remove('active'));
                 opt.classList.add('active');
                 currentWaveStyle = opt.dataset.style;
-                triggerUIRefresh();
-            });
-        });
-
-        palettes.forEach(palette => {
-            palette.addEventListener('click', () => {
-                palettes.forEach(p => p.classList.remove('selected'));
-                palette.classList.add('selected');
-                currentWaveColors = JSON.parse(palette.dataset.colors);
                 triggerUIRefresh();
             });
         });
@@ -713,21 +759,26 @@
             clearCanvas(ctx, canvas.width, canvas.height);
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
-            gradient.addColorStop(1, currentWaveColors[1]);
+            if (currentWaveColors.length > 2) {
+                gradient.addColorStop(0.5, currentWaveColors[1]);
+                gradient.addColorStop(1, currentWaveColors[2]);
+            } else {
+                gradient.addColorStop(1, currentWaveColors[1]);
+            }
             ctx.fillStyle = gradient;
             ctx.strokeStyle = gradient;
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
 
-            if (currentWaveStyle === 'circle') {
+            if (currentWaveStyle === 'corona') {
                 ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
-            } else if (currentWaveStyle === 'digital_circle') {
+            } else if (currentWaveStyle === 'star') {
                 const centerX = canvas.width / 2; const centerY = canvas.height / 2;
                 const baseRadius = 140;
-                for (let i = 0; i < 45; i++) {
-                    const angle = (i / 45) * Math.PI * 2;
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
+                for (let i = 0; i < 48; i++) {
+                    const angle = (i / 48) * Math.PI * 2;
+                    const startX = centerX + Math.cos(angle) * (baseRadius - 8);
+                    const startY = centerY + Math.sin(angle) * (baseRadius - 8);
                     const endX = centerX + Math.cos(angle) * (baseRadius + 8);
                     const endY = centerY + Math.sin(angle) * (baseRadius + 8);
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
@@ -744,49 +795,86 @@
         function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
             const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
             gradient.addColorStop(0, currentWaveColors[0]);
-            gradient.addColorStop(1, currentWaveColors[1]);
+            if (currentWaveColors.length > 2) {
+                gradient.addColorStop(0.5, currentWaveColors[1]);
+                gradient.addColorStop(1, currentWaveColors[2]);
+            } else {
+                gradient.addColorStop(1, currentWaveColors[1]);
+            }
             targetCtx.strokeStyle = gradient;
             targetCtx.fillStyle = gradient;
             targetCtx.lineWidth = 4;
             targetCtx.lineCap = 'round';
             
             const points = dataArr.length;
+            const centerX = targetCanvas.width / 2; 
+            const centerY = targetCanvas.height / 2;
 
-            if (currentWaveStyle === 'circle') {
-                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
+            if (currentWaveStyle === 'corona') {
                 const baseRadius = 140;
+                const coords = [];
+                
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
                     const boosted = getBoostedValue(dataArr[i]); 
                     const waveLength = Math.max(3, boosted * 102); 
+                    const r = baseRadius + waveLength;
                     
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
-                    const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-                    const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                    coords.push({
+                        x: centerX + Math.cos(angle) * r,
+                        y: centerY + Math.sin(angle) * r
+                    });
                 }
-            } else if (currentWaveStyle === 'digital_circle') {
-                const centerX = targetCanvas.width / 2; const centerY = targetCanvas.height / 2;
-                const baseRadius = 135;
+                
+                targetCtx.beginPath();
+                targetCtx.moveTo(coords[0].x, coords[0].y);
+                
+                for (let i = 0; i < points; i++) {
+                    const curr = coords[i];
+                    const next = coords[(i + 1) % points];
+                    const cpX = (curr.x + next.x) / 2;
+                    const cpY = (curr.y + next.y) / 2;
+                    targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
+                }
+                
+                targetCtx.closePath();
+                
+                targetCtx.save();
+                targetCtx.globalAlpha = 0.9;
+                targetCtx.fill(); 
+                
+                targetCtx.globalCompositeOperation = 'destination-out';
+                targetCtx.beginPath();
+                targetCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.restore();
+                
+            } else if (currentWaveStyle === 'star') {
+                const baseRadius = 138;
                 const barCount = 48; 
+                
                 for (let i = 0; i < barCount; i++) {
                     const angle = (i / barCount) * Math.PI * 2;
                     const dataIndex = Math.floor((i / barCount) * points);
                     
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    const waveLength = Math.max(8, boosted * 106); 
+                    const waveLength = Math.max(2, boosted * 85); 
                     
-                    const startX = centerX + Math.cos(angle) * baseRadius;
-                    const startY = centerY + Math.sin(angle) * baseRadius;
+                    const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
+                    const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
                     const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
                     const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-                    targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+                    
+                    targetCtx.beginPath(); 
+                    targetCtx.moveTo(startX, startY); 
+                    targetCtx.lineTo(endX, endY); 
+                    targetCtx.stroke();
                 }
+                
             } else if (currentWaveStyle === 'aurora') {
                 const usedPoints = 32; 
                 const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
-                const centerY = targetCanvas.height / 2;
+                const activeCenterY = targetCanvas.height / 2;
 
                 const coords = [];
                 let hasAudio = false;
@@ -804,32 +892,32 @@
 
                 if (!hasAudio) {
                     targetCtx.beginPath();
-                    targetCtx.moveTo(40, centerY);
-                    targetCtx.lineTo(targetCanvas.width - 40, centerY);
+                    targetCtx.moveTo(40, activeCenterY);
+                    targetCtx.lineTo(targetCanvas.width - 40, activeCenterY);
                     targetCtx.stroke();
                     return;
                 }
 
                 targetCtx.beginPath();
-                targetCtx.moveTo(coords[0].x, centerY - coords[0].waveHeight);
+                targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
 
                 for (let i = 1; i < usedPoints; i++) {
                     const prev = coords[i - 1];
                     const curr = coords[i];
                     const cpX = (prev.x + curr.x) / 2;
-                    const prevY = centerY - prev.waveHeight;
-                    const currY = centerY - curr.waveHeight;
+                    const prevY = activeCenterY - prev.waveHeight;
+                    const currY = activeCenterY - curr.waveHeight;
                     targetCtx.bezierCurveTo(cpX, prevY, cpX, currY, curr.x, currY);
                 }
 
-                targetCtx.lineTo(coords[usedPoints - 1].x, centerY + coords[usedPoints - 1].waveHeight);
+                targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
 
                 for (let i = usedPoints - 1; i > 0; i--) {
                     const curr = coords[i];
                     const next = coords[i - 1];
                     const cpX = (curr.x + next.x) / 2;
-                    const currY = centerY + curr.waveHeight;
-                    const nextY = centerY + next.waveHeight;
+                    const currY = activeCenterY + curr.waveHeight;
+                    const nextY = activeCenterY + next.waveHeight;
                     targetCtx.bezierCurveTo(cpX, currY, cpX, nextY, next.x, nextY);
                 }
 
@@ -844,163 +932,86 @@
 
         async function startRecordingStream() {
             stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: { 
-                    echoCancellation: isNoiseCancelOn, 
-                    noiseSuppression: isNoiseCancelOn, 
-                    autoGainControl: isNoiseCancelOn 
-                } 
+                audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn } 
             });
-            
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             source = audioCtx.createMediaStreamSource(stream);
-            
             setupAudioNodes(source, true);
-
             recordDestination = audioCtx.createMediaStreamDestination();
             gainNode.connect(recordDestination);
-
             dataArray = new Uint8Array(analyser.frequencyBinCount);
         }
 
         async function restartRecordingStream() {
             if (!isRecording || !mediaRecorder) return;
             if (stream) stream.getTracks().forEach(track => track.stop());
-            
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn } 
                 });
-                
                 const newSource = audioCtx.createMediaStreamSource(stream);
-                
                 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
                 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
                 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-                
                 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
-
                 gainNode = audioCtx.createGain();
                 analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
                 analyser.smoothingTimeConstant = 0.75;
-
-                newSource.connect(eqLow);
-                eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-                gainNode.connect(analyser);
-                
-                gainNode.connect(recordDestination);
+                newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+                gainNode.connect(analyser); gainNode.connect(recordDestination);
                 syncAudioParams();
-
-            } catch (err) {
-                console.error("ストリームの動的切り替えに失敗しました:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         recBtn.addEventListener('click', async () => {
             if (isRecording) return;
             resetDataWithoutPrompt();
-
             try {
                 unlockMenus();
                 await startRecordingStream();
-
-                isRecording = true;
-                draw();
-
+                isRecording = true; draw();
                 recordedChunks = [];
                 mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
                 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                
                 mediaRecorder.onstop = () => {
                     audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
                     audioBlobUrl = URL.createObjectURL(audioBlob);
-                    
                     playbackAudio = new Audio(audioBlobUrl);
                     playbackAudio.preload = "auto";
-                    
                     const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
                     setupAudioNodes(playbackSource, false);
-
-                    playbackAudio.addEventListener('loadedmetadata', () => {
-                        seekBar.max = playbackAudio.duration;
-                        seekBar.value = 0;
-                    });
-                    playbackAudio.addEventListener('timeupdate', () => {
-                        if (!isUserChangingIndex && playbackAudio.duration) {
-                            seekBar.value = playbackAudio.currentTime;
-                        }
-                    });
-                    playbackAudio.addEventListener('ended', () => {
-                        playPauseImg.src = IMG_PLAY;
-                        isPlayingRecorded = false;
-                        if (animationId) cancelAnimationFrame(animationId);
-                        playbackAudio.currentTime = 0;
-                        seekBar.value = 0;
-                        drawStaticWave();
-                    });
-
-                    downloadBtn.classList.add('ready');
-                    playPauseImg.src = IMG_PLAY;
-
+                    playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+                    playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
+                    playbackAudio.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; isPlayingRecorded = false; if (animationId) cancelAnimationFrame(animationId); playbackAudio.currentTime = 0; seekBar.value = 0; drawStaticWave(); });
+                    downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
                     lockMenus();
                 };
-
                 mediaRecorder.start();
-                recBtn.classList.add('recording');
-                timerDisplay.style.display = 'block';
-                timeLeft = 120;
-                updateTimerText();
-
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    updateTimerText();
-                    if (timeLeft <= 0) stopRecording();
-                }, 1000);
-
-            } catch (err) {
-                alert("マイクの起動に失敗しました꙳☄︎ 端末の権限設定をご確認ください: " + err);
-            }
+                recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
+                timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
+            } catch (err) { alert("マイクの起動に失敗しました꙳☄︎ 端末の権限設定をご確認ください: " + err); }
         });
 
         stopBtn.addEventListener('click', () => { stopRecording(); });
-
         function stopRecording() {
-            if (!isRecording) return;
-            isRecording = false;
+            if (!isRecording) return; isRecording = false;
             if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
             if (stream) stream.getTracks().forEach(track => track.stop());
-            
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            
-            clearInterval(timerInterval);
-            recBtn.classList.remove('recording');
-            timerDisplay.style.display = 'none';
-            drawStaticWave();
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            clearInterval(timerInterval); recBtn.classList.remove('recording'); timerDisplay.style.display = 'none'; drawStaticWave();
         }
 
         function setupAudioNodes(audioSource, isMuteSpeaker) {
             if (!audioCtx || !audioSource) return;
-            
             eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
             eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
             eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-            
             ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
-
             gainNode = audioCtx.createGain();
-            analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.75; 
-
-            audioSource.connect(eqLow);
-            eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.75; 
+            audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
             gainNode.connect(analyser);
-            
-            if (!isMuteSpeaker) {
-                gainNode.connect(audioCtx.destination);
-            }
-            
+            if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
             syncAudioParams();
         }
 
@@ -1010,123 +1021,68 @@
         }
 
         function lockMenus() {
-            menuBg.classList.add('locked');
-            menuStyle.classList.add('locked');
-            menuColor.classList.add('locked');
+            menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
         }
-
         function unlockMenus() {
-            menuBg.classList.remove('locked');
-            menuStyle.classList.remove('locked');
-            menuColor.classList.remove('locked');
+            menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
         }
 
         resetBtn.addEventListener('click', () => {
-            if (confirm("現在の状態をクリアして、最初からやり直しますか？")) {
-                resetDataWithoutPrompt();
-                alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
-            }
+            if (confirm("現在の状態をクリアして、最初からやり職しますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
-
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
             if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-            audioBlob = null;
-            seekBar.value = 0;
-            playPauseImg.src = IMG_PLAY; 
-            downloadBtn.classList.remove('ready');
-            
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            
+            audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
             isPlayingRecorded = false; isRecording = false;
             audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
-            
-            unlockMenus();
-            drawStaticWave();
+            unlockMenus(); drawStaticWave();
         }
 
         playPauseBtn.addEventListener('click', () => {
             if (!audioBlobUrl || !playbackAudio) { alert("再生する音声がありません。先に録音を完了させてください^.ˬ.^ฅⳊ"); return; }
-            
             if (playbackAudio.paused) {
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                playbackAudio.play().then(() => {
-                    isPlayingRecorded = true;
-                    playPauseImg.src = IMG_PAUSE; 
-                    draw();
-                }).catch(err => {
-                    alert("再生に失敗しました。画面を一度タップしてからもう一度お試しください^.ˬ.^ฅⳊ");
-                });
-            } else {
-                playbackAudio.pause();
-                playPauseImg.src = IMG_PLAY; 
-            }
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                playbackAudio.play().then(() => { isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE; draw(); }).catch(err => { alert("再生に失敗しました。"); });
+            } else { playbackAudio.pause(); playPauseImg.src = IMG_PLAY; }
         });
-
-        seekBar.addEventListener('input', () => { 
-            if (!playbackAudio) return; 
-            isUserChangingIndex = true; 
-            playbackAudio.currentTime = seekBar.value; 
-        });
+        seekBar.addEventListener('input', () => { if (!playbackAudio) return; isUserChangingIndex = true; playbackAudio.currentTime = seekBar.value; });
         seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
         function draw() {
-            if (!isRecording && !isPlayingRecorded) {
-                animationId = null;
-                return;
-            }
-            
+            if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
             animationId = requestAnimationFrame(draw);
-            
-            if (analyser && dataArray) {
-                analyser.getByteFrequencyData(dataArray);
-            }
+            if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
             clearCanvas(ctx, canvas.width, canvas.height);
-            if (dataArray) {
-                drawWaveLogic(ctx, canvas, dataArray);
-            }
+            if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
         }
 
         downloadBtn.addEventListener('click', async () => {
-            if (!audioBlob) { alert("保存する動画がありません。先に○ボタンから録音を完了させてください.꙳☄︎ᐧ"); return; }
-            
+            if (!audioBlob) { alert("保存する動画がありません。"); return; }
             downloadBtn.style.pointerEvents = 'none';
             alert("動画の書き出しを開始します。完了するまでブラウザを閉じずにお待ちください･･･✶⋆.˚꩜");
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const arrayBuffer = await audioBlob.arrayBuffer();
             const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
-
             const bufferSource = renderAudioCtx.createBufferSource();
             bufferSource.buffer = audioBuffer;
 
             const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
             const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
             const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-            
             const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
-
             const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
-            const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256;
-            rAnalyser.smoothingTimeConstant = 0.75;
+            const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
-            
-            // 【重要】動画解析用コンテキストのスピーカー宛て出力を切断し、完全無音化。
-            // rGain.connect(renderAudioCtx.destination); <- この行を削除
-
+            bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rGain.connect(rAnalyser);
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
             const captureCanvas = document.createElement('canvas');
             captureCanvas.width = 600; captureCanvas.height = 600;
             const rCtx = captureCanvas.getContext('2d');
             const canvasStream = captureCanvas.captureStream(30);
-
             const renderDest = renderAudioCtx.createMediaStreamDestination();
             rGain.connect(renderDest);
 
@@ -1136,43 +1092,24 @@
             const movieChunks = [];
 
             movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
-            
             movieRecorder.onstop = () => {
                 const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
                 const finalVideoUrl = URL.createObjectURL(finalBlob);
-                const a = document.createElement('a');
-                a.href = finalVideoUrl;
-                a.download = `voice-wave-${Date.now()}.webm`;
+                const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                
-                downloadBtn.style.pointerEvents = 'auto';
-                alert("動画の保存が完了しました！^.ˬ.^ฅⳊ");
+                downloadBtn.style.pointerEvents = 'auto'; alert("動画の保存が完了しました！^.ˬ.^ฅⳊ");
             };
 
-            movieRecorder.start();
-            bufferSource.start(0);
-
-            const startTime = performance.now();
-            const duration = audioBuffer.duration * 1000;
+            movieRecorder.start(); bufferSource.start(0);
+            const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
 
             function renderFrame() {
-                const now = performance.now();
-                const elapsed = now - startTime;
-
+                const now = performance.now(); const elapsed = now - startTime;
                 rAnalyser.getByteFrequencyData(rDataArray);
-                
-                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-                rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-
+                rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff'; rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
                 drawWaveLogic(rCtx, captureCanvas, rDataArray);
-
-                if (elapsed < duration) {
-                    requestAnimationFrame(renderFrame);
-                } else {
-                    bufferSource.stop();
-                    movieRecorder.stop();
-                    renderAudioCtx.close();
-                }
+                if (elapsed < duration) requestAnimationFrame(renderFrame);
+                else { bufferSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
             }
             renderFrame();
         });
