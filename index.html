@@ -758,7 +758,6 @@
                 for (let i = 0; i < points; i++) {
                     const angle = (i / points) * Math.PI * 2;
                     const boosted = getBoostedValue(dataArr[i]); 
-                    // 感度を15%抑制 (120 -> 102)
                     const waveLength = Math.max(3, boosted * 102); 
                     
                     const startX = centerX + Math.cos(angle) * baseRadius;
@@ -776,7 +775,6 @@
                     const dataIndex = Math.floor((i / barCount) * points);
                     
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    // 感度を15%抑制 (125 -> 106)
                     const waveLength = Math.max(8, boosted * 106); 
                     
                     const startX = centerX + Math.cos(angle) * baseRadius;
@@ -798,7 +796,6 @@
                     if (dataArr[dataIndex] > 0) hasAudio = true;
 
                     const boosted = getBoostedValue(dataArr[dataIndex]);
-                    // 感度を15%抑制 (145 -> 123)
                     const waveHeight = boosted * 123; 
                     
                     const x = 40 + i * spacing;
@@ -1119,7 +1116,9 @@
             rAnalyser.smoothingTimeConstant = 0.75;
 
             bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
-            rGain.connect(renderAudioCtx.destination);
+            
+            // 【重要】動画解析用コンテキストのスピーカー宛て出力を切断し、完全無音化。
+            // rGain.connect(renderAudioCtx.destination); <- この行を削除
 
             const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
             
