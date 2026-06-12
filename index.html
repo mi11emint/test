@@ -664,7 +664,7 @@
             gradient.addColorStop(1, currentWaveColors[1]);
             ctx.fillStyle = gradient;
             ctx.strokeStyle = gradient;
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
 
             if (currentWaveStyle === 'circle') {
@@ -681,32 +681,34 @@
                     ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                const barCount = 128;
-                const spacing = (canvas.width - 100) / (barCount - 1);
+                const pointsCount = 60;
+                const spacing = (canvas.width - 80) / (pointsCount - 1);
                 const centerY = canvas.height / 2;
 
-                ctx.save();
-                ctx.globalAlpha = 0.35; // 内側の塗りつぶし透明度
-
                 ctx.beginPath();
-                ctx.moveTo(50, centerY);
+                ctx.moveTo(40, centerY);
 
-                for (let i = 0; i < barCount; i++) {
-                    const x = 50 + i * spacing;
-                    ctx.lineTo(x, centerY - 5);
+                // 静止時はきれいな波模様（サインカーブ）を描画
+                for (let i = 0; i < pointsCount; i++) {
+                    const x = 40 + i * spacing;
+                    const y = centerY + Math.sin(i * 0.3) * 15;
+                    if (i === 0) ctx.lineTo(x, y);
+                    else {
+                        const prevX = 40 + (i - 1) * spacing;
+                        const prevY = centerY + Math.sin((i - 1) * 0.3) * 15;
+                        ctx.bezierCurveTo((prevX + x) / 2, prevY, (prevX + x) / 2, y, x, y);
+                    }
                 }
-                for (let i = barCount - 1; i >= 0; i--) {
-                    const x = 50 + i * spacing;
-                    ctx.lineTo(x, centerY + 5);
-                }
+
+                // 中心（地面）へ向かってパスを閉じて完全に塗りつぶす
+                ctx.lineTo(canvas.width - 40, centerY);
+                ctx.lineTo(40, centerY);
                 ctx.closePath();
+                
+                ctx.save();
+                ctx.globalAlpha = 0.85; // 完全に塗りつぶしつつ、質感を出すための不透明度
                 ctx.fill();
                 ctx.restore();
-
-                for (let i = 0; i < barCount; i++) {
-                    const x = 50 + i * spacing;
-                    ctx.fillRect(x, centerY - 5, 2.5, 10);
-                }
             }
         }
 
@@ -716,7 +718,7 @@
             gradient.addColorStop(1, currentWaveColors[1]);
             targetCtx.strokeStyle = gradient;
             targetCtx.fillStyle = gradient;
-            targetCtx.lineWidth = 5;
+            targetCtx.lineWidth = 4;
             targetCtx.lineCap = 'round';
             
             const points = dataArr.length;
@@ -750,47 +752,47 @@
                     targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
                 }
             } else if (currentWaveStyle === 'aurora') {
-                const barCount = 128;
-                const spacing = (targetCanvas.width - 100) / (barCount - 1);
+                // 音声データから間引いてなめらかな頂点を生成
+                const usedPoints = 32; 
+                const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
                 const centerY = targetCanvas.height / 2;
 
-                const upper = [];
-                const lower = [];
-
-                for (let i = 0; i < barCount; i++) {
-                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
+                const coords = [];
+                for (let i = 0; i < usedPoints; i++) {
+                    // 低音・中音域が目立つようにマッピングを最適化
+                    const dataIndex = Math.floor((i / usedPoints) * (points * 0.75));
                     const audioValue = dataArr[dataIndex] / 255;
-                    const h = Math.max(8, audioValue * 280);
-                    const x = 50 + i * spacing;
-
-                    upper.push([x, centerY - h / 2]);
-                    lower.push([x, centerY + h / 2]);
+                    
+                    // 値を滑らかな線にするためのスケール調整（最大140pxの揺れ）
+                    const waveHeight = audioValue * 140; 
+                    const x = 40 + i * spacing;
+                    const y = centerY - waveHeight;
+                    coords.push({x, y});
                 }
 
-                // 1. グラデーションで内側を波状に塗りつぶす
-                targetCtx.save();
+                // パスを開始して波のラインを描画
                 targetCtx.beginPath();
-                targetCtx.moveTo(upper[0][0], centerY);
+                targetCtx.moveTo(coords[0].x, centerY);
+                targetCtx.lineTo(coords[0].x, coords[0].y);
 
-                upper.forEach(p => targetCtx.lineTo(p[0], p[1]));
-                for (let i = lower.length - 1; i >= 0; i--) {
-                    targetCtx.lineTo(lower[i][0], lower[i][1]);
+                // ベジェ曲線を用いて各点の間を滑らかに繋ぐ
+                for (let i = 1; i < usedPoints; i++) {
+                    const prev = coords[i - 1];
+                    const curr = coords[i];
+                    const cpX = (prev.x + curr.x) / 2; // 制御点X
+                    targetCtx.bezierCurveTo(cpX, prev.y, cpX, curr.y, curr.x, curr.y);
                 }
 
+                // 終点から中心線（地面）に落とし、始点に戻ることで「内側」を完全に閉じ込める
+                targetCtx.lineTo(targetCanvas.width - 40, centerY);
+                targetCtx.lineTo(40, centerY);
                 targetCtx.closePath();
-                targetCtx.globalAlpha = 0.35; // 参考画像の透明感を意識した設定
+
+                // 隙間なく完全かつ綺麗に塗りつぶす（少し不透明度を上げることでグラデが映えます）
+                targetCtx.save();
+                targetCtx.globalAlpha = 0.9; 
                 targetCtx.fill();
                 targetCtx.restore();
-
-                // 2. 音の解像度を保つためのメインバー（縦の細線）群を描画
-                for (let i = 0; i < barCount; i++) {
-                    const dataIndex = Math.floor(Math.abs((barCount / 2) - i) * (points / (barCount / 2)));
-                    const audioValue = dataArr[dataIndex] / 255;
-                    const h = Math.max(8, audioValue * 280);
-                    const x = 50 + i * spacing;
-
-                    targetCtx.fillRect(x, centerY - h / 2, 2.5, h);
-                }
             }
         }
 
