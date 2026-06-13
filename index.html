@@ -88,7 +88,6 @@
         let isPlaying = false, isGameOver = false;
         let timeLeft = 30, timerInterval, bloomProgress = 0, flowers = [];
 
-        // 🔄 秒間60回の描画ループを最初から常時起動
         function animate() {
             drawGame();
             requestAnimationFrame(animate);
@@ -103,7 +102,6 @@
             timeLeft = 30;
             bloomProgress = 0;
 
-            // 🌸【花の配置】確実に画像の中央（225, 225）を中心にまあるく配置
             flowers = [];
             const totalFlowers = 350; 
             const centerX = canvas.width / 2;
@@ -128,25 +126,21 @@
                 });
             }
 
-            // タイマー開始
             timerInterval = setInterval(() => {
                 timeLeft--;
                 
-                // 🛡️【安全装置】声が全く反応していなくても、1秒ごとに確実に約3.3%ずつ自動開花させる
-                // これにより、マイクの不調があっても絶対に花が咲きます！
-                if (bloomProgress < (30 - timeLeft) * 0.033) {
-                    bloomProgress = (30 - timeLeft) * 0.033;
+                // 🛡️【ご要望の調整】何もしなくても30秒で30%になるよう、1秒につき「0.01（1%）」自動開花にしました
+                if (bloomProgress < (30 - timeLeft) * 0.01) {
+                    bloomProgress = (30 - timeLeft) * 0.01;
                 }
 
                 if (timeLeft <= 0) endGame();
             }, 1000);
 
-            // マイクとオーディオの起動処理
             try {
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // 🛡️ スマホのブラウザによる「音声ブロック」を強制解除する魔法の1行
                 if (audioContext.state === 'suspended') {
                     await audioContext.resume();
                 }
@@ -157,11 +151,10 @@
                 source.connect(analyser);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
             } catch (err) {
-                console.log('マイクなしモード（自動開花安全装置で動作します）');
+                console.log('マイクなしモード');
             }
         });
 
-        // マイクから音を拾って開花をスムーズに進める計算
         function updateAudio() {
             if (!analyser) return;
             analyser.getByteFrequencyData(dataArray);
@@ -170,23 +163,20 @@
             let avg = total / dataArray.length;
 
             if (avg > 15) {
-                // 声を感知しているときは、安全装置のスピードを追い抜いてグングン咲く
-                bloomProgress += 0.0012; 
+                // 声をかけているときは、少し多めにお花が咲き進みます
+                bloomProgress += 0.0015; 
                 if (bloomProgress > 1.1) bloomProgress = 1.1; 
             }
         }
 
-        // 画面を描画する処理（背景画像の上に透明な膜として重なっています）
         function drawGame() {
             if (isPlaying) {
                 updateAudio();
             }
 
-            // キャンバスを透明にクリア（下の世界樹画像が見えるように）
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (isPlaying) {
-                // 宝石の花を上から重ねて描画
                 let now = Date.now();
                 flowers.forEach(f => {
                     if (bloomProgress >= f.requiredProgress) {
@@ -210,13 +200,11 @@
                     }
                 });
 
-                // 開花度と残り時間の表示
                 let displayPercent = Math.min(100, Math.floor(bloomProgress * 100));
                 ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left';
                 ctx.fillText(`世界樹の開花度: ${displayPercent}%`, 20, 35);
                 ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 35);
 
-                // 30秒終了時の暗転リザルト表示
                 if (isGameOver) {
                     ctx.fillStyle = 'rgba(2, 2, 6, 0.95)'; 
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
