@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声リズムゲーム（プロトタイプ）</title>
+    <title>音声リズムゲーム（エフェクト＆ランダム版）</title>
     <style>
         body {
             margin: 0;
@@ -44,7 +44,7 @@
 </head>
 <body>
 
-    <div id="info">【リズムゲーム試作】リズムに合わせて声を出すか、手を叩こう！👏</div>
+    <div id="info">【30秒限定】白丸が重なる瞬間に手拍子！リングの発光色に注目👏✨</div>
     <button id="startBtn">ゲームスタート</button>
     <canvas id="gameCanvas" width="360" height="500"></canvas>
 
@@ -57,29 +57,32 @@
         let analyser;
         let dataArray;
         let isPlaying = false;
+        let isGameOver = false;
 
         // ゲームステート
         let score = 0;
         let combo = 0;
         let maxCombo = 0;
-        let ratingText = ""; // PERFECT, GREAT, MISS など
-        let ratingColor = "#fff";
-        let ratingTimer = 0;
+        let timeLeft = 30;
+        let timerInterval;
 
-        // リズム設定 (BPM: 120 = 1秒に2拍)
-        const bpm = 120;
-        const beatInterval = (60 / bpm) * 1000; // 1拍のミリ秒 (500ms)
-        let lastSpawnTime = 0;
+        // 発光エフェクト管理用変数
+        let flashAlpha = 0;      // 発光の強さ（透明度）
+        let flashColor = "#fff"; // 発光の色
+        let flashBlur = 0;       // ぼかし（光の広がり）の強さ
+
+        // ランダムリズム生成用タイマー
+        let nextSpawnCountdown = 0;
 
         // ノーツ配列
         let notes = [];
-        const noteSpeed = 4; // 落下速度
+        const noteSpeed = 4.5; // 落下速度
         
-        // 判定ラインの位置（画面下部）
+        // 判定ラインの位置
         const judgmentY = canvas.height - 80;
-        const targetRadius = 30; // 判定サークルの大きさ
+        const targetRadius = 30; 
 
-        // マイク入力のチャタリング（連続判定）防止用
+        // チャタリング防止用
         let canInput = true;
         let inputCooldown = 0;
 
@@ -95,13 +98,21 @@
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
                 isPlaying = true;
+                isGameOver = false;
                 score = 0;
                 combo = 0;
                 maxCombo = 0;
+                timeLeft = 30;
                 notes = [];
-                ratingText = "";
+                flashAlpha = 0;
+                nextSpawnCountdown = 30; // 最初のノーツが降るまでの時間（フレーム数）
                 startBtn.style.display = 'none';
-                lastSpawnTime = Date.now();
+
+                // 30秒タイマー
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft <= 0) endGame();
+                }, 1000);
 
                 gameLoop();
             } catch (err) {
@@ -116,7 +127,9 @@
             updateGame();
             drawGame();
 
-            requestAnimationFrame(gameLoop);
+            if (!isGameOver) {
+                requestAnimationFrame(gameLoop);
+            }
         }
 
         function updateAudio() {
@@ -126,34 +139,33 @@
             for (let i = 0; i < dataArray.length; i++) total += dataArray[i];
             let volume = total / dataArray.length;
 
-            // 音量しきい値（手を叩く、または大きめの声）
-            const threshold = 25; 
+            const threshold = 22; 
 
-            // クールダウン処理
             if (inputCooldown > 0) {
                 inputCooldown--;
                 if (inputCooldown === 0) canInput = true;
             }
 
             if (volume > threshold && canInput) {
-                checkJudgment(); // タイミング判定へ
+                checkJudgment(); 
                 canInput = false;
-                inputCooldown = 12; // 一度反応したら12フレーム（約0.2秒）は再反応しない
+                inputCooldown = 12; 
             }
         }
 
         function updateGame() {
-            const now = Date.now();
-
-            // 🎵 一定のリズム（BPM）で上からノーツを降らせる
-            if (now - lastSpawnTime >= beatInterval) {
+            // 🎵 【修正】リズムを完全ランダムに自動生成
+            nextSpawnCountdown--;
+            if (nextSpawnCountdown <= 0) {
                 notes.push({
-                    x: canvas.width / 2, // 中央の1レーン
+                    x: canvas.width / 2,
                     y: -20,
-                    radius: 20,
+                    radius: 18,
                     hit: false
                 });
-                lastSpawnTime = now;
+                
+                // 次のノーツが降ってくるまでの間隔をランダムに決定（18〜70フレームの間＝約0.3秒〜1.1秒）
+                nextSpawnCountdown = Math.floor(Math.random() * 52) + 18;
             }
 
             // ノーツの移動と画面外判定
@@ -161,123 +173,148 @@
                 notes[i].y += noteSpeed;
 
                 // 判定ラインを通り過ぎてしまった場合（MISS）
-                if (notes[i].y > judgmentY + 50 && !notes[i].hit) {
+                if (notes[i].y > judgmentY + 45) {
                     notes.splice(i, 1);
-                    ratingText = "MISS...";
-                    ratingColor = "#ff3333";
-                    ratingTimer = 30;
-                    combo = 0; // コンボ途切れる
+                    combo = 0; // コンボがリセットされても文字は出さない
                 }
             }
 
-            // 文字表示タイマーの更新
-            if (ratingTimer > 0) ratingTimer--;
+            // 発光エフェクトのフェードアウト処理（徐々に消えていく）
+            if (flashAlpha > 0) {
+                flashAlpha -= 0.05; 
+                if (flashAlpha < 0) flashAlpha = 0;
+            }
         }
 
-        // 🎯 タイミング判定ロジック
+        // 🎯 タイミング判定ロジック（文字を廃止し、光り方で評価）
         function checkJudgment() {
             if (notes.length === 0) return;
 
-            // 一番下にある（判定ラインに最も近い）ノーツを取得
             let targetNote = notes[0];
-            
-            // 判定ラインとノーツの距離を計算
             let distance = Math.abs(targetNote.y - judgmentY);
 
-            // 距離に応じた評価
-            if (distance < 15) {
-                ratingText = "PERFECT!!!";
-                ratingColor = "#ffcc00";
+            // 🌟【修正】判定による発光エフェクトの切り替え
+            if (distance < 16) {
+                // Perfect/Great判定：ネオンのように激しくまばゆい「水色〜白」の強烈な光
+                flashColor = "#00ffff";
+                flashAlpha = 1.0;
+                flashBlur = 25; // 強く光る
                 score += 100 + combo * 5;
                 combo++;
-                notes.shift(); // 判定したノーツを消す
-            } else if (distance < 35) {
-                ratingText = "GREAT!";
-                ratingColor = "#00ffaa";
-                score += 50 + combo * 2;
-                combo++;
-                notes.shift();
-            } else if (distance < 55) {
-                ratingText = "GOOD";
-                ratingColor = "#00aaff";
-                score += 20;
+                notes.shift(); 
+            } else if (distance < 45) {
+                // Good判定：オレンジ〜黄色っぽく「ふわっと優しく」光る
+                flashColor = "#ffaa00";
+                flashAlpha = 0.7;
+                flashBlur = 12; // 優しく光る
+                score += 40;
                 combo++;
                 notes.shift();
             }
-            // 遠すぎる場合は空振り（何もしない、またはMISSにしても良い）
             
             if (combo > maxCombo) maxCombo = combo;
-            if (ratingText !== "") ratingTimer = 40;
         }
 
         function drawGame() {
-            // 背景クリア
             ctx.fillStyle = '#050510';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // レーンの線
-            ctx.strokeStyle = '#222244';
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#151530';
+            ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(canvas.width / 2, 0);
             ctx.lineTo(canvas.width / 2, canvas.height);
             ctx.stroke();
 
-            // 🎯 判定リング（ここに重なった瞬間に叩く！）
+            // ⭐【光のエフェクト描画】判定に成功した時だけリングの後ろに光をにじませる
+            if (flashAlpha > 0) {
+                ctx.save();
+                ctx.shadowBlur = flashBlur;
+                ctx.shadowColor = flashColor;
+                ctx.strokeStyle = flashColor;
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = flashAlpha;
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, judgmentY, targetRadius + 4, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 🎯 通常の判定リング
             ctx.strokeStyle = '#555577';
-            ctx.lineWidth = 5;
+            ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.arc(canvas.width / 2, judgmentY, targetRadius, 0, Math.PI * 2);
             ctx.stroke();
 
-            // 内側にもう一本うっすらガイド線
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(canvas.width / 2, judgmentY, targetRadius - 10, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 🎵 流れてくるノーツの描画
+            // ⭐【修正】流れてくるノーツの描画（綺麗な白い光の球）
             notes.forEach(note => {
-                // グラデーションで光る綺麗なノーツに
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#fff'; // 白く光らせる
+                
                 let gradient = ctx.createRadialGradient(note.x, note.y, 2, note.x, note.y, note.radius);
-                gradient.addColorStop(0, '#ff00aa');
-                gradient.addColorStop(1, '#990055');
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.8, '#e0e0ff');
+                gradient.addColorStop(1, '#aaaaaa');
                 ctx.fillStyle = gradient;
                 
                 ctx.beginPath();
                 ctx.arc(note.x, note.y, note.radius, 0, Math.PI * 2);
                 ctx.fill();
-                
-                // 輪郭
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                ctx.restore();
             });
 
-            // UIテキスト（スコア・コンボ）
+            // UIテキスト（スコア・残り時間・コンボ）
             ctx.fillStyle = '#fff';
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText(`SCORE: ${score}`, 20, 40);
             
             ctx.textAlign = 'right';
-            ctx.fillText(`MAX COMBO: ${maxCombo}`, canvas.width - 20, 40);
+            if (timeLeft <= 5) ctx.fillStyle = '#ff3333';
+            ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 40);
 
+            ctx.fillStyle = '#fff';
             if (combo > 0) {
+                ctx.textBaseline = 'middle';
                 ctx.textAlign = 'center';
-                ctx.font = 'bold 24px sans-serif';
-                ctx.fillStyle = '#0fa';
-                ctx.fillText(`${combo} COMBO`, canvas.width / 2, canvas.height / 2 - 50);
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillStyle = '#00ffaa';
+                ctx.fillText(`${combo} COMBO`, canvas.width / 2, canvas.height / 2 - 80);
             }
 
-            // 判定評価（PERFECT! など）の表示
-            if (ratingTimer > 0) {
+            // 🛑 リザルト画面
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
-                ctx.font = 'bold 28px sans-serif';
-                ctx.fillStyle = ratingColor;
-                ctx.fillText(ratingText, canvas.width / 2, canvas.height / 2);
+                ctx.font = '24px sans-serif';
+                ctx.fillText('タイムアップ！', canvas.width / 2, canvas.height / 2 - 40);
+                
+                ctx.fillStyle = '#ffcc00';
+                ctx.font = 'bold 26px sans-serif';
+                ctx.fillText(`最終スコア: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+
+                ctx.fillStyle = '#00ffaa';
+                ctx.font = '18px sans-serif';
+                ctx.fillText(`最大コンボ: ${maxCombo}`, canvas.width / 2, canvas.height / 2 + 50);
             }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            drawGame();
+            
+            setTimeout(() => {
+                startBtn.textContent = 'もう一度挑戦する';
+                startBtn.style.display = 'block';
+                isPlaying = false;
+            }, 2000);
         }
     </script>
 </body>
