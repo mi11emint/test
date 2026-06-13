@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声リズムゲーム（タイミング特化＆超発光花火版）</title>
+    <title>音響ヒーリングゲーム：世界樹の開花</title>
     <style>
         body {
             margin: 0;
-            background-color: #03030a;
+            background-color: #04040a;
             color: #fff;
-            font-family: sans-serif;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,36 +19,43 @@
             user-select: none;
         }
         #gameCanvas {
-            border: 2px solid #223;
-            background-color: #010105;
+            border: 2px solid #1a1a2e;
+            background-color: #020205;
             max-width: 100%;
             max-height: 70vh;
-            box-shadow: 0 0 25px rgba(0,255,255,0.08);
+            box-shadow: 0 0 30px rgba(180, 200, 255, 0.05);
+            border-radius: 8px;
         }
         #startBtn {
-            padding: 12px 24px;
+            padding: 14px 28px;
             font-size: 18px;
-            background-color: #00ffff;
-            color: #000;
+            background-color: #e1bee7;
+            color: #212121;
             border: none;
-            border-radius: 5px;
+            border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
             margin-bottom: 10px;
-            box-shadow: 0 0 15px #00ffff;
+            box-shadow: 0 0 20px rgba(225, 190, 231, 0.4);
+            transition: all 0.3s;
+        }
+        #startBtn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(225, 190, 231, 0.7);
         }
         #info {
             font-size: 14px;
-            color: #778;
-            margin-bottom: 5px;
+            color: #90a4ae;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
 
-    <div id="info">【完全シンプル化】音程なし！声や楽器のタイミングだけで下枠を狙え！5コンボで超発光花火🎆</div>
-    <button id="startBtn">ゲームスタート</button>
-    <canvas id="gameCanvas" width="400" height="500"></canvas>
+    <div id="info">穏やかな語りかけや静かな音楽で、世界樹に宝石の花を咲かせましょう（30秒）</div>
+    <button id="startBtn">世界樹の声を聴く</button>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -61,24 +68,16 @@
         let isPlaying = false;
         let isGameOver = false;
 
-        let score = 0;
-        let combo = 0;
         let timeLeft = 30;
         let timerInterval;
-
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const spawnY = 80;
-        const judgeLowY = canvas.height - 70;
-        const targetRadius = 32;
-
-        let notes = [];
-        let nextSpawnCountdown = 0;
-        let hitEffects = [];
-        let fireworks = [];
-
-        let lastVolume = 0;
-        let inputCooldown = 0;
+        
+        // 開花コントロール
+        let bloomProgress = 0; // 0.0 〜 1.0 (1.0で20秒時点の満開)
+        let maxBloomProgress = 1.5; // 30秒まで咲き続けられる上限
+        let flowers = [];
+        
+        // 世界樹の骨組み（固定の枝データ）をあらかじめ生成
+        let treeBranches = [];
 
         startBtn.addEventListener('click', async () => {
             if (isPlaying) return;
@@ -88,21 +87,23 @@
                 
                 source = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512; 
+                analyser.fftSize = 256; 
                 source.connect(analyser);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+                // 初期化
                 isPlaying = true;
                 isGameOver = false;
-                score = 0;
-                combo = 0;
                 timeLeft = 30;
-                notes = [];
-                hitEffects = [];
-                fireworks = [];
-                nextSpawnCountdown = 20;
+                bloomProgress = 0;
+                flowers = [];
                 startBtn.style.display = 'none';
 
+                // 世界樹の枝の生成
+                treeBranches = [];
+                generateTree(canvas.width / 2, canvas.height - 40, -Math.PI / 2, 85, 9);
+
+                // タイマー
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     if (timeLeft <= 0) endGame();
@@ -114,10 +115,46 @@
             }
         });
 
+        // 再帰アルゴリズムで世界樹の枝骨組みをビルド
+        function generateTree(x, y, angle, length, depth) {
+            if (depth === 0) return;
+
+            let x2 = x + Math.cos(angle) * length;
+            let y2 = y + Math.sin(angle) * length;
+
+            treeBranches.push({ x1: x, y1: y, x2: x2, y2: y2, depth: depth });
+
+            // 枝の先の方に、花が咲く候補地をたくさん登録
+            if (depth <= 6) {
+                let flowerCount = (7 - depth) * 2;
+                for(let i=0; i<flowerCount; i++) {
+                    let t = Math.random(); // 枝のどの位置に咲くか
+                    let fx = x + (x2 - x) * t;
+                    let fy = y + (y2 - y) * t;
+                    
+                    const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7", "#ffcc80"];
+                    flowers.push({
+                        x: fx,
+                        y: fy,
+                        color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
+                        size: Math.random() * 5 + 4,
+                        requiredProgress: Math.random() * 1.0, // どのくらいゲージが進んだら咲くか(0〜1.0で満開)
+                        sparkleOffset: Math.random() * 100
+                    });
+                }
+            }
+
+            let numBranches = Math.floor(Math.random() * 2) + 2; // 2〜3本に分岐
+            for (let i = 0; i < numBranches; i++) {
+                let newAngle = angle + (Math.random() * 0.7 - 0.35);
+                let newLength = length * (0.7 + Math.random() * 0.15);
+                generateTree(x2, y2, newAngle, newLength, depth - 1);
+            }
+        }
+
         function gameLoop() {
             if (!isPlaying) return;
             updateAudio();
-            updateGame();
             drawGame();
             if (!isGameOver) requestAnimationFrame(gameLoop);
         }
@@ -125,244 +162,106 @@
         function updateAudio() {
             if (!analyser) return;
             analyser.getByteFrequencyData(dataArray);
-            
-            let maxVal = 0;
+
+            let totalVolume = 0;
             for (let i = 0; i < dataArray.length; i++) {
-                if (dataArray[i] > maxVal) {
-                    maxVal = dataArray[i];
-                }
+                totalVolume += dataArray[i];
             }
+            let avgVolume = totalVolume / dataArray.length;
 
-            let currentVolume = maxVal;
-            const threshold = 30; 
-
-            if (inputCooldown > 0) inputCooldown--;
-
-            let volumeSpike = currentVolume - lastVolume;
-
-            if (currentVolume > threshold && volumeSpike > 10 && inputCooldown === 0) {
-                checkJudgment(); 
-                inputCooldown = 10; 
+            // ⭐【癒やし検知システム】
+            // 激しい一瞬の音ではなく、静かに話しかけている音量（基準15以上）を感知
+            if (avgVolume > 15) {
+                // 穏やかに声を出し続けると、20秒で満開（1.0）になるペースで加算
+                // （60fps換算で 1秒間に0.05進む ＝ 20秒で1.0）
+                bloomProgress += 0.00085; 
+                if (bloomProgress > maxBloomProgress) bloomProgress = maxBloomProgress;
             }
-
-            lastVolume = currentVolume; 
-        }
-
-        function updateGame() {
-            nextSpawnCountdown--;
-            if (nextSpawnCountdown <= 0) {
-                // ⭐【修正】高音（high）の概念を完全撤去！すべて共通の通常ノーツとして生成
-                notes.push({
-                    progress: 0, 
-                    speed: 0.014 + Math.random() * 0.006
-                });
-                nextSpawnCountdown = Math.floor(Math.random() * 30) + 25;
-            }
-
-            for (let i = notes.length - 1; i >= 0; i--) {
-                notes[i].progress += notes[i].speed;
-                if (notes[i].progress > 1.15) {
-                    notes.splice(i, 1);
-                    combo = 0; 
-                }
-            }
-
-            for (let i = hitEffects.length - 1; i >= 0; i--) {
-                hitEffects[i].alpha -= 0.06;
-                hitEffects[i].radius += 2.5;
-                if (hitEffects[i].alpha <= 0) hitEffects.splice(i, 1);
-            }
-
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                let fw = fireworks[i];
-                fw.delay--;
-                if (fw.delay <= 0) {
-                    fw.state = "explode";
-                    fw.alpha -= 0.018; 
-                    fw.radius += fw.expandSpeed; 
-                    fw.expandSpeed *= 0.95; 
-                }
-                if (fw.alpha <= 0) fireworks.splice(i, 1);
-            }
-        }
-
-        function checkJudgment() {
-            let targetIndex = -1;
-            let maxProgress = -1;
-
-            for(let i=0; i<notes.length; i++) {
-                if(notes[i].progress > maxProgress) {
-                    maxProgress = notes[i].progress;
-                    targetIndex = i;
-                }
-            }
-
-            if (targetIndex === -1) return; 
-            
-            let note = notes[targetIndex];
-            let diff = Math.abs(note.progress - 1.0);
-            let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
-
-            let hitSuccess = false;
-
-            if (diff < 0.10) {
-                hitEffects.push({
-                    x: centerX, y: currentY, radius: targetRadius,
-                    color: "#ffffff", blur: 40, alpha: 1.0
-                });
-                score += 150;
-                combo++;
-                hitSuccess = true;
-                notes.splice(targetIndex, 1);
-            } else if (diff < 0.22) {
-                hitEffects.push({
-                    x: centerX, y: currentY, radius: targetRadius,
-                    color: "#b0e0ff", blur: 18, alpha: 0.75
-                });
-                score += 50;
-                combo++;
-                hitSuccess = true;
-                notes.splice(targetIndex, 1);
-            }
-
-            if (hitSuccess && combo >= 5) {
-                triggerFireworkShow(); 
-                combo = 0; 
-            }
-        }
-
-        function triggerFireworkShow() {
-            const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7"];
-            for (let i = 0; i < 5; i++) {
-                let fireworkX = (Math.random() > 0.5) ? (Math.random() * 90 + 30) : (Math.random() * 90 + 280);
-                let fireworkY = Math.random() * 200 + 130; 
-
-                fireworks.push({
-                    x: fireworkX,
-                    y: fireworkY,
-                    radius: 3,
-                    maxRadius: Math.random() * 20 + 35,
-                    expandSpeed: 2.0 + Math.random() * 1.0,
-                    color: pastelColors[i % pastelColors.length],
-                    alpha: 1.0, 
-                    delay: i * 8, 
-                    state: "wait"
-                });
-            }
-            score += 1000; 
         }
 
         function drawGame() {
-            ctx.fillStyle = '#020206';
+            // 深い夜空のような黒背景
+            ctx.fillStyle = '#030308';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 超発光花火の描画
-            fireworks.forEach(fw => {
-                if (fw.state === "explode") {
+            // 1. 世界樹の幹と枝を描画（シックなグレー）
+            treeBranches.forEach(b => {
+                ctx.save();
+                ctx.strokeStyle = `rgba(120, 128, 140, ${0.2 + (b.depth * 0.08)})`;
+                ctx.lineWidth = b.depth * 0.8;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(b.x1, b.y1);
+                ctx.lineTo(b.x2, b.y2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 2. 宝石の花を描画
+            let now = Date.now();
+            flowers.forEach(f => {
+                // 現在の進行度が、花の開花条件を超えていたら咲かせる
+                if (bloomProgress >= f.requiredProgress) {
                     ctx.save();
-                    ctx.globalAlpha = fw.alpha;
                     
-                    // 1層目：大きく包み込む淡い巨大な光のオーラ
-                    ctx.shadowBlur = fw.radius * 2.2; 
-                    ctx.shadowColor = fw.color;
-                    ctx.strokeStyle = fw.color;
-                    ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
-                    
-                    // 2層目：中心に近い部分のクッキリした強い光の輪（芯を白く輝かせる）
+                    // 宝石のようなパステル超発光を表現
+                    // 時間経過で個別に優しくキラキラと明滅する
+                    let sparkle = Math.sin((now / 200) + f.sparkleOffset) * 0.25 + 0.75;
+                    ctx.globalAlpha = sparkle;
                     ctx.shadowBlur = 15;
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = "#ffffff"; 
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
+                    ctx.shadowColor = f.color;
                     
-                    // 3層目：中央のまばゆいコア
+                    // 外側の淡い光の輪（宝石の輝き）
+                    ctx.fillStyle = f.color;
+                    ctx.beginPath();
+                    // 進行度に応じてツボミから少しずつ大きくなる
+                    let currentSize = f.size * Math.min(1.5, (bloomProgress - f.requiredProgress) * 4 + 0.5);
+                    ctx.arc(f.x, f.y, currentSize, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 内側の眩しい白い芯（宝石のきらめき）
+                    ctx.shadowBlur = 0;
                     ctx.fillStyle = "#ffffff";
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.12, 0, Math.PI * 2); ctx.fill();
-                    
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, currentSize * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+
                     ctx.restore();
                 }
             });
 
-            // 単一レーン線
-            ctx.strokeStyle = '#101025';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(centerX, spawnY); ctx.lineTo(centerX, judgeLowY);
-            ctx.stroke();
+            // 3. 上部UI（残り時間と開花パーセンテージ）
+            let displayPercent = Math.min(100, Math.floor(bloomProgress * 100));
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.font = '15px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`世界樹の開花度: ${displayPercent}%`, 25, 40);
+            
+            ctx.textAlign = 'right';
+            ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 25, 40);
 
-            // 🎯 下の判定リング（サイバーブルー）
-            ctx.strokeStyle = 'rgba(0, 150, 255, 0.45)';
-            ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.arc(centerX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
-
-            // 発光残像
-            hitEffects.forEach(fx => {
-                ctx.save();
-                ctx.globalAlpha = fx.alpha;
-                ctx.shadowBlur = fx.blur;
-                ctx.shadowColor = fx.color;
-                ctx.fillStyle = fx.color;
-                ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            });
-
-            // 🎵 上から降ってくる白い光ノーツ（残像カラーも青に統一）
-            notes.forEach(note => {
-                let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
-                let currentRadius = 3 + (15 * note.progress);
-
-                ctx.save();
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = "#0099ff";
-                
-                let gradient = ctx.createRadialGradient(centerX, currentY, 1, centerX, currentY, currentRadius);
-                gradient.addColorStop(0, '#ffffff');
-                gradient.addColorStop(0.6, '#f5f8ff');
-                gradient.addColorStop(1, "#0088ff");
-                ctx.fillStyle = gradient;
-
-                ctx.beginPath(); ctx.arc(centerX, currentY, currentRadius, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            });
-
-            // 5回コンボ満タン仕様の白いサークルゲージ
-            let gaugeY = centerY - 20;
-            ctx.save();
-            ctx.strokeStyle = "#151525";
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.arc(centerX, gaugeY, 22, 0, Math.PI * 2);
-            ctx.stroke();
-
-            if (combo > 0) {
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = "#ffffff"; 
-                ctx.strokeStyle = "#ffffff"; 
-                ctx.lineWidth = 6;
-                let progressAngle = (combo / 5) * Math.PI * 2;
-                ctx.beginPath();
-                ctx.arc(centerX, gaugeY, 22, -Math.PI / 2, (-Math.PI / 2) + progressAngle);
-                ctx.stroke();
+            // 下部にうっすらと音の感知を伝えるインジケーター
+            ctx.fillStyle = 'rgba(144, 164, 174, 0.15)';
+            ctx.textAlign = 'center';
+            if (bloomProgress < maxBloomProgress && !isGameOver) {
+                ctx.fillText(".. 穏やかな声を感知中 ..", canvas.width/2, canvas.height - 15);
             }
-            ctx.restore();
 
-            // UI
-            ctx.fillStyle = '#fff';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'left'; ctx.fillText(`SCORE: ${score}`, 20, 40);
-            ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 40);
-
-            // 🛑 リザルト
+            // 🛑 リザルト（タイムアップ時）
             if (isGameOver) {
-                ctx.fillStyle = 'rgba(1, 1, 5, 0.93)';
+                ctx.fillStyle = 'rgba(2, 2, 6, 0.9)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
                 ctx.font = '24px sans-serif';
-                ctx.fillText('タイムアップ！', centerX, centerY - 30);
-                ctx.fillStyle = '#00ffff';
-                ctx.font = 'bold 26px sans-serif';
-                ctx.fillText(`最終スコア: ${score}`, centerX, centerY + 20);
+                ctx.fillText('時の砂が尽きました', canvas.width / 2, canvas.height / 2 - 30);
+                
+                ctx.fillStyle = '#ffb7d5';
+                ctx.font = 'bold 28px sans-serif';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ffb7d5';
+                ctx.fillText(`最終開花度: ${displayPercent}%`, canvas.width / 2, canvas.height / 2 + 20);
             }
         }
 
@@ -371,10 +270,10 @@
             clearInterval(timerInterval);
             drawGame();
             setTimeout(() => {
-                startBtn.textContent = 'もう一度遊ぶ';
+                startBtn.textContent = 'もう一度世界樹を育てる';
                 startBtn.style.display = 'block';
                 isPlaying = false;
-            }, 2000);
+            }, 2500);
         }
     </script>
 </body>
