@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声インベーダー（ボス降臨・最終決戦版）</title>
+    <title>音声インベーダー（ボス確実出現版）</title>
     <style>
         body {
             margin: 0;
@@ -67,7 +67,7 @@
 </head>
 <body>
 
-    <div id="info">【最終決戦】後半15秒で巨大ボス👾出現！ビームでHPを削れ！</div>
+    <div id="info">【今度こそ降臨】後半15秒で巨大ボス出現！ビームでHPを削れ！🎤👑</div>
     <button id="startBtn">ゲームスタート</button>
     <canvas id="gameCanvas" width="400" height="500"></canvas>
 
@@ -95,7 +95,7 @@
 
         let bullets = [];
         let invaders = [];
-        let boss = null; // 👑 ボス用の変数
+        let boss = null; 
 
         let player = { x: canvas.width / 2, y: canvas.height - 40, speed: 9 };
         let moveLeft = false;
@@ -104,7 +104,7 @@
         let voiceDuration = 0;
         let isBeaming = false;
         let invaderSpawnTimer = 0;
-        let hasBossSpawned = false; // ボスが既に出現したかフラグ
+        let hasBossSpawned = false; // ボス出現フラグ
 
         const setBtnEvent = (btn, startFlag, endFlag) => {
             btn.addEventListener('mousedown', () => { if(isPlaying) startFlag() });
@@ -224,10 +224,10 @@
                 if (bullets[i].y < -50) bullets.splice(i, 1);
             }
 
-            // --- 👾 インベーダー＆ボス出現ロジック ---
+            // --- インベーダー＆ボス出現ロジック ---
             invaderSpawnTimer++;
             
-            // 残り15秒以下なら毎フレームレベルでドバドバ降らせる（出現間隔を2フレームに固定！）
+            // 残り15秒以下なら、2フレームに1回という超高速で雑魚を湧かせる
             const spawnInterval = (timeLeft <= 15) ? 2 : 12;
 
             if (invaderSpawnTimer > spawnInterval) {
@@ -240,25 +240,24 @@
                 invaderSpawnTimer = 0;
             }
 
-            // 👑 【ボス出現判定】残り15秒になった瞬間に親玉を1体生成
+            // ⭐【修正：ボス出現判定を強化】残り15秒以下で、まだ1回もボスが出ていなければ確実に生成
             if (timeLeft <= 15 && !hasBossSpawned) {
                 boss = {
                     x: canvas.width / 2,
                     y: -50,
-                    size: 80, // 通常の約4倍のデカさ！
-                    speed: 0.6, // ゆっくりじわじわ降りてくる
-                    hp: 20, // 耐久力（20回当てる必要がある）
+                    size: 80, // 圧倒的デカさ
+                    speed: 0.6,
+                    hp: 20, // 耐久力
                     maxHp: 20
                 };
-                hasBossSpawned = true;
+                hasBossSpawned = true; // 出現済みにする
             }
 
             // ボスの移動
             if (boss) {
                 boss.y += boss.speed;
-                // 画面下部まで来たら上に戻る（エンドレス化）
                 if (boss.y > canvas.height + 50) {
-                    boss.y = -50;
+                    boss.y = -50; // 下まで行ったら上からループ
                 }
             }
 
@@ -276,28 +275,27 @@
                 let bullet = bullets[b];
                 if (!bullet) continue;
 
-                // 👑 ボスとの当たり判定
+                // ボスとの当たり判定
                 if (boss) {
                     let hitBoss = false;
                     let dx = bullet.x - boss.x;
                     let dy = bullet.y - boss.y;
                     let distance = Math.sqrt(dx * dx + dy * dy);
 
-                    // ボスのサイズに合わせた簡易判定
-                    if (distance < (bullet.radius || bullet.width/2) + boss.size/2) {
+                    // ボスの丸い体に当たったかの判定
+                    if (distance < (bullet.radius || bullet.width/2) + boss.size/3) {
                         hitBoss = true;
                     }
 
                     if (hitBoss) {
-                        boss.hp--; // HPを減らす
-                        score += 10; // 当たるだけでも加点
+                        boss.hp--; 
+                        score += 10; 
 
                         if (boss.hp <= 0) {
                             boss = null; // ボス撃破！
-                            score += 5000; // 撃破大ボーナス！
+                            score += 5000; // 超ボーナス
                         }
 
-                        // 通常弾は消滅、ビームはボスのHPを連続で削りつつ貫通
                         if (!bullet.isBeam) {
                             bullets.splice(b, 1);
                             continue;
@@ -356,20 +354,20 @@
                 }
             });
 
-            // 👑 ボスの描画
+            // ボスの描画
             if (boss) {
                 ctx.font = `${boss.size}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('👑👾', boss.x, boss.y); // 王冠つきのボス
+                ctx.fillText('👑👾', boss.x, boss.y); 
 
                 // ボスのHPバー
-                let barWidth = 60;
-                let barHeight = 6;
+                let barWidth = 70;
+                let barHeight = 8;
                 ctx.fillStyle = '#ff3333';
-                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2 - 10, barWidth, barHeight);
+                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2, barWidth, barHeight);
                 ctx.fillStyle = '#0fa';
-                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2 - 10, barWidth * (boss.hp / boss.maxHp), barHeight);
+                ctx.fillRect(boss.x - barWidth/2, boss.y - boss.size/2, barWidth * (boss.hp / boss.maxHp), barHeight);
             }
 
             // 雑魚インベーダー
