@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音響ヒーリングゲーム：世界樹の開花</title>
+    <title>音響ヒーリングゲーム：世界樹の開花 (枝振り強化版)</title>
     <style>
         body {
             margin: 0;
@@ -73,10 +73,10 @@
         
         // 開花コントロール
         let bloomProgress = 0; // 0.0 〜 1.0 (1.0で20秒時点の満開)
-        let maxBloomProgress = 1.5; // 30秒まで咲き続けられる上限
+        let maxBloomProgress = 1.5; 
         let flowers = [];
         
-        // 世界樹の骨組み（固定の枝データ）をあらかじめ生成
+        // 世界樹の骨組み
         let treeBranches = [];
 
         startBtn.addEventListener('click', async () => {
@@ -91,7 +91,6 @@
                 source.connect(analyser);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-                // 初期化
                 isPlaying = true;
                 isGameOver = false;
                 timeLeft = 30;
@@ -99,7 +98,7 @@
                 flowers = [];
                 startBtn.style.display = 'none';
 
-                // 世界樹の枝の生成
+                // 世界樹の枝の生成（開始時の幹の長さや深さを調整）
                 treeBranches = [];
                 generateTree(canvas.width / 2, canvas.height - 40, -Math.PI / 2, 85, 9);
 
@@ -115,20 +114,24 @@
             }
         });
 
-        // 再帰アルゴリズムで世界樹の枝骨組みをビルド
+        // ⭐【修正】添付画像のような全体的に丸い、横にも広がる枝振りを生成するアルゴリズム
         function generateTree(x, y, angle, length, depth) {
             if (depth === 0) return;
 
-            let x2 = x + Math.cos(angle) * length;
-            let y2 = y + Math.sin(angle) * length;
+            // 添付画像のように、幹に近い方が太く、先に行くほど細くなるように、各段階で長さを調整
+            // depthが深い（幹に近い）ときは長く、浅いときは短く
+            let adjustedLength = length * (0.6 + depth * 0.1); 
+
+            let x2 = x + Math.cos(angle) * adjustedLength;
+            let y2 = y + Math.sin(angle) * adjustedLength;
 
             treeBranches.push({ x1: x, y1: y, x2: x2, y2: y2, depth: depth });
 
-            // 枝の先の方に、花が咲く候補地をたくさん登録
-            if (depth <= 6) {
-                let flowerCount = (7 - depth) * 2;
+            // 枝の密度を上げるため、花の候補地も少し増やす
+            if (depth <= 7) { 
+                let flowerCount = Math.floor((8 - depth) * 2.5); // 密度アップ
                 for(let i=0; i<flowerCount; i++) {
-                    let t = Math.random(); // 枝のどの位置に咲くか
+                    let t = Math.random(); 
                     let fx = x + (x2 - x) * t;
                     let fy = y + (y2 - y) * t;
                     
@@ -137,17 +140,27 @@
                         x: fx,
                         y: fy,
                         color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
-                        size: Math.random() * 5 + 4,
-                        requiredProgress: Math.random() * 1.0, // どのくらいゲージが進んだら咲くか(0〜1.0で満開)
+                        size: Math.random() * 4 + 4, // サイズを少し小さめにして密度感
+                        requiredProgress: Math.random() * 1.0, 
                         sparkleOffset: Math.random() * 100
                     });
                 }
             }
 
-            let numBranches = Math.floor(Math.random() * 2) + 2; // 2〜3本に分岐
+            // ⭐ 分岐角度と長さを調整して、全体的に大きな「丸い形」になるように
+            let numBranches = 2; // 基本は2本に分岐
+
             for (let i = 0; i < numBranches; i++) {
-                let newAngle = angle + (Math.random() * 0.7 - 0.35);
-                let newLength = length * (0.7 + Math.random() * 0.15);
+                // 角度を広く取ることで、横への広がりを表現
+                // 特に幹に近いところでは広い角度で分岐
+                let angleSpread = (depth > 6) ? 0.9 : 0.6; // 角度の広がり
+                let angleShift = (i === 0) ? -angleSpread : angleSpread;
+                let newAngle = angle + angleShift * (Math.random() * 0.5 + 0.5);
+
+                // 先に行くほど枝が短くなるように縮小率を調整
+                let shrinkFactor = (depth > 6) ? 0.8 : 0.75;
+                let newLength = length * shrinkFactor * (0.8 + Math.random() * 0.4);
+
                 generateTree(x2, y2, newAngle, newLength, depth - 1);
             }
         }
@@ -169,26 +182,22 @@
             }
             let avgVolume = totalVolume / dataArray.length;
 
-            // ⭐【癒やし検知システム】
-            // 激しい一瞬の音ではなく、静かに話しかけている音量（基準15以上）を感知
             if (avgVolume > 15) {
-                // 穏やかに声を出し続けると、20秒で満開（1.0）になるペースで加算
-                // （60fps換算で 1秒間に0.05進む ＝ 20秒で1.0）
-                bloomProgress += 0.00085; 
+                bloomProgress += 0.001; // 少しだけ咲くペースを早く調整
                 if (bloomProgress > maxBloomProgress) bloomProgress = maxBloomProgress;
             }
         }
 
         function drawGame() {
-            // 深い夜空のような黒背景
             ctx.fillStyle = '#030308';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 1. 世界樹の幹と枝を描画（シックなグレー）
+            // ⭐ 世界樹の幹と枝を描画（シックなグレー。幹をより太く）
             treeBranches.forEach(b => {
                 ctx.save();
                 ctx.strokeStyle = `rgba(120, 128, 140, ${0.2 + (b.depth * 0.08)})`;
-                ctx.lineWidth = b.depth * 0.8;
+                // 添付画像の太い幹を表現するため、depthによる太さの倍率をアップ
+                ctx.lineWidth = b.depth * (b.depth > 7 ? 1.5 : 1.1); 
                 ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(b.x1, b.y1);
@@ -197,29 +206,23 @@
                 ctx.restore();
             });
 
-            // 2. 宝石の花を描画
+            // 花の描画
             let now = Date.now();
             flowers.forEach(f => {
-                // 現在の進行度が、花の開花条件を超えていたら咲かせる
                 if (bloomProgress >= f.requiredProgress) {
                     ctx.save();
                     
-                    // 宝石のようなパステル超発光を表現
-                    // 時間経過で個別に優しくキラキラと明滅する
                     let sparkle = Math.sin((now / 200) + f.sparkleOffset) * 0.25 + 0.75;
                     ctx.globalAlpha = sparkle;
                     ctx.shadowBlur = 15;
                     ctx.shadowColor = f.color;
                     
-                    // 外側の淡い光の輪（宝石の輝き）
                     ctx.fillStyle = f.color;
                     ctx.beginPath();
-                    // 進行度に応じてツボミから少しずつ大きくなる
                     let currentSize = f.size * Math.min(1.5, (bloomProgress - f.requiredProgress) * 4 + 0.5);
                     ctx.arc(f.x, f.y, currentSize, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // 内側の眩しい白い芯（宝石のきらめき）
                     ctx.shadowBlur = 0;
                     ctx.fillStyle = "#ffffff";
                     ctx.beginPath();
@@ -230,7 +233,7 @@
                 }
             });
 
-            // 3. 上部UI（残り時間と開花パーセンテージ）
+            // UIテキスト
             let displayPercent = Math.min(100, Math.floor(bloomProgress * 100));
             ctx.fillStyle = 'rgba(255,255,255,0.85)';
             ctx.font = '15px sans-serif';
@@ -240,14 +243,14 @@
             ctx.textAlign = 'right';
             ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 25, 40);
 
-            // 下部にうっすらと音の感知を伝えるインジケーター
+            // インジケーター
             ctx.fillStyle = 'rgba(144, 164, 174, 0.15)';
             ctx.textAlign = 'center';
             if (bloomProgress < maxBloomProgress && !isGameOver) {
                 ctx.fillText(".. 穏やかな声を感知中 ..", canvas.width/2, canvas.height - 15);
             }
 
-            // 🛑 リザルト（タイムアップ時）
+            // リザルト
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(2, 2, 6, 0.9)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
