@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>世界樹の開花 - Healing Tree (自動開始版)</title>
+    <title>音声リズムゲーム（動画保存中版）</title>
     <style>
         body {
             margin: 0;
-            background-color: #04040a;
+            background-color: #03030a;
             color: #fff;
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,100 +18,68 @@
             overflow: hidden;
             user-select: none;
         }
+        #gameCanvas {
+            border: 2px solid #223;
+            background-color: #010105;
+            max-width: 100%;
+            max-height: 70vh;
+            box-shadow: 0 0 25px rgba(0,255,255,0.08);
+        }
         #info {
-            font-size: 13px;
-            color: #ccdacd;
+            font-size: 12px;
+            color: #e0ffff;
             margin-bottom: 12px;
             text-align: center;
             padding: 0 20px;
-        }
-        .game-container {
-            position: relative;
-            width: 450px;
-            height: 450px;
-            max-width: 90vw;
-            max-height: 60vh;
-            background-color: #020205;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #treeImg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            opacity: 0.6; 
-            z-index: 1;
-        }
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 2;
-            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="info">・・・保存待ち時間中・・・<br><br>穏やかな語りかけ・音楽で<br>
-    宝石を咲かせましょう</div>
-    <div class="game-container">
-        <img id="treeImg" src="https://img1.mitemin.net/cn/c9/5h3rb7a49bj373z8gxyk7s3t40_k6d_vu_yx_5kna.png" alt="世界樹">
-        <canvas id="gameCanvas" width="450" height="450"></canvas>
-    </div>
+    <div id="info">・・・保存待ち時間中・・・<br><br>
+      音声リズムゲーム<br>
+      声や音で下枠○を狙って！^.ˬ.^ฅⳊ</div>
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        let audioContext, analyser, dataArray, audioStream;
-        let isPlaying = false, isGameOver = false;
-        let isCountingDown = false; // ⭐ カウントダウンフラグ
-        let countdownNumber = 3;    // ⭐ カウントダウン初期値
-        let timeLeft = 30, timerInterval, bloomProgress = 0, flowers = [];
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let audioStream; 
+
+        let isPlaying = false;
+        let isGameOver = false;
+        let isCountingDown = false; 
+        let countdownNumber = 3;    
+
+        let score = 0;
+        let combo = 0;
+        let timeLeft = 30;
+        let timerInterval;
 
         const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2; 
+        const centerY = canvas.height / 2;
+        const spawnY = 80;
+        const judgeLowY = canvas.height - 70;
+        const targetRadius = 32;
 
-        // 🔄 アニメーションメインループ
-        function animate() {
-            drawGame();
-            requestAnimationFrame(animate);
-        }
-        animate();
+        let notes = [];
+        let nextSpawnCountdown = 0;
+        let hitEffects = [];
+        let fireworks = []; // ⭐ 世界樹スタイルのオーブ演出用配列
 
-        // 🚀 【新規】画面読み込み時にマイクを取得し、そのまま自動開始
+        let lastVolume = 0;
+        let inputCooldown = 0;
+
+        // 🚀 画面が開いた瞬間に自動でマイク許可を取り、カウントダウンを開始する処理
         window.addEventListener('DOMContentLoaded', async () => {
-            // お花のデータ定義（配列化）
-            flowers = [];
-            const totalFlowers = 350; 
-
-            for(let i = 0; i < totalFlowers; i++) {
-                let angle = Math.random() * Math.PI * 2; 
-                let dist = Math.pow(Math.random(), 0.8) * 140; 
-                
-                let fx = centerX + Math.cos(angle) * dist;
-                let fy = centerY + Math.sin(angle) * dist;
-
-                const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7", "#ffcc80"];
-                let required = 0.01 + Math.random() * 0.98;
-
-                flowers.push({
-                    x: fx, y: fy,
-                    color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
-                    maxSize: Math.random() * 3.5 + 2.5,
-                    requiredProgress: required,
-                    sparkleOffset: Math.random() * 100
-                });
-            }
-
+            ctx.fillStyle = '#020206';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
             try {
-                // ページ表示と同時にマイク許可ポップアップ
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
@@ -121,19 +89,22 @@
 
                 const source = audioContext.createMediaStreamSource(audioStream);
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256; 
+                analyser.fftSize = 512; 
                 source.connect(analyser);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-                // カウントダウンフェーズへ移行
                 startCountdown();
+
             } catch (err) {
-                console.log('マイクなしモードでの起動');
-                startCountdown(); // 許可が得られなくても進行
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.font = '14px sans-serif';
+                ctx.fillText('マイクを許可、または接続してください', centerX, centerY);
+                console.log('マイク起動エラー：', err);
             }
         });
 
-        // ⏱️ カウントダウンのインターバル処理
+        // ⏱️ カウントダウン処理
         function startCountdown() {
             isCountingDown = true;
             countdownNumber = 3;
@@ -143,58 +114,34 @@
                 if (countdownNumber < 0) {
                     clearInterval(cdInterval);
                     isCountingDown = false;
-                    startGame(); // 3秒後にゲーム本番開始
+                    startGame(); 
                 }
             }, 1000);
-        }
 
-        // ゲーム本番開始
-        function startGame() {
-            isPlaying = true;
-            isGameOver = false;
-            timeLeft = 30;
-            bloomProgress = 0;
-
-            timerInterval = setInterval(() => {
-                timeLeft--;
+            function countdownLoop() {
+                if (!isCountingDown) return;
                 
-                // 何もしなくても30秒で30%になるよう、1秒につき「0.01（1%）」自動開花
-                if (bloomProgress < (30 - timeLeft) * 0.01) {
-                    bloomProgress = (30 - timeLeft) * 0.01;
-                }
+                ctx.fillStyle = '#020206';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                if (timeLeft <= 0) endGame();
-            }, 1000);
-        }
+                ctx.strokeStyle = '#101025';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, spawnY); ctx.lineTo(centerX, judgeLowY);
+                ctx.stroke();
 
-        function updateAudio() {
-            if (!analyser) return;
-            analyser.getByteFrequencyData(dataArray);
-            let total = 0;
-            for (let i = 0; i < dataArray.length; i++) total += dataArray[i];
-            let avg = total / dataArray.length;
+                ctx.strokeStyle = 'rgba(0, 150, 255, 0.2)'; 
+                ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.arc(centerX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
 
-            if (avg > 15) {
-                // 声をかけているときは、少し多めにお花が咲き進む
-                bloomProgress += 0.0015; 
-                if (bloomProgress > 1.1) bloomProgress = 1.1; 
-            }
-        }
-
-        function drawGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 1. カウントダウン中の描画処理
-            if (isCountingDown) {
-                ctx.save();
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.font = 'bold 75px sans-serif';
-
+                ctx.font = 'bold 70px sans-serif';
+                
                 if (countdownNumber > 0) {
-                    ctx.fillStyle = '#e1bee7';
+                    ctx.fillStyle = '#00ffff';
                     ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#e1bee7';
+                    ctx.shadowColor = '#00ffff';
                     ctx.fillText(countdownNumber, centerX, centerY);
                 } else {
                     ctx.fillStyle = '#ffffff';
@@ -202,52 +149,281 @@
                     ctx.shadowColor = '#ffffff';
                     ctx.fillText('START!', centerX, centerY);
                 }
-                ctx.restore();
-                return; // カウントダウン中はここで描画を抜ける
+                ctx.shadowBlur = 0; 
+
+                requestAnimationFrame(countdownLoop);
+            }
+            countdownLoop();
+        }
+
+        // ゲーム本番開始
+        function startGame() {
+            isPlaying = true;
+            isGameOver = false;
+            score = 0;
+            combo = 0;
+            timeLeft = 30;
+            notes = [];
+            hitEffects = [];
+            fireworks = [];
+            nextSpawnCountdown = 20;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+
+            gameLoop();
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            updateAudio();
+            updateGame();
+            drawGame();
+            if (!isGameOver) requestAnimationFrame(gameLoop);
+        }
+
+        function updateAudio() {
+            if (!analyser) return;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
+            let maxVal = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                if (dataArray[i] > maxVal) {
+                    maxVal = dataArray[i];
+                }
             }
 
-            // 2. ゲーム本番中の描画処理
-            if (isPlaying) {
-                updateAudio();
+            let currentVolume = maxVal;
+            const threshold = 30; 
 
-                let now = Date.now();
-                flowers.forEach(f => {
-                    if (bloomProgress >= f.requiredProgress) {
-                        ctx.save();
-                        let sparkle = Math.sin((now / 200) + f.sparkleOffset) * 0.25 + 0.75;
-                        ctx.globalAlpha = sparkle;
-                        
-                        let timeSinceBloom = bloomProgress - f.requiredProgress;
-                        let sizeGrowth = Math.min(1.0, timeSinceBloom * 4 + 0.15); 
-                        let currentSize = f.maxSize * sizeGrowth;
+            if (inputCooldown > 0) inputCooldown--;
 
-                        ctx.shadowBlur = currentSize * 2.2;
-                        ctx.shadowColor = f.color;
-                        ctx.fillStyle = f.color;
-                        ctx.beginPath(); ctx.arc(f.x, f.y, currentSize, 0, Math.PI * 2); ctx.fill();
+            let volumeSpike = currentVolume - lastVolume;
 
-                        ctx.shadowBlur = 0;
-                        ctx.fillStyle = "#ffffff";
-                        ctx.beginPath(); ctx.arc(f.x, f.y, currentSize * 0.35, 0, Math.PI * 2); ctx.fill();
-                        ctx.restore();
-                    }
+            if (currentVolume > threshold && volumeSpike > 10 && inputCooldown === 0) {
+                checkJudgment(); 
+                inputCooldown = 10; 
+            }
+
+            lastVolume = currentVolume; 
+        }
+
+        function updateGame() {
+            nextSpawnCountdown--;
+            if (nextSpawnCountdown <= 0) {
+                notes.push({
+                    progress: 0, 
+                    speed: 0.014 + Math.random() * 0.006
                 });
+                nextSpawnCountdown = Math.floor(Math.random() * 30) + 25;
+            }
 
-                let displayPercent = Math.min(100, Math.floor(bloomProgress * 100));
-                ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left';
-                ctx.fillText(`世界樹の開花度: ${displayPercent}%`, 20, 35);
-                ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 35);
-
-                // 3. タイムアップ後のリザルト画面表示
-                if (isGameOver) {
-                    ctx.fillStyle = 'rgba(2, 2, 6, 0.95)'; 
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '20px sans-serif';
-                    ctx.fillText('時の砂が尽きました', canvas.width / 2, canvas.height / 2 - 25);
-                    ctx.fillStyle = '#e1bee7'; ctx.font = 'bold 24px sans-serif';
-                    ctx.fillText(`最終開花度: ${displayPercent}%`, canvas.width / 2, canvas.height / 2 + 25);
+            for (let i = notes.length - 1; i >= 0; i--) {
+                notes[i].progress += notes[i].speed;
+                if (notes[i].progress > 1.15) {
+                    notes.splice(i, 1);
+                    combo = 0; 
                 }
+            }
+
+            for (let i = hitEffects.length - 1; i >= 0; i--) {
+                hitEffects[i].alpha -= 0.06;
+                hitEffects[i].radius += 2.5;
+                if (hitEffects[i].alpha <= 0) hitEffects.splice(i, 1);
+            }
+
+            // 🛠️ 世界樹風オーブのアップデート処理
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                let fw = fireworks[i];
+                fw.delay--;
+                if (fw.delay <= 0) {
+                    fw.state = "explode";
+                    fw.alpha -= 0.015; // じわっと消えていく速度
+                    // 徐々に花が開くように少しだけサイズアップ
+                    if (fw.radius < fw.maxRadius) {
+                        fw.radius += (fw.maxRadius - fw.radius) * 0.1;
+                    }
+                }
+                if (fw.alpha <= 0) fireworks.splice(i, 1);
+            }
+        }
+
+        function checkJudgment() {
+            let targetIndex = -1;
+            let maxProgress = -1;
+
+            for(let i=0; i<notes.length; i++) {
+                if(notes[i].progress > maxProgress) {
+                    maxProgress = notes[i].progress;
+                    targetIndex = i;
+                }
+            }
+
+            if (targetIndex === -1) return; 
+            
+            let note = notes[targetIndex];
+            let diff = Math.abs(note.progress - 1.0);
+            let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
+
+            let hitSuccess = false;
+
+            if (diff < 0.10) {
+                hitEffects.push({
+                    x: centerX, y: currentY, radius: targetRadius,
+                    color: "#ffffff", blur: 40, alpha: 1.0
+                });
+                score += 150;
+                combo++;
+                hitSuccess = true;
+                notes.splice(targetIndex, 1);
+            } else if (diff < 0.22) {
+                hitEffects.push({
+                    x: centerX, y: currentY, radius: targetRadius,
+                    color: "#b0e0ff", blur: 18, alpha: 0.75
+                });
+                score += 50;
+                combo++;
+                hitSuccess = true;
+                notes.splice(targetIndex, 1);
+            }
+
+            if (hitSuccess && combo >= 5) {
+                triggerFireworkShow(); 
+                combo = 0; 
+            }
+        }
+
+        // 🛠️ 花火の代わりに世界樹の発光オーブを生成
+        function triggerFireworkShow() {
+            const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7", "#ffcc80"];
+            for (let i = 0; i < 6; i++) {
+                // レーンを邪魔しないよう左右の空きスペースにランダム配置
+                let fireworkX = (Math.random() > 0.5) ? (Math.random() * 80 + 30) : (Math.random() * 80 + 290);
+                let fireworkY = Math.random() * 220 + 100; 
+
+                fireworks.push({
+                    x: fireworkX,
+                    y: fireworkY,
+                    radius: 2,
+                    maxRadius: Math.random() * 5 + 4.5, // 世界樹の花（maxSize: 2.5〜6）に近いサイズ感
+                    color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
+                    alpha: 1.0, 
+                    delay: i * 5, // ポポポンと心地よい時間差で咲く
+                    sparkleOffset: Math.random() * 100,
+                    state: "wait"
+                });
+            }
+            score += 1000; 
+        }
+
+        function drawGame() {
+            ctx.fillStyle = '#020206';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 🛠️ 世界樹風・発光オーブ（宝石の花）の描画処理
+            let now = Date.now();
+            fireworks.forEach(fw => {
+                if (fw.state === "explode") {
+                    ctx.save();
+                    // 世界樹と同じく、サイン波でキラキラまたたく効果
+                    let sparkle = Math.sin((now / 150) + fw.sparkleOffset) * 0.25 + 0.75;
+                    ctx.globalAlpha = fw.alpha * sparkle;
+                    
+                    // パステルカラーの外光（ぼかし効果）
+                    ctx.shadowBlur = fw.radius * 2.5; 
+                    ctx.shadowColor = fw.color;
+                    ctx.fillStyle = fw.color;
+                    ctx.beginPath(); 
+                    ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); 
+                    ctx.fill();
+                    
+                    // 内側の白い光の核
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = "#ffffff";
+                    ctx.beginPath(); 
+                    ctx.arc(fw.x, fw.y, fw.radius * 0.35, 0, Math.PI * 2); 
+                    ctx.fill();
+                    
+                    ctx.restore();
+                }
+            });
+
+            ctx.strokeStyle = '#101025';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, spawnY); ctx.lineTo(centerX, judgeLowY);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(0, 150, 255, 0.45)';
+            ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.arc(centerX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
+
+            hitEffects.forEach(fx => {
+                ctx.save();
+                ctx.globalAlpha = fx.alpha;
+                ctx.shadowBlur = fx.blur;
+                ctx.shadowColor = fx.color;
+                ctx.fillStyle = fx.color;
+                ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
+
+            notes.forEach(note => {
+                let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
+                let currentRadius = 3 + (15 * note.progress);
+
+                ctx.save();
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = "#0099ff";
+                
+                let gradient = ctx.createRadialGradient(centerX, currentY, 1, centerX, currentY, currentRadius);
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(0.6, '#f5f8ff');
+                gradient.addColorStop(1, "#0088ff");
+                ctx.fillStyle = gradient;
+
+                ctx.beginPath(); ctx.arc(centerX, currentY, currentRadius, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
+
+            let gaugeY = centerY - 20;
+            ctx.save();
+            ctx.strokeStyle = "#151525";
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.arc(centerX, gaugeY, 22, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (combo > 0) {
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = "#ffffff"; 
+                ctx.strokeStyle = "#ffffff"; 
+                ctx.lineWidth = 6;
+                let progressAngle = (combo / 5) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(centerX, gaugeY, 22, -Math.PI / 2, (-Math.PI / 2) + progressAngle);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '16px sans-serif';
+            ctx.textAlign = 'left'; ctx.fillText(`SCORE: ${score}`, 20, 40);
+            ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 40);
+
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(1, 1, 5, 0.93)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.font = '24px sans-serif';
+                ctx.fillText('タイムアップ！', centerX, centerY - 30);
+                ctx.fillStyle = '#00ffff';
+                ctx.font = 'bold 26px sans-serif';
+                ctx.fillText(`最終スコア: ${score}`, centerX, centerY + 20);
             }
         }
 
@@ -255,19 +431,14 @@
         function endGame() {
             isGameOver = true;
             clearInterval(timerInterval);
+            drawGame();
             
-            // 🛡️ マイクのストリーム情報を完全クリア（スマホの録音表示を強制停止）
             if (audioStream) {
-                audioStream.getTracks().forEach(t => t.stop());
+                audioStream.getTracks().forEach(track => track.stop());
             }
             if (audioContext) {
                 audioContext.close();
             }
-            
-            setTimeout(() => {
-                // アプリ側でリロードされる想定のためフラグのみ戻す
-                isPlaying = false;
-            }, 2500);
         }
     </script>
 </body>
