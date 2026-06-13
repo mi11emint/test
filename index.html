@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声リズムゲーム（50倍・世界樹大満開フラッシュ版）</title>
+    <title>音声リズムゲーム（動画保存中版）</title>
     <style>
         body {
             margin: 0;
@@ -38,7 +38,7 @@
 
     <div id="info">・・・保存待ち時間中・・・<br><br>
       音声リズムゲーム<br>
-      声や音で下枠○を狙って！ 5コンボで画面を染める50倍大発光！✨^.ˬ.^</div>
+      声や音で下枠○を狙って！^.ˬ.^ฅⳊ</div>
     <canvas id="gameCanvas" width="400" height="500"></canvas>
 
     <script>
@@ -64,7 +64,7 @@
         const centerY = canvas.height / 2;
         const spawnY = 80;
         const judgeLowY = canvas.height - 70;
-        const targetRadius = 32;
+        const targetRadius = 32; // 判定用の〇のサイズ
 
         let notes = [];
         let nextSpawnCountdown = 0;
@@ -235,15 +235,15 @@
                 if (hitEffects[i].alpha <= 0) hitEffects.splice(i, 1);
             }
 
-            // ⭐ 50倍・超銀河スケール花火のアップデート処理
+            // ⭐ 花火のアップデート処理
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 let fw = fireworks[i];
                 fw.delay--;
                 if (fw.delay <= 0) {
                     fw.state = "explode";
-                    fw.alpha -= 0.008; // 画面が真っ白に染まる時間を長くするため、よりゆっくり消えるように
+                    fw.alpha -= 0.016; 
                     fw.radius += fw.expandSpeed; 
-                    fw.expandSpeed *= 0.98; // 驚異的な広がりをキープ
+                    fw.expandSpeed *= 0.94; 
                 }
                 if (fw.alpha <= 0) fireworks.splice(i, 1);
             }
@@ -294,24 +294,24 @@
             }
         }
 
-        // ⭐【50倍設定】キャンバスを遥かに超えて空間を焼き尽くす一撃
+        // ⭐ 判定の〇より15%ほど大きく綺麗に広がる花火を生成
         function triggerFireworkShow() {
             const pastelColors = ["#ffffff", "#ffb7d5", "#b2ebf2", "#fff59d", "#e0ffff", "#e1bee7"];
-            for (let i = 0; i < 4; i++) {
-                // 画面の中心付近から圧倒的な光を放つ
-                let fireworkX = canvas.width / 2 + (Math.random() * 100 - 50);
-                let fireworkY = canvas.height / 2 + (Math.random() * 100 - 100); 
+            for (let i = 0; i < 5; i++) {
+                // レーンの両脇エリアにバランスよく配置
+                let fireworkX = (Math.random() > 0.5) ? (Math.random() * 80 + 30) : (Math.random() * 80 + 290);
+                let fireworkY = Math.random() * 200 + 110; 
 
                 fireworks.push({
                     x: fireworkX,
                     y: fireworkY,
-                    radius: 5,
-                    // ⭐【前のコードの50倍スケールへ】
-                    maxRadius: (Math.random() * 20 + 35) * 50, // 最大半径 約1750〜2750（画面の4倍以上）
-                    expandSpeed: 45.0 + Math.random() * 15.0, // 爆速で画面を飲み込む
+                    radius: 3,
+                    // ⭐【15%アップのジャスト調整】最大半径を 37 前後に設定
+                    maxRadius: Math.random() * 5 + 35, 
+                    expandSpeed: 2.5 + Math.random() * 1.0, 
                     color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
                     alpha: 1.0, 
-                    delay: i * 4, 
+                    delay: i * 6, // ポポポンとリズムよく咲く
                     state: "wait"
                 });
             }
@@ -322,30 +322,28 @@
             ctx.fillStyle = '#020206';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // ⭐ 50倍・限界突破発光の描画処理
+            // ⭐ 完璧な発光をキープした花火の描画処理
             fireworks.forEach(fw => {
                 if (fw.state === "explode") {
                     ctx.save();
                     ctx.globalAlpha = fw.alpha;
                     
-                    // ⭐ 50倍のスケールに合わせて影のぼかし（発光オーラ）も限界突破
-                    // 1層目：超巨大な空間全体のカラーフェード
-                    ctx.shadowBlur = Math.min(fw.radius * 0.5, 150); // ブラウザの負荷限界を考慮しつつ最大化
+                    // 1層目：外側のふんわりしたパステルの光の輪
+                    ctx.shadowBlur = fw.radius * 2.2; 
                     ctx.shadowColor = fw.color;
                     ctx.strokeStyle = fw.color;
-                    ctx.lineWidth = 12;
+                    ctx.lineWidth = 4;
                     ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
                     
-                    // 2層目：画面全体を染め上げるネオンの波
-                    ctx.strokeStyle = "#ffffff";
-                    ctx.lineWidth = 30;
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.7, 0, Math.PI * 2); ctx.stroke();
+                    // 2層目：まばゆさを出すための内側の白い輪
+                    ctx.shadowBlur = 15;
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = "#ffffff"; 
+                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.9, 0, Math.PI * 2); ctx.stroke();
                     
-                    // 3層目：真っ白に燃え盛る巨大な核
+                    // 3層目：中心のきらりと光るコア
                     ctx.fillStyle = "#ffffff";
-                    ctx.shadowBlur = 100;
-                    ctx.shadowColor = "#ffffff";
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.3, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.15, 0, Math.PI * 2); ctx.fill();
                     
                     ctx.restore();
                 }
