@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D音声リズムゲーム（花火エリア制限版）</title>
+    <title>3D音声リズムゲーム（淡い花火＆ボイス特化版）</title>
     <style>
         body {
             margin: 0;
@@ -46,7 +46,7 @@
 </head>
 <body>
 
-    <div id="info">【視界クリア版】3コンボで花火解放！ゲームの邪魔にならないサイドエリアに打ち上がります🎆</div>
+    <div id="info">【ボイス・楽器最適化】3コンボで、サイドに「淡く美しく光る花火」が優しく咲きます🎆</div>
     <button id="startBtn">ゲームスタート</button>
     <canvas id="gameCanvas" width="400" height="500"></canvas>
 
@@ -77,7 +77,8 @@
         let hitEffects = [];
         let fireworks = [];
 
-        let canInput = true;
+        // ⭐【声・楽器用チューニング】長音の誤反応を防ぐ状態管理
+        let lastVolume = 0;
         let inputCooldown = 0;
 
         startBtn.addEventListener('click', async () => {
@@ -126,20 +127,18 @@
             if (!analyser) return;
             analyser.getByteFrequencyData(dataArray);
             
-            let totalHigh = 0;
-            let totalLow = 0;
             let maxVal = 0;
             let maxIndex = 0;
-
             const hzPerBucket = audioContext.sampleRate / analyser.fftSize;
 
             for (let i = 0; i < dataArray.length; i++) {
                 let val = dataArray[i];
                 let currentHz = i * hzPerBucket;
 
-                if (currentHz < 444) {
-                    val = val * 1.5;
-                    if (val > 255) val = 255; 
+                // 低音域の感度ブースト
+                if (currentHz < 400) {
+                    val = val * 1.4;
+                    if (val > 255) val = 255;
                 }
 
                 if (val > maxVal) {
@@ -148,22 +147,26 @@
                 }
             }
 
-            let volume = maxVal; 
-            const threshold = 14; 
+            let currentVolume = maxVal;
+            const threshold = 40; // 声や楽器用に少しハッキリした音量基準に設定
 
-            if (inputCooldown > 0) {
-                inputCooldown--;
-                if (inputCooldown === 0) canInput = true;
-            }
+            if (inputCooldown > 0) inputCooldown--;
 
-            if (volume > threshold && canInput) {
+            // ⭐【超重要】前フレームの音量より「急激に大きくなった瞬間」だけを狙い撃ち（トリガー化）
+            // これにより、声が「ハーーイ」と伸びていても、最初の「ハ」の瞬間だけに反応します
+            let volumeSpike = currentVolume - lastVolume;
+
+            if (currentVolume > threshold && volumeSpike > 15 && inputCooldown === 0) {
                 const peakHz = maxIndex * hzPerBucket;
-                let isHighPitch = peakHz >= 444;
+                
+                // ⭐ 声・楽器が一番気持ちよく分離する境界（400Hz）で判定
+                let isHighPitch = peakHz >= 400;
 
                 checkJudgment(isHighPitch); 
-                canInput = false;
-                inputCooldown = 9; 
+                inputCooldown = 12; // 次の音を拾うまでの短いクールダウン
             }
+
+            lastVolume = currentVolume; // 音量を記憶
         }
 
         function updateGame() {
@@ -192,14 +195,15 @@
                 if (hitEffects[i].alpha <= 0) hitEffects.splice(i, 1);
             }
 
+            // 淡い花火のフェードアウト処理
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 let fw = fireworks[i];
                 fw.delay--;
                 if (fw.delay <= 0) {
                     fw.state = "explode";
-                    fw.alpha -= 0.02; 
+                    fw.alpha -= 0.025; // 少しだけスッと儚く消えるように
                     fw.radius += fw.expandSpeed; 
-                    fw.expandSpeed *= 0.96; 
+                    fw.expandSpeed *= 0.95; 
                 }
                 if (fw.alpha <= 0) fireworks.splice(i, 1);
             }
@@ -225,7 +229,7 @@
 
             let hitSuccess = false;
 
-            if (diff < 0.08) {
+            if (diff < 0.09) {
                 hitEffects.push({
                     x: centerX, y: currentY, radius: targetRadius,
                     color: "#ffffff", blur: 40, alpha: 1.0
@@ -234,10 +238,10 @@
                 combo++;
                 hitSuccess = true;
                 notes.splice(targetIndex, 1);
-            } else if (diff < 0.18) {
+            } else if (diff < 0.20) {
                 hitEffects.push({
                     x: centerX, y: currentY, radius: targetRadius,
-                    color: "#88ccff", blur: 18, alpha: 0.75
+                    color: "#b0e0ff", blur: 18, alpha: 0.75
                 });
                 score += 50;
                 combo++;
@@ -251,32 +255,23 @@
             }
         }
 
-        // ⭐【修正】判定リング・中央レーンを絶対に邪魔しない「サイドエリア専用」花火生成
+        // ⭐【修正】淡くて幻想的な色彩の「パステル淡発光花火」にリデザイン
         function triggerFireworkShow() {
-            const colors = ["#ff00ff", "#00ffff", "#ffff00", "#ff3366", "#33ff66"];
+            // パステルピンク、パステルブルー、ペールイエロー、ミントグリーン、ラベンダーパープル
+            const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7"];
             for (let i = 0; i < 5; i++) {
-                // 50%の確率で、左の空き地か、右の空き地かを分ける
-                let fireworkX = 0;
-                if (Math.random() > 0.5) {
-                    // 左サイド（X: 30 〜 120 の間）
-                    fireworkX = Math.random() * 90 + 30;
-                } else {
-                    // 右サイド（X: 280 〜 370 の間）
-                    fireworkX = Math.random() * 90 + 280;
-                }
-
-                // Y座標もリングに被らない安全な中段メイン（Y: 130 〜 370 の間）に配置
+                let fireworkX = (Math.random() > 0.5) ? (Math.random() * 90 + 30) : (Math.random() * 90 + 280);
                 let fireworkY = Math.random() * 240 + 130;
 
                 fireworks.push({
                     x: fireworkX,
                     y: fireworkY,
-                    radius: 5,
-                    maxRadius: Math.random() * 30 + 35,
-                    expandSpeed: 2.5 + Math.random() * 1.5,
-                    color: colors[i % colors.length],
-                    alpha: 1.0,
-                    delay: i * 10, 
+                    radius: 3,
+                    maxRadius: Math.random() * 25 + 35,
+                    expandSpeed: 2.2 + Math.random() * 1.2,
+                    color: pastelColors[i % pastelColors.length],
+                    alpha: 0.9, // 最初から少し透明感を持たせる
+                    delay: i * 9, 
                     state: "wait"
                 });
             }
@@ -287,18 +282,20 @@
             ctx.fillStyle = '#020206';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // 背景花火（サイドに限定されて描画されます）
+            // ⭐【修正】淡い花火の描画（線を少し細くし、光の広がりを優しく）
             fireworks.forEach(fw => {
                 if (fw.state === "explode") {
                     ctx.save();
                     ctx.globalAlpha = fw.alpha;
-                    ctx.shadowBlur = 20;
+                    ctx.shadowBlur = 15; // 柔らかい光に
                     ctx.shadowColor = fw.color;
                     ctx.strokeStyle = fw.color;
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 1.8; // 線を細くして儚さを演出
                     ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle = "#fff";
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.15, 0, Math.PI * 2); ctx.fill();
+                    
+                    // 中心の光の点もうっすら優しく
+                    ctx.fillStyle = "rgba(255,255,255,0.7)";
+                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.1, 0, Math.PI * 2); ctx.fill();
                     ctx.restore();
                 }
             });
