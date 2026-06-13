@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声インベーダーゲーム！</title>
+    <title>音声インベーダーゲーム！（感度アップ版）</title>
     <style>
         body {
             margin: 0;
@@ -42,7 +42,7 @@
 </head>
 <body>
 
-    <div id="info">【声で撃て！】短い声＝通常弾 / 長い声＝ビーム</div>
+    <div id="info">【声で撃て！】小さい声でも反応します 🎤</div>
     <button id="startBtn">ゲームスタート</button>
     <canvas id="gameCanvas" width="400" height="500"></canvas>
 
@@ -59,7 +59,7 @@
 
         // ゲーム状態
         let score = 0;
-        let timeLeft = 30; // 30秒の制限時間（仮のダウンロード時間）
+        let timeLeft = 30; // 30秒の制限時間
         let timerInterval;
 
         // オブジェクト管理
@@ -75,6 +75,7 @@
         startBtn.addEventListener('click', async () => {
             if (isPlaying) return;
             try {
+                // マイクアクセスの許可を取得
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(stream);
@@ -83,6 +84,7 @@
                 source.connect(analyser);
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+                // 初期化
                 isPlaying = true;
                 isGameOver = false;
                 score = 0;
@@ -99,19 +101,20 @@
                     }
                 }, 1000);
 
+                // ゲームループ開始
                 gameLoop();
             } catch (err) {
-                alert('マイクの許可が必要です：' + err);
+                alert('マイクの許可が必要です。ブラウザの設定を確認してください：' + err);
             }
         });
 
         function gameLoop() {
             if (!isPlaying) return;
 
-            updateAudio();
-            updateGame();
-            checkCollisions(); // 当たり判定の追加
-            drawGame();
+            updateAudio(); // 音声の解析
+            updateGame();  // ゲーム状態の更新（インベーダーの移動・出現など）
+            checkCollisions(); // 当たり判定
+            drawGame();    // 描画
 
             if (!isGameOver) {
                 requestAnimationFrame(gameLoop);
@@ -119,23 +122,27 @@
         }
 
         function updateAudio() {
+            if (!analyser) return;
+            
             analyser.getByteFrequencyData(dataArray);
             let total = 0;
             for (let i = 0; i < dataArray.length; i++) total += dataArray[i];
             let volume = total / dataArray.length;
 
-            const threshold = 35; // 声の感度設定
+            // ⭐ 感度調整：35から15に下げました（小さい声でも反応）
+            const threshold = 15; 
 
             if (volume > threshold) {
                 voiceDuration++;
+                // 15フレーム（約0.25秒）声が続いたらビーム
                 if (voiceDuration > 15) isBeaming = true;
 
                 if (isBeaming) {
-                    // ビーム発射
+                    // ビーム発射（声の大きさに応じて太さが変わる）
                     bullets.push({
                         x: player.x,
                         y: player.y - 10,
-                        width: Math.min(volume * 0.4, 35),
+                        width: Math.min(volume * 0.5, 40),
                         height: 25,
                         speed: 12,
                         color: '#f0f',
@@ -147,7 +154,7 @@
                         bullets.push({
                             x: player.x,
                             y: player.y - 10,
-                            radius: Math.min(volume * 0.3, 25),
+                            radius: Math.min(volume * 0.4, 30),
                             speed: 7,
                             color: '#0fa',
                             isBeam: false
@@ -167,14 +174,14 @@
                 if (bullets[i].y < -50) bullets.splice(i, 1);
             }
 
-            // インベーダーの自動生成（約1秒に1回）
+            // ⭐ インベーダーの自動生成（音声に関係なく1秒弱に1回降ってくるように修正）
             invaderSpawnTimer++;
-            if (invaderSpawnTimer > 50) {
+            if (invaderSpawnTimer > 45) {
                 invaders.push({
-                    x: Math.random() * (canvas.width - 40) + 20,
+                    x: Math.random() * (canvas.width - 50) + 25,
                     y: -20,
-                    size: 25,
-                    speed: 1.5 + Math.random() * 1.5 // 速度はランダム
+                    size: 22,
+                    speed: 1.2 + Math.random() * 1.5 // 降りてくる速度
                 });
                 invaderSpawnTimer = 0;
             }
@@ -183,14 +190,14 @@
             for (let i = invaders.length - 1; i >= 0; i--) {
                 invaders[i].y += invaders[i].speed;
 
-                // 一番下まで攻め込まれたらゲームオーバー
+                // 一番下まで攻め込まれたらゲーム終了（今回はデモ用なので終了のみ、スコアは残る）
                 if (invaders[i].y > canvas.height - 60) {
                     endGame();
                 }
             }
         }
 
-        // 💥 当たり判定の処理
+        // 当たり判定
         function checkCollisions() {
             for (let b = bullets.length - 1; b >= 0; b--) {
                 for (let i = invaders.length - 1; i >= 0; i--) {
@@ -202,33 +209,29 @@
                     let hit = false;
 
                     if (bullet.isBeam) {
-                        // 四角形（ビーム）と円（インベーダー）の当たり判定
+                        // ビーム（四角）とインベーダー（円）の判定
                         let closeX = Math.max(bullet.x - bullet.width/2, Math.min(invader.x, bullet.x + bullet.width/2));
                         let closeY = Math.max(bullet.y, Math.min(invader.y, bullet.y + bullet.height));
                         let distanceX = invader.x - closeX;
                         let distanceY = invader.y - closeY;
-                        let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-                        if (distanceSquared < (invader.size * invader.size)) {
+                        if ((distanceX * distanceX + distanceY * distanceY) < (invader.size * invader.size)) {
                             hit = true;
                         }
                     } else {
-                        // 円（通常弾）と円（インベーダー）の当たり判定
+                        // 通常弾（円）とインベーダー（円）の判定
                         let dx = bullet.x - invader.x;
                         let dy = bullet.y - invader.y;
-                        let distance = Math.sqrt(dx * dx + dy * dy);
-                        if (distance < bullet.radius + invader.size) {
+                        if (Math.sqrt(dx * dx + dy * dy) < (bullet.radius + invader.size)) {
                             hit = true;
                         }
                     }
 
                     if (hit) {
-                        invaders.splice(i, 1); // インベーダー消滅
-                        score += 100; // スコア加算
-                        
-                        // 通常弾の場合は弾も消す（ビームは貫通する）
+                        invaders.splice(i, 1);
+                        score += 100;
                         if (!bullet.isBeam) {
                             bullets.splice(b, 1);
-                            break; 
+                            break;
                         }
                     }
                 }
@@ -236,16 +239,16 @@
         }
 
         function drawGame() {
-            // 背景クリア
+            // 背景
             ctx.fillStyle = '#000';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // プレイヤー（自機）
+            // 自機
             ctx.fillStyle = '#fff';
             ctx.fillRect(player.x - 20, player.y, 40, 15);
-            ctx.fillRect(player.x - 5, player.y - 8, 10, 8); // 砲台っぽく
+            ctx.fillRect(player.x - 5, player.y - 8, 10, 8);
 
-            // 弾の描画
+            // 弾
             bullets.forEach(bullet => {
                 ctx.fillStyle = bullet.color;
                 if (!bullet.isBeam) {
@@ -257,17 +260,15 @@
                 }
             });
 
-            // インベーダー（👾）の描画
+            // インベーダー（👾）
             invaders.forEach(invader => {
-                ctx.fillStyle = '#ff3333'; // 赤いインベーダー
-                // 簡易的に文字で「👾」を描画（画像がなくても寂しくないように）
-                ctx.font = `${invader.size * 1.2}px sans-serif`;
+                ctx.font = `${invader.size * 1.3}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('👾', invader.x, invader.y);
             });
 
-            // UI（スコアと残り時間）の描画
+            // UI
             ctx.fillStyle = '#fff';
             ctx.font = '16px sans-serif';
             ctx.textAlign = 'left';
@@ -275,19 +276,19 @@
             ctx.textAlign = 'right';
             ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 15, 30);
 
-            // リザルト画面
+            // リザルト
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 ctx.fillStyle = '#fff';
                 ctx.textAlign = 'center';
-                ctx.font = '28px sans-serif';
+                ctx.font = '24px sans-serif';
                 ctx.fillText('保存が完了しました！', canvas.width / 2, canvas.height / 2 - 40);
                 
                 ctx.fillStyle = '#0fa';
                 ctx.font = '22px sans-serif';
-                ctx.fillText(`あなたのスコア: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
+                ctx.fillText(`最終スコア: ${score}`, canvas.width / 2, canvas.height / 2 + 10);
 
                 ctx.fillStyle = '#aaa';
                 ctx.font = '14px sans-serif';
@@ -298,9 +299,8 @@
         function endGame() {
             isGameOver = true;
             clearInterval(timerInterval);
-            drawGame(); // 最終画面を描画
+            drawGame();
             
-            // 2秒後にスタートボタンを再表示（もう一度遊べるように）
             setTimeout(() => {
                 startBtn.textContent = 'もう一度遊ぶ';
                 startBtn.style.display = 'block';
