@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声リズムゲーム（3レーン・世界樹発光版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>にふなみ - 動画保存中ミニゲーム</title>
     <style>
         body {
             margin: 0;
@@ -18,471 +18,452 @@
             overflow: hidden;
             user-select: none;
         }
+
+        .universal-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 100%;
+        }
+
+        /* --- 1. Sound Invader ＆ 2. Aqua Catch 共通のスタイル --- */
         #gameCanvas {
             border: 2px solid #223;
             background-color: #010105;
             max-width: 100%;
-            max-height: 70vh;
-            box-shadow: 0 0 25px rgba(0,255,255,0.08);
+            max-height: 65vh;
+            cursor: pointer;
+            display: none; 
         }
         #info {
-            font-size: 12px;
+            font-size: 13px;
             color: #e0ffff;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             text-align: center;
             padding: 0 20px;
+            line-height: 1.5;
+        }
+
+        /* --- 2. Aqua Catch 専用のスタイル --- */
+        #controls {
+            display: none; 
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 15px;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 45%;
+            height: 55px;
+            background: linear-gradient(135deg, #0f2042 0%, #061026 100%);
+            border: 2px solid #00d2ff;
+            border-radius: 12px;
+            color: #00d2ff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,210,255,0.3);
+            transition: background 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active {
+            background: #00d2ff;
+            color: #03030a;
+            box-shadow: 0 0 20px rgba(0,210,255,0.6);
+        }
+
+        /* --- 3. Healing Tree 専用のスタイル --- */
+        .tree-game-container {
+            display: none; 
+            position: relative;
+            width: 450px;
+            height: 450px;
+            max-width: 90vw;
+            max-height: 60vh;
+            background-color: #020205;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #treeImg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0.6; 
+            z-index: 1;
+        }
+        #treeCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="info">・・・保存待ち時間中・・・<br><br>
-      3レーン音声リズムゲーム<br>
-      画面の「左・中・右」をタップするか、声や音で○を狙って！^.ˬ.^</div>
-    <canvas id="gameCanvas" width="400" height="500"></canvas>
+    <div class="universal-container">
+        <div id="info">・・・保存待ち時間中・・・</div>
+        
+        <canvas id="gameCanvas" width="400" height="500"></canvas>
+        
+        <div class="tree-game-container" id="treeContainer">
+            <img id="treeImg" src="https://img1.mitemin.net/cn/c9/5h3rb7a49bj373z8gxyk7s3t40_k6d_vu_yx_5kna.png" alt="世界樹">
+            <canvas id="treeCanvas" width="450" height="450"></canvas>
+        </div>
+        
+        <div id="controls">
+            <button class="btn" id="btnLeft">◀ 左へ</button>
+            <button class="btn" id="btnRight">右へ ▶</button>
+        </div>
+    </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        // 画面が読み込まれたら即座にゲームをランダム決定して枠を表示する
+        window.addEventListener('DOMContentLoaded', () => {
+            const games = ["INVADER", "CATCH", "TREE"];
+            const selectedGame = games[Math.floor(Math.random() * games.length)];
 
-        let audioContext;
-        let analyser;
-        let dataArray;
-        let audioStream; 
-
-        let isPlaying = false;
-        let isGameOver = false;
-        let isCountingDown = false; 
-        let countdownNumber = 3;    
-
-        let score = 0;
-        let combo = 0;
-        let timeLeft = 30;
-        let timerInterval;
-
-        const spawnY = 80;
-        const judgeLowY = canvas.height - 70;
-        const targetRadius = 32; // 判定の〇のサイズ
-
-        // ⭐ 3レーンのX座標（左・中央・右）
-        const lanes = [100, 200, 300]; 
-
-        let notes = [];
-        let nextSpawnCountdown = 0;
-        let hitEffects = [];
-        let fireworks = []; 
-
-        let lastVolume = 0;
-        let inputCooldown = 0;
-
-        // 🚀 画面が開いた瞬間に自動でマイク許可を取り、カウントダウンを開始
-        window.addEventListener('DOMContentLoaded', async () => {
-            ctx.fillStyle = '#020206';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // ⭐ タップ操作でも遊べるようにイベントを追加（スマホ対応）
-            canvas.addEventListener('touchstart', handleTouch, { passive: false });
-            canvas.addEventListener('mousedown', handleMouseDown);
-
-            try {
-                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-
-                const source = audioContext.createMediaStreamSource(audioStream);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512; 
-                source.connect(analyser);
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-                startCountdown();
-
-            } catch (err) {
-                // マイクがなくてもタップで遊べるようにカウントダウンは開始する
-                startCountdown();
-                console.log('マイク未接続、または拒否されました（タップ操作のみ有効）：', err);
+            if (selectedGame === "INVADER") {
+                runInvaderGame();
+            } else if (selectedGame === "CATCH") {
+                runCatchGame();
+            } else if (selectedGame === "TREE") {
+                runTreeGame();
             }
         });
 
-        // 📱 スマホの画面タップ処理（左・中・右の判別）
-        function handleTouch(e) {
-            e.preventDefault();
-            if (!isPlaying || isGameOver || isCountingDown) return;
-            const rect = canvas.getBoundingClientRect();
-            const touchX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
-            triggerLaneInput(touchX);
-        }
-
-        // 🖱️ PCでのテスト用クリック処理
-        function handleMouseDown(e) {
-            if (!isPlaying || isGameOver || isCountingDown) return;
-            const rect = canvas.getBoundingClientRect();
-            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-            triggerLaneInput(clickX);
-        }
-
-        // どのレーンが押されたか判定してジャッジ
-        function triggerLaneInput(canvasX) {
-            let targetLane = 1; // デフォルト中央
-            if (canvasX < 150) targetLane = 0; // 左
-            else if (canvasX > 250) targetLane = 2; // 右
+        // =========================================================================
+        // 🎮 1. SOUND INVADER 
+        // =========================================================================
+        function runInvaderGame() {
+            const canvas = document.getElementById('gameCanvas');
+            canvas.style.display = "block"; 
+            canvas.height = 500; 
             
-            checkJudgment(targetLane);
-        }
+            const info = document.getElementById('info');
+            info.innerHTML = "・・・保存待ち時間中・・・<br>🎤「あーー」と声を出しながら<br>下枠〇に重なるノーツをタイミングよくタップ！";
 
-        // ⏱️ カウントダウン処理
-        function startCountdown() {
-            isCountingDown = true;
-            countdownNumber = 3;
+            const ctx = canvas.getContext('2d');
+            let audioContext, analyser, dataArray, audioStream; 
+            let isPlaying = false, isGameOver = false, isCountingDown = false, countdownNumber = 3;    
+            let score = 0, combo = 0, timeLeft = 30, timerInterval;
 
-            const cdInterval = setInterval(() => {
-                countdownNumber--;
-                if (countdownNumber < 0) {
-                    clearInterval(cdInterval);
-                    isCountingDown = false;
-                    startGame(); 
+            const laneXs = [80, 200, 320], spawnY = 80, judgeLowY = canvas.height - 70, targetRadius = 26;
+            let notes = [], nextSpawnCountdown = 0, hitEffects = [], fireworks = [], isVoiceDetected = false;
+
+            // タップイベント登録
+            const handleTap = (clientX, clientY) => {
+                if (!isPlaying || isGameOver) return;
+                const rect = canvas.getBoundingClientRect();
+                const tapX = (clientX - rect.left) * (canvas.width / rect.width);
+                const tapY = (clientY - rect.top) * (canvas.height / rect.height);
+                let clickedLane = -1, minDiff = 999;
+                for (let i = 0; i < laneXs.length; i++) {
+                    let diff = Math.abs(tapX - laneXs[i]);
+                    if (diff < 50 && diff < minDiff) { minDiff = diff; clickedLane = i; }
                 }
-            }, 1000);
+                if (clickedLane !== -1) checkJudgment(clickedLane);
+            };
+            canvas.addEventListener('mousedown', (e) => handleTap(e.clientX, e.clientY));
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleTap(e.touches[0].clientX, e.touches[0].clientY); });
 
-            function countdownLoop() {
-                if (!isCountingDown) return;
-                
-                ctx.fillStyle = '#020206';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // マイクエラー対策：先にカウントダウンの描画を開始する
+            startCountdown();
+            initAudio();
 
-                // 3本の背景レーンを描画
-                lanes.forEach(laneX => {
-                    ctx.strokeStyle = '#101025';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(laneX, spawnY); ctx.lineTo(laneX, judgeLowY); ctx.stroke();
-
-                    ctx.strokeStyle = 'rgba(0, 150, 255, 0.1)'; 
-                    ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.arc(laneX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
-                });
-
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.font = 'bold 70px sans-serif';
-                
-                if (countdownNumber > 0) {
-                    ctx.fillStyle = '#00ffff';
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#00ffff';
-                    ctx.fillText(countdownNumber, canvas.width / 2, canvas.height / 2);
-                } else {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowBlur = 25;
-                    ctx.shadowColor = '#ffffff';
-                    ctx.fillText('START!', canvas.width / 2, canvas.height / 2);
-                }
-                ctx.shadowBlur = 0; 
-
-                requestAnimationFrame(countdownLoop);
-            }
-            countdownLoop();
-        }
-
-        // ゲーム本番開始
-        function startGame() {
-            isPlaying = true;
-            isGameOver = false;
-            score = 0;
-            combo = 0;
-            timeLeft = 30;
-            notes = [];
-            hitEffects = [];
-            fireworks = [];
-            nextSpawnCountdown = 20;
-
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) endGame();
-            }, 1000);
-
-            gameLoop();
-        }
-
-        function gameLoop() {
-            if (!isPlaying) return;
-            updateAudio();
-            updateGame();
-            drawGame();
-            if (!isGameOver) requestAnimationFrame(gameLoop);
-        }
-
-        function updateAudio() {
-            if (!analyser) return;
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(dataArray);
-            
-            let maxVal = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                if (dataArray[i] > maxVal) {
-                    maxVal = dataArray[i];
+            async function initAudio() {
+                try {
+                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioContext.state === 'suspended') await audioContext.resume();
+                    const source = audioContext.createMediaStreamSource(audioStream);
+                    analyser = audioContext.createAnalyser(); analyser.fftSize = 256;
+                    source.connect(analyser); dataArray = new Uint8Array(analyser.frequencyBinCount);
+                } catch (err) {
+                    console.log("マイクなしモードで実行します");
                 }
             }
 
-            let currentVolume = maxVal;
-            const threshold = 30; 
+            function startCountdown() {
+                isCountingDown = true; countdownNumber = 3;
+                const cdInterval = setInterval(() => {
+                    countdownNumber--;
+                    if (countdownNumber < 0) { clearInterval(cdInterval); isCountingDown = false; startGame(); }
+                }, 1000);
+                function countdownLoop() {
+                    if (!isCountingDown) return;
+                    ctx.fillStyle = '#020206'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.strokeStyle = '#101025'; ctx.lineWidth = 2;
+                    laneXs.forEach(x => {
+                        ctx.beginPath(); ctx.moveTo(x, spawnY); ctx.lineTo(x, judgeLowY); ctx.stroke();
+                        ctx.strokeStyle = 'rgba(0, 150, 255, 0.15)'; ctx.beginPath(); ctx.arc(x, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
+                    });
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 70px sans-serif';
+                    if (countdownNumber > 0) { ctx.fillStyle = '#00ffff'; ctx.fillText(countdownNumber, canvas.width / 2, canvas.height / 2); }
+                    else { ctx.fillStyle = '#ffffff'; ctx.fillText('START!', canvas.width / 2, canvas.height / 2); }
+                    requestAnimationFrame(countdownLoop);
+                }
+                countdownLoop();
+            }
 
-            if (inputCooldown > 0) inputCooldown--;
+            function startGame() {
+                isPlaying = true; timerInterval = setInterval(() => { timeLeft--; if (timeLeft <= 0) endGame(); }, 1000);
+                gameLoop();
+            }
+            function gameLoop() { if (!isPlaying) return; updateAudio(); updateGame(); drawGame(); if (!isGameOver) requestAnimationFrame(gameLoop); }
 
-            let volumeSpike = currentVolume - lastVolume;
+            function updateAudio() {
+                if (!analyser) return; analyser.getByteFrequencyData(dataArray);
+                let total = 0; for (let i = 0; i < dataArray.length; i++) total += dataArray[i];
+                isVoiceDetected = (total / dataArray.length) > 14;
+            }
 
-            // 音声入力の場合は、一番手前にあるノーツのレーンを自動的に狙うようにします
-            if (currentVolume > threshold && volumeSpike > 10 && inputCooldown === 0) {
-                let targetIndex = -1;
-                let maxProgress = -1;
-                for(let i=0; i<notes.length; i++) {
-                    if(notes[i].progress > maxProgress) {
-                        maxProgress = notes[i].progress;
-                        targetIndex = i;
+            function updateGame() {
+                nextSpawnCountdown--;
+                if (nextSpawnCountdown <= 0) {
+                    notes.push({ lane: Math.floor(Math.random() * 3), progress: 0, speed: 0.015 + Math.random() * 0.007 });
+                    nextSpawnCountdown = Math.floor(Math.random() * 20) + 15;
+                }
+                for (let i = notes.length - 1; i >= 0; i--) {
+                    notes[i].progress += notes[i].speed;
+                    if (notes[i].progress > 1.12) { notes.splice(i, 1); combo = 0; }
+                }
+                for (let i = hitEffects.length - 1; i >= 0; i--) { fx = hitEffects[i]; fx.alpha -= 0.07; fx.radius += 2.0; if (fx.alpha <= 0) hitEffects.splice(i, 1); }
+                for (let i = fireworks.length - 1; i >= 0; i--) {
+                    let fw = fireworks[i]; fw.delay--;
+                    if (fw.delay <= 0) { fw.state = "explode"; fw.alpha -= 0.02; if (fw.radius < fw.maxRadius) fw.radius += (fw.maxRadius - fw.radius) * 0.1; }
+                    if (fw.alpha <= 0) fireworks.splice(i, 1);
+                }
+            }
+
+            function checkJudgment(clickedLane) {
+                let targetIndex = -1, maxProgress = -1;
+                for(let i=0; i<notes.length; i++) { if(notes[i].lane === clickedLane && notes[i].progress > maxProgress) { maxProgress = notes[i].progress; targetIndex = i; } }
+                if (targetIndex === -1) return; 
+                let note = notes[targetIndex], diff = Math.abs(note.progress - 1.0), currentX = laneXs[note.lane], currentY = spawnY + (judgeLowY - spawnY) * note.progress;
+
+                if (!isVoiceDetected) {
+                    hitEffects.push({ x: currentX, y: currentY, radius: targetRadius * 0.5, color: "#ff3333", blur: 10, alpha: 0.6, text: "NO VOICE!" });
+                    combo = 0; return;
+                }
+                let hitSuccess = false;
+                if (diff < 0.09) {
+                    hitEffects.push({ x: currentX, y: currentY, radius: targetRadius, color: "#ffffff", blur: 30, alpha: 1.0, text: "PERFECT!" });
+                    score += 150; combo++; hitSuccess = true; notes.splice(targetIndex, 1);
+                } else if (diff < 0.20) {
+                    hitEffects.push({ x: currentX, y: currentY, radius: targetRadius, color: "#b0e0ff", blur: 15, alpha: 0.8, text: "GREAT!" });
+                    score += 70; combo++; hitSuccess = true; notes.splice(targetIndex, 1);
+                }
+                if (hitSuccess && combo > 0 && combo % 5 === 0) triggerFireworkShow(); 
+            }
+
+            function triggerFireworkShow() {
+                const pastelColors = ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7"];
+                for (let i = 0; i < 4; i++) {
+                    fireworks.push({ x: Math.random() * (canvas.width - 60) + 30, y: Math.random() * 150 + 100, radius: 2, maxRadius: Math.random() * 6 + 5, color: pastelColors[Math.floor(Math.random() * pastelColors.length)], alpha: 1.0, delay: i * 6, sparkleOffset: Math.random() * 100, state: "wait" });
+                }
+                score += 500; 
+            }
+
+            function drawGame() {
+                ctx.fillStyle = '#020206'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                let now = Date.now();
+                fireworks.forEach(fw => {
+                    if (fw.state === "explode") {
+                        ctx.save(); ctx.globalAlpha = fw.alpha * (Math.sin((now / 150) + fw.sparkleOffset) * 0.25 + 0.75);
+                        ctx.shadowBlur = fw.radius * 3; ctx.shadowColor = fw.color; ctx.fillStyle = fw.color;
+                        ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.fill();
+                        ctx.shadowBlur = 0; ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
                     }
-                }
-                if (targetIndex !== -1) {
-                    checkJudgment(notes[targetIndex].lane);
-                }
-                inputCooldown = 12; 
-            }
-
-            lastVolume = currentVolume; 
-        }
-
-        function updateGame() {
-            nextSpawnCountdown--;
-            if (nextSpawnCountdown <= 0) {
-                // ⭐ ランダムに0, 1, 2のレーンにノーツを生成
-                notes.push({
-                    lane: Math.floor(Math.random() * 3), 
-                    progress: 0, 
-                    speed: 0.014 + Math.random() * 0.006
                 });
-                nextSpawnCountdown = Math.floor(Math.random() * 25) + 20; // 3レーンなので少しテンポを早く
-            }
-
-            for (let i = notes.length - 1; i >= 0; i--) {
-                notes[i].progress += notes[i].speed;
-                if (notes[i].progress > 1.15) {
-                    notes.splice(i, 1);
-                    combo = 0; 
+                laneXs.forEach(x => {
+                    ctx.strokeStyle = '#121228'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, spawnY); ctx.lineTo(x, judgeLowY); ctx.stroke();
+                    ctx.strokeStyle = isVoiceDetected ? 'rgba(0, 240, 255, 0.6)' : 'rgba(0, 100, 205, 0.25)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
+                });
+                hitEffects.forEach(fx => {
+                    ctx.save(); ctx.globalAlpha = fx.alpha; ctx.shadowBlur = fx.blur; ctx.shadowColor = fx.color; ctx.fillStyle = fx.color; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0; ctx.fillStyle = fx.color === "#ff3333" ? "#ff8888" : "#ffffff"; ctx.font = "bold 13px sans-serif"; ctx.textAlign = "center"; ctx.fillText(fx.text, fx.x, fx.y - 45); ctx.restore();
+                });
+                notes.forEach(note => {
+                    let currentX = laneXs[note.lane], currentY = spawnY + (judgeLowY - spawnY) * note.progress, currentRadius = 4 + (16 * note.progress);
+                    ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = "#0099ff";
+                    let gradient = ctx.createRadialGradient(currentX, currentY, 1, currentX, currentY, currentRadius);
+                    gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.5, '#f0f5ff'); gradient.addColorStop(1, "#0077ff");
+                    ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(currentX, currentY, currentRadius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                });
+                ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SCORE: ${score}`, 20, 35); ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 35);
+                if (combo > 0) {
+                    ctx.save(); ctx.textAlign = 'center'; ctx.fillStyle = '#00ffff'; ctx.font = 'bold 24px sans-serif'; ctx.fillText(`${combo}`, canvas.width / 2, spawnY + 40);
+                    ctx.font = '11px sans-serif'; ctx.fillStyle = '#ffffff'; ctx.fillText('COMBO', canvas.width / 2, spawnY + 58); ctx.restore();
+                }
+                if (isGameOver) {
+                    ctx.fillStyle = 'rgba(1, 1, 5, 0.93)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '24px sans-serif'; ctx.fillText('タイムアップ！', canvas.width / 2, canvas.height / 2 - 30);
+                    ctx.fillStyle = '#00ffff'; ctx.font = 'bold 26px sans-serif'; ctx.fillText(`最終スコア: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
                 }
             }
 
-            for (let i = hitEffects.length - 1; i >= 0; i--) {
-                hitEffects[i].alpha -= 0.06;
-                hitEffects[i].radius += 2.5;
-                if (hitEffects[i].alpha <= 0) hitEffects.splice(i, 1);
-            }
-
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                let fw = fireworks[i];
-                fw.delay--;
-                if (fw.delay <= 0) {
-                    fw.state = "explode";
-                    fw.alpha -= 0.016; 
-                    fw.radius += fw.expandSpeed; 
-                    fw.expandSpeed *= 0.94; 
-                }
-                if (fw.alpha <= 0) fireworks.splice(i, 1);
-            }
+            function endGame() { isGameOver = true; clearInterval(timerInterval); drawGame(); if (audioStream) audioStream.getTracks().forEach(track => track.stop()); if (audioContext) audioContext.close(); }
         }
 
-        // 判定処理（指定されたレーンのノーツをジャッジ）
-        function checkJudgment(clickedLane) {
-            let targetIndex = -1;
-            let maxProgress = -1;
-
-            for(let i=0; i<notes.length; i++) {
-                if(notes[i].lane === clickedLane && notes[i].progress > maxProgress) {
-                    maxProgress = notes[i].progress;
-                    targetIndex = i;
-                }
-            }
-
-            if (targetIndex === -1) return; 
+        // =========================================================================
+        // 🎮 2. Aqua Catch
+        // =========================================================================
+        function runCatchGame() {
+            const canvas = document.getElementById('gameCanvas');
+            canvas.style.display = "block"; 
+            canvas.height = 480; 
             
-            let note = notes[targetIndex];
-            let diff = Math.abs(note.progress - 1.0);
-            let currentX = lanes[note.lane];
-            let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
-
-            let hitSuccess = false;
-
-            if (diff < 0.10) {
-                hitEffects.push({
-                    x: currentX, y: currentY, radius: targetRadius,
-                    color: "#ffffff", blur: 40, alpha: 1.0
-                });
-                score += 150;
-                combo++;
-                hitSuccess = true;
-                notes.splice(targetIndex, 1);
-            } else if (diff < 0.22) {
-                hitEffects.push({
-                    x: currentX, y: currentY, radius: targetRadius,
-                    color: "#b0e0ff", blur: 18, alpha: 0.75
-                });
-                score += 50;
-                combo++;
-                hitSuccess = true;
-                notes.splice(targetIndex, 1);
-            }
-
-            if (hitSuccess && combo >= 5) {
-                triggerFireworkShow(currentX, currentY); 
-                combo = 0; 
-            }
-        }
-
-        // ⭐ 5コンボ達成時、タップしたレーンの周辺を中心にパッと綺麗に花火が咲く
-        function triggerFireworkShow(originX, originY) {
-            const pastelColors = ["#ffffff", "#ffb7d5", "#b2ebf2", "#fff59d", "#e0ffff", "#e1bee7"];
-            for (let i = 0; i < 5; i++) {
-                // コンボを決めたレーンの周りにポポポンと広がる
-                let fireworkX = originX + (Math.random() * 120 - 60);
-                let fireworkY = originY - Math.random() * 150 - 30; 
-
-                // 画面外にはみ出しすぎないようガード
-                if(fireworkX < 30) fireworkX = 30;
-                if(fireworkX > canvas.width - 30) fireworkX = canvas.width - 30;
-
-                fireworks.push({
-                    x: fireworkX,
-                    y: fireworkY,
-                    radius: 3,
-                    maxRadius: Math.random() * 5 + 37, // 判定の〇より15%ほど大きいサイズ
-                    expandSpeed: 2.5 + Math.random() * 1.0, 
-                    color: pastelColors[Math.floor(Math.random() * pastelColors.length)],
-                    alpha: 1.0, 
-                    delay: i * 5, 
-                    state: "wait"
-                });
-            }
-            score += 1000; 
-        }
-
-        function drawGame() {
-            ctx.fillStyle = '#020206';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 3本のレーンとターゲットラインを描画
-            lanes.forEach(laneX => {
-                ctx.strokeStyle = '#101025';
-                ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.moveTo(laneX, spawnY); ctx.lineTo(laneX, judgeLowY); ctx.stroke();
-
-                ctx.strokeStyle = 'rgba(0, 150, 255, 0.45)';
-                ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.arc(laneX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
-            });
-
-            // ⭐ 花火の描画
-            fireworks.forEach(fw => {
-                if (fw.state === "explode") {
-                    ctx.save();
-                    ctx.globalAlpha = fw.alpha;
-                    
-                    ctx.shadowBlur = fw.radius * 2.2; 
-                    ctx.shadowColor = fw.color;
-                    ctx.strokeStyle = fw.color;
-                    ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
-                    
-                    ctx.shadowBlur = 15;
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = "#ffffff"; 
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.9, 0, Math.PI * 2); ctx.stroke();
-                    
-                    ctx.fillStyle = "#ffffff";
-                    ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.15, 0, Math.PI * 2); ctx.fill();
-                    
-                    ctx.restore();
-                }
-            });
-
-            // ヒットエフェクトの描画
-            hitEffects.forEach(fx => {
-                ctx.save();
-                ctx.globalAlpha = fx.alpha;
-                ctx.shadowBlur = fx.blur;
-                ctx.shadowColor = fx.color;
-                ctx.fillStyle = fx.color;
-                ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            });
-
-            // ⭐ ノーツをそれぞれのレーンに描画
-            notes.forEach(note => {
-                let currentX = lanes[note.lane];
-                let currentY = spawnY + (judgeLowY - spawnY) * note.progress;
-                let currentRadius = 3 + (15 * note.progress);
-
-                ctx.save();
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = "#0099ff";
-                
-                let gradient = ctx.createRadialGradient(currentX, currentY, 1, currentX, currentY, currentRadius);
-                gradient.addColorStop(0, '#ffffff');
-                gradient.addColorStop(0.6, '#f5f8ff');
-                gradient.addColorStop(1, "#0088ff");
-                ctx.fillStyle = gradient;
-
-                ctx.beginPath(); ctx.arc(currentX, currentY, currentRadius, 0, Math.PI * 2); ctx.fill();
-                ctx.restore();
-            });
-
-            // 中央のコンボゲージ
-            let gaugeY = (canvas.height / 2) - 20;
-            let gaugeX = canvas.width / 2;
-            ctx.save();
-            ctx.strokeStyle = "#151525";
-            ctx.lineWidth = 6;
-            ctx.beginPath(); ctx.arc(gaugeX, gaugeY, 22, 0, Math.PI * 2); ctx.stroke();
-
-            if (combo > 0) {
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = "#ffffff"; 
-                ctx.strokeStyle = "#ffffff"; 
-                ctx.lineWidth = 6;
-                let progressAngle = (combo / 5) * Math.PI * 2;
-                ctx.beginPath(); ctx.arc(gaugeX, gaugeY, 22, -Math.PI / 2, (-Math.PI / 2) + progressAngle); ctx.stroke();
-            }
-            ctx.restore();
-
-            ctx.fillStyle = '#fff';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'left'; ctx.fillText(`SCORE: ${score}`, 20, 40);
-            ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 40);
-
-            if (isGameOver) {
-                ctx.fillStyle = 'rgba(1, 1, 5, 0.93)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'center';
-                ctx.font = '24px sans-serif';
-                ctx.fillText('タイムアップ！', canvas.width / 2, canvas.height / 2 - 30);
-                ctx.fillStyle = '#00ffff';
-                ctx.font = 'bold 26px sans-serif';
-                ctx.fillText(`最終スコア: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
-            }
-        }
-
-        function endGame() {
-            isGameOver = true;
-            clearInterval(timerInterval);
-            drawGame();
+            const info = document.getElementById('info');
+            info.innerHTML = "・・・保存待ち時間中・・・<br><br>左右ボタンで白い丸を動かして<br>降ってくるノーツをキャッチ！";
             
-            if (audioStream) {
-                audioStream.getTracks().forEach(track => track.stop());
+            document.getElementById('controls').style.display = "flex"; 
+
+            const ctx = canvas.getContext('2d');
+            let isPlaying = false, isGameOver = false, isCountingDown = false, countdownNumber = 3;    
+            let score = 0, combo = 0, timeLeft = 30, timerInterval;
+
+            const spawnY = 60, judgeLowY = canvas.height - 60, targetRadius = 32; 
+            const lanes = [100, 200, 300]; let currentLaneIndex = 1; 
+            let notes = [], nextSpawnCountdown = 0, splashEffects = [], fireworks = []; 
+
+            // イベント登録
+            document.getElementById('btnLeft').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
+            document.getElementById('btnLeft').addEventListener('mousedown', moveLeft);
+            document.getElementById('btnRight').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+            document.getElementById('btnRight').addEventListener('mousedown', moveRight);
+            window.addEventListener('keydown', (e) => { if (e.key === "ArrowLeft") moveLeft(); if (e.key === "ArrowRight") moveRight(); });
+
+            startCountdown();
+
+            function moveLeft() { if (!isPlaying || isGameOver || isCountingDown) return; if (currentLaneIndex > 0) { currentLaneIndex--; checkImmediateCatch(); } }
+            function moveRight() { if (!isPlaying || isGameOver || isCountingDown) return; if (currentLaneIndex < 2) { currentLaneIndex++; checkImmediateCatch(); } }
+
+            function startCountdown() {
+                isCountingDown = true; countdownNumber = 3;
+                const cdInterval = setInterval(() => { countdownNumber--; if (countdownNumber < 0) { clearInterval(cdInterval); isCountingDown = false; startGame(); } }, 1000);
+                function countdownLoop() {
+                    if (!isCountingDown) return;
+                    ctx.fillStyle = '#020206'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    lanes.forEach((laneX, idx) => {
+                        ctx.strokeStyle = '#101025'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(laneX, spawnY); ctx.lineTo(laneX, judgeLowY); ctx.stroke();
+                        ctx.strokeStyle = (idx === currentLaneIndex) ? 'rgba(0, 210, 255, 0.6)' : 'rgba(0, 150, 255, 0.1)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(laneX, judgeLowY, targetRadius, 0, Math.PI * 2); ctx.stroke();
+                    });
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 70px sans-serif';
+                    if (countdownNumber > 0) { ctx.fillStyle = '#00ffff'; ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff'; ctx.fillText(countdownNumber, canvas.width / 2, canvas.height / 2); }
+                    else { ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 25; ctx.shadowColor = '#ffffff'; ctx.fillText('START!', canvas.width / 2, canvas.height / 2); }
+                    ctx.shadowBlur = 0; requestAnimationFrame(countdownLoop);
+                }
+                countdownLoop();
             }
-            if (audioContext) {
-                audioContext.close();
+
+            function startGame() { isPlaying = true; timerInterval = setInterval(() => { timeLeft--; if (timeLeft <= 0) endGame(); }, 1000); gameLoop(); }
+            function gameLoop() { if (!isPlaying) return; updateGame(); drawGame(); if (!isGameOver) requestAnimationFrame(gameLoop); }
+
+            function updateGame() {
+                nextSpawnCountdown--;
+                if (nextSpawnCountdown <= 0) {
+                    notes.push({ lane: Math.floor(Math.random() * 3), progress: 0, speed: 0.012 + Math.random() * 0.006 });
+                    nextSpawnCountdown = Math.floor(Math.random() * 25) + 20;
+                }
+                for (let i = notes.length - 1; i >= 0; i--) {
+                    notes[i].progress += notes[i].speed;
+                    if (notes[i].lane === currentLaneIndex && notes[i].progress >= 0.96 && notes[i].progress <= 1.04) { checkJudgment(currentLaneIndex); continue; }
+                    if (notes[i].progress > 1.12) { notes.splice(i, 1); combo = 0; }
+                }
+                for (let i = splashEffects.length - 1; i >= 0; i--) {
+                    let fx = splashEffects[i]; fx.radius1 += 2.2; fx.radius2 += 1.6; fx.dropY -= 1.8; fx.alpha -= 0.04; if (fx.alpha <= 0) splashEffects.splice(i, 1);
+                }
+                for (let i = fireworks.length - 1; i >= 0; i--) {
+                    let fw = fireworks[i]; fw.delay--;
+                    if (fw.delay <= 0) { fw.state = "explode"; fw.alpha -= 0.016; fw.radius += fw.expandSpeed; fw.expandSpeed *= 0.94; }
+                    if (fw.alpha <= 0) fireworks.splice(i, 1);
+                }
             }
+
+            function checkImmediateCatch() { checkJudgment(currentLaneIndex); }
+            function checkJudgment(activeLane) {
+                let targetIndex = -1, maxProgress = -1;
+                for(let i=0; i<notes.length; i++) { if(notes[i].lane === activeLane && notes[i].progress > maxProgress) { maxProgress = notes[i].progress; targetIndex = i; } }
+                if (targetIndex === -1) return; 
+                let note = notes[targetIndex], diff = Math.abs(note.progress - 1.0), currentX = lanes[note.lane], currentY = judgeLowY;
+
+                if (diff < 0.12) {
+                    splashEffects.push({ x: currentX, y: currentY, radius1: 5, radius2: 2, dropY: currentY - 5, color: "#ffffff", colorCyan: "#00f0ff", alpha: 1.0 });
+                    score += 150; combo++; notes.splice(targetIndex, 1);
+                    if (combo >= 5) { triggerFireworkShow(currentX, currentY); combo = 0; }
+                }
+            }
+
+            function triggerFireworkShow(originX, originY) {
+                const pastelColors = ["#ffffff", "#ffb7d5", "#b2ebf2", "#fff59d", "#e0ffff", "#e1bee7"];
+                for (let i = 0; i < 5; i++) {
+                    let fireworkX = originX + (Math.random() * 120 - 60); let fireworkY = originY - Math.random() * 140 - 40; 
+                    if(fireworkX < 30) fireworkX = 30; if(fireworkX > canvas.width - 30) fireworkX = canvas.width - 30;
+                    fireworks.push({ x: fireworkX, y: fireworkY, radius: 3, maxRadius: Math.random() * 5 + 37, expandSpeed: 2.5 + Math.random() * 1.0, color: pastelColors[Math.floor(Math.random() * pastelColors.length)], alpha: 1.0, delay: i * 5, state: "wait" });
+                }
+                score += 1000; 
+            }
+
+            function drawGame() {
+                ctx.fillStyle = '#020206'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                lanes.forEach((laneX, idx) => {
+                    ctx.strokeStyle = '#101025'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(laneX, spawnY); ctx.lineTo(laneX, judgeLowY); ctx.stroke();
+                    ctx.strokeStyle = 'rgba(20, 20, 45, 0.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, judgeLowY); ctx.lineTo(canvas.width, judgeLowY); ctx.stroke();
+                });
+                let playerX = lanes[currentLaneIndex];
+                ctx.save(); ctx.shadowBlur = 20; ctx.shadowColor = "#00d2ff"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(playerX, judgeLowY, 18, 0, Math.PI * 2); ctx.stroke();
+                ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(playerX, judgeLowY, 8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+                splashEffects.forEach(fx => {
+                    ctx.save(); ctx.globalAlpha = fx.alpha; ctx.strokeStyle = fx.colorCyan; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = fx.colorCyan; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius1, 0, Math.PI * 2); ctx.stroke();
+                    ctx.strokeStyle = fx.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius2, 0, Math.PI * 2); ctx.stroke();
+                    ctx.fillStyle = "#ffffff"; ctx.shadowColor = "#ffffff"; ctx.beginPath(); ctx.arc(fx.x, fx.dropY, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                });
+                fireworks.forEach(fw => {
+                    if (fw.state === "explode") {
+                        ctx.save(); ctx.globalAlpha = fw.alpha; ctx.shadowBlur = fw.radius * 2.2; ctx.shadowColor = fw.color; ctx.strokeStyle = fw.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius, 0, Math.PI * 2); ctx.stroke();
+                        ctx.shadowBlur = 15; ctx.lineWidth = 1.5; ctx.strokeStyle = "#ffffff"; ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.9, 0, Math.PI * 2); ctx.stroke();
+                        ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(fw.x, fw.y, fw.radius * 0.15, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                    }
+                });
+                notes.forEach(note => {
+                    let currentX = lanes[note.lane], currentY = spawnY + (judgeLowY - spawnY) * note.progress, currentRadius = 4 + (12 * note.progress);
+                    ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = "#0099ff";
+                    let gradient = ctx.createRadialGradient(currentX, currentY, 1, currentX, currentY, currentRadius);
+                    gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.6, '#dbf0ff'); gradient.addColorStop(1, "#0077ff");
+                    ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(currentX, currentY, currentRadius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                });
+                ctx.save(); ctx.strokeStyle = "#151525"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(canvas.width - 40, 75, 15, 0, Math.PI * 2); ctx.stroke();
+                if (combo > 0) {
+                    ctx.shadowBlur = 10; ctx.shadowColor = "#ffffff"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4; let progressAngle = (combo / 5) * Math.PI * 2;
+                    ctx.beginPath(); ctx.arc(canvas.width - 40, 75, 15, -Math.PI / 2, (-Math.PI / 2) + progressAngle); ctx.stroke();
+                }
+                ctx.restore();
+                ctx.fillStyle = '#fff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(`SCORE: ${score}`, 20, 40); ctx.textAlign = 'right'; ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 20, 40);
+                if (isGameOver) {
+                    ctx.fillStyle = 'rgba(1, 1, 5, 0.93)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '24px sans-serif'; ctx.fillText('タイムアップ！', canvas.width / 2, canvas.height / 2 - 30);
+                    ctx.fillStyle = '#00ffff'; ctx.font = 'bold 26px sans-serif'; ctx.fillText(`最終スコア: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+                }
+            }
+            function endGame() { isGameOver = true; clearInterval(timerInterval); drawGame(); }
         }
-    </script>
-</body>
-</html>
+
+        // =========================================================================
+        // 🎮 3. Healing Tree 
+        // =========================================================================
+        function runTreeGame() {
+            const container = document.getElementById('treeContainer');
+            container.style.display = "block"; 
+            
+            const info = document.getElementById('info');
+            info.innerHTML = "・・・保存待ち時間中・・・<br>
