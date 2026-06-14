@@ -400,33 +400,6 @@
             transform: scale(1.1);
         }
         
-        .cp1 { background: linear-gradient(135deg, #fff0f5, #faf0e6); }
-        .cp2 { background: linear-gradient(135deg, #dfe9f3, white ); }
-        .cp3 { background: linear-gradient(135deg, #fff1eb, #ace0f9); }
-        .cp4 { background: linear-gradient(135deg, #fddb92, #d1fdff); }
-        .cp5 { background: linear-gradient(135deg, #bc8f8f, #ffe4e1); }
-        .cp6 { background: linear-gradient(135deg, #eebbcb, #cee4ae); }
-        .cp7 { background: linear-gradient(135deg, #4682b4, #f0f8ff); }
-        .cp8 { background: linear-gradient(135deg, #ffee00, #ffaa00); }
-        
-        .cp9 { background: linear-gradient(135deg, #FFF6B7, #F6416C); }
-        .cp10 { background: linear-gradient(135deg, #a6c0fe, #f68084); }
-        .cp11 { background: linear-gradient(135deg, #f0fff0, #40e0d0); }
-        .cp12 { background: linear-gradient(135deg, #ff4e50, #f9d423); }
-        .cp13 { background: linear-gradient(135deg, #800080, #f08080); }
-        .cp14 { background: linear-gradient(135deg, #f107a3, #7b2ff7); }
-        .cp15 { background: linear-gradient(135deg, #00ffff, #00008b); }
-        .cp16 { background: linear-gradient(135deg, #16a085, #f4d03f); }
-
-        .cp17 { background: linear-gradient(135deg, #dc143c, #8b0000); }
-        .cp18 { background: linear-gradient(135deg, #4b0082, #6495ed); }
-        .cp19 { background: linear-gradient(135deg, #243949, #517fa4); }
-        .cp20 { background: linear-gradient(135deg, #8b5a2b, #2e8b57); }
-        .cp21 { background: linear-gradient(135deg, #dbd0e6, #250d00); }
-        .cp22 { background: linear-gradient(135deg, #191970, #fffacd ); }
-        .cp23 { background: linear-gradient(135deg, #a8caba, #5d4157); }
-        .cp24 { background: linear-gradient(135deg, #eeeeee, #111111); } 
-        
         .monthly-section {
             margin-top: 15px;
         }
@@ -439,7 +412,7 @@
         <p>録音は２分まで</p>
         <p>お使いの端末にのみ、動画として保存されます</p>
         <p>動画は保存後に編集ＯＫ</p>
-        <p>使用許可不要　クレジット不要　アップロード先自由</p>
+        <p>使用許可不要 クレジット不要 アップロード先自由</p>
         <p></p>
         <p>告知なくサービスを変更・停止することがあります</p>
         <p class="info-attention">声が盗られるとか、そういうのはないです</p>
@@ -521,32 +494,7 @@
 
             <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
                 <div class="setting-title">WAVE COLOR</div>
-                <div class="palette-grid">
-                    <div class="palette-circle cp1 selected" data-colors='["#fff0f5", "#faf0e6"]'></div>
-                    <div class="palette-circle cp2" data-colors='["#dfe9f3", "#ffffff"]'></div>
-                    <div class="palette-circle cp3" data-colors='["#fff1eb", "#ace0f9"]'></div>
-                    <div class="palette-circle cp4" data-colors='["#fddb92", "#d1fdff"]'></div>
-                    <div class="palette-circle cp5" data-colors='["#bc8f8f", "#ffe4e1"]'></div>
-                    <div class="palette-circle cp6" data-colors='["#eebbcb", "#cee4ae"]'></div>
-                    <div class="palette-circle cp7" data-colors='["#4682b4", "#f0f8ff"]'></div>
-                    <div class="palette-circle cp8" data-colors='["#ffee00", "#ffaa00"]'></div>
-                    <div class="palette-circle cp9" data-colors='["#FFF6B7", "#F6416C"]'></div>
-                    <div class="palette-circle cp10" data-colors='["#a6c0fe", "#f68084"]'></div>
-                    <div class="palette-circle cp11" data-colors='["#f0fff0", "#40e0d0"]'></div>
-                    <div class="palette-circle cp12" data-colors='["#ff4e50", "#f9d423"]'></div>
-                    <div class="palette-circle cp13" data-colors='["#800080", "#f08080"]'></div>
-                    <div class="palette-circle cp14" data-colors='["#f107a3", "#7b2ff7"]'></div>
-                    <div class="palette-circle cp15" data-colors='["#00ffff", "#00008b"]'></div>
-                    <div class="palette-circle cp16" data-colors='["#16a085", "#f4d03f"]'></div>
-                    <div class="palette-circle cp17" data-colors='["#dc143c", "#8b0000"]'></div>
-                    <div class="palette-circle cp18" data-colors='["#4b0082", "#6495ed"]'></div>
-                    <div class="palette-circle cp19" data-colors='["#243949", "#517fa4"]'></div>
-                    <div class="palette-circle cp20" data-colors='["#8b5a2b", "#2e8b57"]'></div>
-                    <div class="palette-circle cp21" data-colors='["#dbd0e6", "#250d00"]'></div>
-                    <div class="palette-circle cp22" data-colors='["#191970", "#fffacd"]'></div>
-                    <div class="palette-circle cp23" data-colors='["#a8caba", "#5d4157"]'></div>
-                    <div class="palette-circle cp24" data-colors='["#eeeeee", "#111111"]'></div>
-                </div>
+                <div class="palette-grid" id="standardGrid"></div>
             </div>
 
             <div class="setting-section monthly-section" id="menuMonthlyColor">
@@ -565,6 +513,12 @@
         </div>
     </div>
 
+    <div id="renderOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <h2 style="color: #ff4488; margin-bottom: 5px; font-size: 1.2rem; letter-spacing: 2px;">MOVIE SAVING...</h2>
+        <p style="margin-bottom: 15px; font-size: 0.75rem; opacity: 0.9; text-align: center;">⚠️ このタブを開いたままお待ちください<br>（別タブを開くとエラーになることがあります）</p>
+        <iframe src="mini-game.html" style="width: 90%; max-width: 400px; height: 50vh; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; background: #000;"></iframe>
+    </div>
+
     <script>
         const MONTHLY_SETTING = {
             title: "JUNE COLOR", 
@@ -575,6 +529,15 @@
                 ["#D2140B", "#F8481F", "#ECD3B5"]
             ]
         };
+
+        const STANDARD_PALETTES = [
+            ["#fff0f5", "#faf0e6"], ["#dfe9f3", "#ffffff"], ["#fff1eb", "#ace0f9"], ["#fddb92", "#d1fdff"],
+            ["#bc8f8f", "#ffe4e1"], ["#eebbcb", "#cee4ae"], ["#4682b4", "#f0f8ff"], ["#ffee00", "#ffaa00"],
+            ["#FFF6B7", "#F6416C"], ["#a6c0fe", "#f68084"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
+            ["#800080", "#f08080"], ["#f107a3", "#7b2ff7"], ["#00ffff", "#00008b"], ["#16a085", "#f4d03f"],
+            ["#dc143c", "#8b0000"], ["#4b0082", "#6495ed"], ["#243949", "#517fa4"], ["#8b5a2b", "#2e8b57"],
+            ["#dbd0e6", "#250d00"], ["#191970", "#fffacd"], ["#a8caba", "#5d4157"], ["#eeeeee", "#111111"]
+        ];
 
         const canvas = document.getElementById('waveCanvas');
         const ctx = canvas.getContext('2d');
@@ -649,6 +612,22 @@
             });
         }
         initMonthlyColors();
+
+        function initStandardColors() {
+            const grid = document.getElementById('standardGrid');
+            grid.innerHTML = '';
+            
+            STANDARD_PALETTES.forEach((colors, index) => {
+                const circle = document.createElement('div');
+                circle.className = 'palette-circle';
+                if (index === 0) circle.classList.add('selected');
+                
+                circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+                circle.dataset.colors = JSON.stringify(colors);
+                grid.appendChild(circle);
+            });
+        }
+        initStandardColors();
 
         function setupPaletteEvents() {
             const allPalettes = document.querySelectorAll('.palette-circle');
@@ -805,7 +784,6 @@
                     const dataIdx = Math.floor(mapRatio * (validRange - 1));
                     
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    // 【変更】最低値を3から6に引き上げ、大音量時の倍率を95から120に拡大
                     const waveLength = 6 + (boosted * 120); 
                     const r = baseRadius + waveLength;
                     
@@ -848,7 +826,6 @@
                     const dataIdx = Math.floor(mapRatio * (validRange - 1));
                     
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    // 【変更】最低値を2から5に引き上げ、大音量時の倍率を80から100に拡大
                     const waveLength = 5 + (boosted * 100); 
                     
                     const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
@@ -871,12 +848,10 @@
                 for (let i = 0; i < usedPoints; i++) {
                     const dataIdx = Math.floor((i / usedPoints) * validRange);
                     const boosted = getBoostedValue(dataArr[dataIdx]);
-                    // 【変更】無音でも3pxの揺らぎベースを残し、大音量時の倍率を120から155に拡大
                     const waveHeight = 3 + (boosted * 155); 
                     coords.push({x: 40 + i * spacing, waveHeight});
                 }
 
-                // 【変更】無音時も常に波形を描画するため、一律で流れるように処理を一本化
                 targetCtx.beginPath();
                 targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
                 for (let i = 1; i < usedPoints; i++) {
@@ -1030,25 +1005,17 @@
         }
 
         downloadBtn.addEventListener('click', async () => {
-    if (!audioBlob) {
-        alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ");
-        return;
-    }
+            if (!audioBlob) {
+                alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ");
+                return;
+            }
 
-    if (confirm("動画の保存を開始します。よろしいですか？")) {
-        
-        // 1. まず「保存」を確実に開始する
-        startVideoRendering();
+            if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) {
+                return;
+            }
 
-        // 2. その直後に、ミニゲームへ行くかだけを尋ねる
-        // ここでは「キャンセル」を押しても保存処理には影響しません
-        if (confirm("動画の保存を開始しました！\n待ち時間に別窓ミニゲームで遊びますか？")) {
-            window.open('mini-game.html', '_blank', 'width=450,height=800');
-        }
-    }
-
-            alert("30秒ほどかかることがあります。ブラウザを閉じずにお待ちください･･･");
-
+            // オーバーレイを表示して操作をロック
+            document.getElementById('renderOverlay').style.display = 'flex';
             downloadBtn.style.pointerEvents = 'none';
 
             const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1086,6 +1053,8 @@
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 
                 downloadBtn.style.pointerEvents = 'auto'; 
+                // 保存が終わったらオーバーレイを非表示にする
+                document.getElementById('renderOverlay').style.display = 'none';
                 
                 resetDataWithoutPrompt();
                 alert("お待たせしました。動画の保存完了です！\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
