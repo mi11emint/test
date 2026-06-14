@@ -1029,22 +1029,25 @@
             if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
         }
 
-        // 修正後：ボタンの処理をスッキリさせる
-downloadBtn.addEventListener('click', async () => {
+        downloadBtn.addEventListener('click', async () => {
     if (!audioBlob) {
         alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ");
         return;
     }
 
-    if (confirm("動画の保存を開始します。保存中、別窓ミニゲームで遊べます^.ˬ.^ฅⳊ")) {
-        // 1. レンダリング開始
+    if (confirm("動画の保存を開始します。よろしいですか？")) {
+        
+        // 1. まず「保存」を確実に開始する
         startVideoRendering();
-        // 2. ミニゲームを別窓で開く
-        window.open('mini-game.html', '_blank', 'width=450,height=800');
-    }
-});
 
-            
+        // 2. その直後に、ミニゲームへ行くかだけを尋ねる
+        // ここでは「キャンセル」を押しても保存処理には影響しません
+        if (confirm("動画の保存を開始しました！\n待ち時間に別窓ミニゲームで遊びますか？")) {
+            window.open('mini-game.html', '_blank', 'width=450,height=800');
+        }
+    }
+
+            alert("30秒ほどかかることがあります。ブラウザを閉じずにお待ちください･･･");
 
             downloadBtn.style.pointerEvents = 'none';
 
@@ -1101,60 +1104,6 @@ downloadBtn.addEventListener('click', async () => {
             }
             renderFrame();
         });
-        // 【追加】動画保存の専門家関数
-async function startVideoRendering() {
-    alert("保存を開始します。完了までページを閉じないでください･･･");
-    downloadBtn.style.pointerEvents = 'none';
-
-    const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const arrayBuffer = await audioBlob.arrayBuffer();
-    const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
-    const bufferSource = renderAudioCtx.createBufferSource();
-    bufferSource.buffer = audioBuffer;
-
-    const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
-    const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
-    const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-    const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'peaking'; rNcFilter.frequency.value = 2200; rNcFilter.Q.value = 0.7; rNcFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
-    const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
-    const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
-
-    bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser); 
-    const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
-    
-    const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
-    const rCtx = captureCanvas.getContext('2d');
-    const canvasStream = captureCanvas.captureStream(30);
-    const renderDest = renderAudioCtx.createMediaStreamDestination();
-    rGain.connect(renderDest);
-
-    const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-    const movieRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 });
-    const movieChunks = [];
-
-    movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
-    movieRecorder.onstop = () => {
-        const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(finalBlob); a.download = `voice-wave-${Date.now()}.webm`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        downloadBtn.style.pointerEvents = 'auto'; 
-        resetDataWithoutPrompt();
-        alert("動画の保存が完了しました！");
-    };
-
-    movieRecorder.start(); bufferSource.start(0);
-    const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
-    function renderFrame() {
-        const elapsed = performance.now() - startTime;
-        rAnalyser.getByteFrequencyData(rDataArray);
-        rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff'; rCtx.fillRect(0, 0, 600, 600);
-        drawWaveLogic(rCtx, captureCanvas, rDataArray);
-        if (elapsed < duration) requestAnimationFrame(renderFrame);
-        else { bufferSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
-    }
-    renderFrame();
-}
-        
     </script>
 </body>
 </html>
