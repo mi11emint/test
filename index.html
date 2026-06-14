@@ -976,6 +976,7 @@
         resetBtn.addEventListener('click', () => {
             if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
         });
+
         function resetDataWithoutPrompt() {
             if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
             if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
@@ -984,6 +985,13 @@
             isPlayingRecorded = false; isRecording = false;
             audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
             unlockMenus(); drawStaticWave();
+        }
+
+        // オーバーレイを閉じてメモリとデータを完全にリセットする共通関数
+        function hideOverlayAndCleanup() {
+            document.getElementById('renderOverlay').style.display = 'none';
+            document.getElementById('miniGameIframe').src = 'about:blank'; // iframeのメモリを完全解放
+            resetDataWithoutPrompt(); // 録音データをリセット
         }
 
         playPauseBtn.addEventListener('click', () => {
@@ -1056,12 +1064,15 @@
                 
                 downloadBtn.style.pointerEvents = 'auto'; 
                 
-                // 保存が終わったらオーバーレイを非表示にし、iframeの中身を空にしてメモリを解放する
-                document.getElementById('renderOverlay').style.display = 'none';
-                document.getElementById('miniGameIframe').src = 'about:blank';
+                // 動画の保存が完了したらユーザーに選択させる
+                const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n「キャンセル」を押すと最後まで遊べます");
                 
-                resetDataWithoutPrompt();
-                alert("お待たせしました。動画の保存完了です！\n録音データを自動リセットして新しく録音できます^.ˬ.^ฅⳊ");
+                if (finishGame) {
+                    // OK（終わる）を選んだ場合：画面を閉じてデータを初期化
+                    hideOverlayAndCleanup();
+                    alert("お疲れ様です。新しく録音できます^.ˬ.^ฅⳊ");
+                } 
+                // キャンセルを選んだ場合は何もしない（そのままゲームを続けさせる）
             };
 
             movieRecorder.start(); bufferSource.start(0);
@@ -1077,6 +1088,16 @@
             }
             renderFrame();
         });
+
+        // --- ミニゲーム側からの「終わったよ」の合図を受け取る仕組み ---
+        window.addEventListener('message', (event) => {
+            // iframeからのメッセージを受信したら初期化を実行
+            if (event.data === 'MINIGAME_FINISHED') {
+                hideOverlayAndCleanup();
+                alert("ミニゲーム終了お疲れ様でした！\n新しく録音できます^.ˬ.^ฅⳊ");
+            }
+        });
+
     </script>
 </body>
 </html>
