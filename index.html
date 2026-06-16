@@ -819,7 +819,14 @@ targetCtx.lineCap = 'round';
 const centerX = targetCanvas.width / 2;
 const centerY = targetCanvas.height / 2;
 
-const validRange = 37;
+const validRange = 46;
+// ========================================================
+// ★ここを追加：突出する原因となる超低音ノイズ（0〜2番目）を強制カット
+// ========================================================
+dataArr[0] = 0;
+dataArr[1] = 0;
+dataArr[2] = 0;
+// ========================================================
 const steps = 120;
 
 if (currentWaveStyle === 'corona') {
