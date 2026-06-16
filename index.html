@@ -1090,8 +1090,10 @@ btnBlack.classList.add('active');
 btnWhite.classList.remove('active');
 btnPicture.classList.remove('active'); // 追加
 canvasBg.classList.remove('theme-white');
+pictureInput.value = ""; // 🛠️ 追加：画像選択の記憶をリセット
 triggerUIRefresh();
 });
+
 // 背景色変更：WHITE
 btnWhite.addEventListener('click', () => {
 currentBgColor = 'white';
@@ -1099,6 +1101,7 @@ btnWhite.classList.add('active');
 btnBlack.classList.remove('active');
 btnPicture.classList.remove('active'); // 追加
 canvasBg.classList.add('theme-white');
+pictureInput.value = ""; // 🛠️ 追加：画像選択の記憶をリセット
 triggerUIRefresh();
 });
 
