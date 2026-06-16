@@ -831,10 +831,10 @@ targetCtx.save();
 targetCtx.globalAlpha = currentOpacity; // 透過度を適用
 targetCtx.lineWidth = 2.5;              // 線がきれいに密集するよう、少し細めに調整
 
-for (let i = 2; i < barCount; i++) {
+for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
-const dataIdx = Math.floor(mapRatio * (validRange - 1 - 3)) + 3;
+const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveLength = 6 + (boosted * 150);
@@ -858,10 +858,10 @@ const barCount = 64;
 
 targetCtx.save();
 targetCtx.globalAlpha = currentOpacity;
-for (let i = 2; i < barCount; i++) {
+for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
-const dataIndex = Math.floor((i % (steps / 4)) / (steps / 4) * (validRange - 3)) + 3;
+const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveLength = 5 + (boosted * 150);
@@ -884,7 +884,7 @@ const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
 const activeCenterY = targetCanvas.height / 2;
 const coords = [];
 
-for (let i = 3; i < usedPoints; i++) {
+for (let i = 0; i < usedPoints; i++) {
 const dataIdx = Math.floor((i / usedPoints) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const waveHeight = 3 + (boosted * 150);
@@ -933,7 +933,7 @@ targetCtx.globalAlpha = currentOpacity;
 
 const barWidth = spacing * 0.7; // バーの横幅（隙間に合わせた最適な太さ）
 
-for (let i = 3; i < barCount; i++) {
+for (let i = 0; i < barCount; i++) {
 const dataIdx = Math.floor((i / barCount) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
 const barHeight = boosted * 250;
