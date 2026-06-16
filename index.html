@@ -746,11 +746,38 @@ if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
 // キャンバスの背景クリア
 function clearCanvas(targetCtx, w, h) {
 if (currentBgColor === 'picture' && bgImage) {
-// 画像が選ばれている場合はCanvas全体に描画
-targetCtx.drawImage(bgImage, 0, 0, w, h);
+    // 🛠️ 変更：背景を黒で塗りつぶさず、一度キャンバス全体を完全に「透明」にクリアする
+    targetCtx.clearRect(0, 0, w, h);
+
+    const imgW = bgImage.width;
+    const imgH = bgImage.height;
+
+    // 画像とキャンバス(w, h)の比率を比較
+    const imgRatio = imgW / imgH;
+    const canvasRatio = w / h;
+
+    let renderW, renderH;
+    let renderX, renderY;
+
+    if (imgRatio > canvasRatio) {
+        // 画像が横長の場合：横幅をキャンバスに合わせ、上下に余白を作る
+        renderW = w;
+        renderH = w / imgRatio;
+        renderX = 0;
+        renderY = (h - renderH) / 2;
+    } else {
+        // 画像が縦長の場合：縦高さをキャンバスに合わせ、左右に余白を作る
+        renderH = h;
+        renderW = h * imgRatio;
+        renderX = (w - renderW) / 2;
+        renderY = 0;
+    }
+
+    // 計算した位置とサイズで画像を描画（余白部分は透明のまま残ります）
+    targetCtx.drawImage(bgImage, renderX, renderY, renderW, renderH);
 } else {
-targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-targetCtx.fillRect(0, 0, w, h);
+    targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+    targetCtx.fillRect(0, 0, w, h);
 }
 }
 
