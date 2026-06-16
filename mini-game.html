@@ -78,6 +78,8 @@
         .menu-row[data-game="invader"]:active .menu-text { color: #0fa; text-shadow: 0 0 8px rgba(0,255,170,0.4); }
         .menu-row[data-game="catch"]:active .menu-text { color: #00d2ff; text-shadow: 0 0 8px rgba(0,210,255,0.4); }
         .menu-row[data-game="tree"]:active .menu-text { color: #e1bee7; text-shadow: 0 0 8px rgba(225,190,231,0.4); }
+        /* 3Dビジュアライザー用の発光エフェクトを追加 */
+        .menu-row[data-game="visualizer"]:active .menu-text { color: #00ffff; text-shadow: 0 0 8px rgba(0,255,255,0.4); }
 
         /* --- 🖼️ キャンバス表示制御 --- */
         #gameCanvas {
@@ -91,6 +93,20 @@
         }
         .border-invader { border: 2px solid #555; }
         .border-catch { border: 2px solid #223; box-shadow: 0 0 25px rgba(0,255,255,0.08); }
+
+        /* 3Dビジュアライザー用のキャンバス表示設定を追加 */
+        #visualizerCanvas {
+            background-color: #000;
+            display: none;
+            width: 100%;
+            max-width: min(95vw, calc(55vh * 0.8), 400px); 
+            aspect-ratio: 4 / 5;
+            height: auto;
+            flex-shrink: 0; 
+            border: 2px solid #1e293b;
+            box-shadow: 0 0 25px rgba(0,210,255,0.15);
+            cursor: move;
+        }
 
         /* --- 🌳 世界樹ゲーム用特殊コンテナ --- */
         .tree-game-container {
@@ -180,6 +196,8 @@
             color: #000;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
@@ -190,9 +208,11 @@
             <div class="menu-row" data-game="invader"><span class="menu-text">Sound Invader</span></div>
             <div class="menu-row" data-game="catch"><span class="menu-text">Aqua Catch</span></div>
             <div class="menu-row" data-game="tree"><span class="menu-text">Yggdrasil</span></div>
+            <div class="menu-row" data-game="visualizer"><span class="menu-text">3D Visualizer</span></div>
         </div>
         
         <canvas id="gameCanvas" width="400" height="500"></canvas>
+        <canvas id="visualizerCanvas"></canvas>
         
         <div class="tree-game-container" id="treeContainer">
             <img id="treeImg" src="https://img1.mitemin.net/cn/c9/5h3rb7a49bj373z8gxyk7s3t40_k6d_vu_yx_5kna.png" alt="世界樹">
@@ -213,6 +233,7 @@
         const info = document.getElementById('info');
         const menuContainer = document.getElementById('menuContainer');
         const gameCanvas = document.getElementById('gameCanvas');
+        const visualizerCanvas = document.getElementById('visualizerCanvas'); // 追加
         const treeContainer = document.getElementById('treeContainer');
         const controlsBlock = document.getElementById('controlsBlock');
         const leftBtn = document.getElementById('leftBtn');
@@ -226,6 +247,7 @@
 
         // --- 🚪「結果を閉じる」ボタンの処理 ---
         document.getElementById('closeResultBtn').addEventListener('click', () => {
+            if (window.currentCanvasStop) window.currentCanvasStop(); // 3Dアニメーションのクリーンアップを実行
             if (audioStream) audioStream.getTracks().forEach(track => track.stop());
             if (audioContext && audioContext.state !== 'closed') audioContext.close();
             window.parent.postMessage('MINIGAME_FINISHED', '*');
@@ -244,6 +266,7 @@
             if (index === 0) runInvaderGame();
             else if (index === 1) runCatchGame();
             else if (index === 2) runTreeGame();
+            else if (index === 3) runVisualizerGame(); // 4番目の分岐を追加
         }
 
         // =========================================================================
@@ -409,7 +432,7 @@
         // 🎮 2. AQUA CATCH（🌟効果音ラボ・外部音源再生版🌟）
         // =========================================================================
         function runCatchGame() {
-            info.innerHTML = "左右ボタンで白い丸を動かしてノーツをキャッチ！<br>綺麗に重なると、みずみずしい「ぽちゃん！」の音が鳴るよ💧";
+            info.innerHTML = "左右ボタンで白い丸を動かして水滴をキャッチ！";
             gameCanvas.style.display = "block";
             gameCanvas.className = "border-catch";
             controlsBlock.style.display = "flex";
@@ -697,6 +720,181 @@
                 if (audioContext && audioContext.state !== 'closed') audioContext.close();
                 setTimeout(() => { closeBtnContainer.style.display = 'block'; }, 800);
             }
+        }
+
+        // =========================================================================
+        // 🎮 4. 3D VISUALIZER (追加機能)
+        // =========================================================================
+        function runVisualizerGame() {
+            info.innerHTML = "🎵 3Dビジュアライザー空間<br>声に合わせて光の波が流れます。ドラッグで回転。";
+            
+            // 3D用のキャンバスを表示
+            visualizerCanvas.style.display = "block";
+            
+            // 癒やし系（終わりがない自由空間）のため、最初から「戻るボタン」を表示しておく
+            setTimeout(() => { document.getElementById('closeBtnContainer').style.display = 'block'; }, 400);
+
+            let isVizPlaying = true;
+            let vizAnimId;
+
+            const FFT_SIZE = 256; 
+            const GRID_SIZE = 6000;
+            const MAX = FFT_SIZE / 2;
+
+            // 音データの履歴配列を初期化
+            const freqByteDataArray = [];
+            for (let i = 0; i < MAX; i++) {
+                const array = new Uint8Array(MAX);
+                for (let j = 0; j < MAX; j++) array[j] = 0;
+                freqByteDataArray.push(array);
+            }
+
+            // --- 3D空間のセットアップ ---
+            const scene = new THREE.Scene();
+            const width = visualizerCanvas.clientWidth;
+            const height = visualizerCanvas.clientHeight;
+            
+            const camera = new THREE.PerspectiveCamera(45, width / height, 1, 200000);
+            camera.position.set(3000, 5000, 5000);
+
+            // カメラコントローラー（ぐるぐる回せる設定）
+            const controls = new THREE.OrbitControls(camera, visualizerCanvas);
+            controls.target.set(-1000, 1500, 0);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 3000;
+            controls.maxDistance = 12000;
+            controls.minPolarAngle = Math.PI / 6;
+            controls.maxPolarAngle = Math.PI / 2.2;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.4;
+
+            // レンダラー設定
+            const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: visualizerCanvas });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000);
+            renderer.setSize(width, height, false);
+
+            // 背景のサイバーグリッド床＆壁
+            const gridColor = new THREE.Color(0x112233);
+            {
+                const grid = new THREE.GridHelper(GRID_SIZE, 30, gridColor, gridColor);
+                scene.add(grid);
+            }
+            {
+                const grid = new THREE.GridHelper(GRID_SIZE, 30, gridColor, gridColor);
+                grid.position.z = -GRID_SIZE / 2; grid.position.y = GRID_SIZE / 2;
+                grid.rotation.x = Math.PI / 2; scene.add(grid);
+            }
+            {
+                const grid = new THREE.GridHelper(GRID_SIZE, 30, gridColor, gridColor);
+                grid.position.x = -GRID_SIZE / 2; grid.position.y = GRID_SIZE / 2;
+                grid.rotation.z = Math.PI / 2; scene.add(grid);
+            }
+
+            // 大量の立方体を一括描画する軽量なメッシュ（InstancedMesh）
+            const geometry = new THREE.BoxGeometry(10, GRID_SIZE, 10);
+            const material = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            const mesh = new THREE.InstancedMesh(geometry, material, MAX * MAX);
+            scene.add(mesh);
+
+            // グラデーションの初期配置（青からピンクへのHSLグラデーション）
+            for (let i = 0; i < MAX; i++) {
+                for (let j = 0; j < MAX; j++) {
+                    const hue = (j / MAX) * 0.5 + 0.5;
+                    const saturation = 0.8;
+                    const lightness = i === MAX - 1 ? 1 : (0.18 * i) / MAX;
+                    const color = new THREE.Color();
+                    color.setHSL(hue, saturation, lightness);
+
+                    const matrix = createMatrix4(i, j, 0);
+                    const id = i * MAX + j;
+                    mesh.setMatrixAt(id, matrix);
+                    mesh.setColorAt(id, color);
+                }
+            }
+            mesh.instanceColor.needsUpdate = true;
+
+            initAudio();
+
+            async function initAudio() {
+                try {
+                    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioContext.state === 'suspended') await audioContext.resume();
+                    const source = audioContext.createMediaStreamSource(audioStream);
+                    
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = FFT_SIZE;
+                    analyser.smoothingTimeConstant = 0.5;
+                    
+                    source.connect(analyser);
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    
+                    vizLoop();
+                } catch (err) {
+                    console.log('マイクなしモードで起動');
+                    vizLoop();
+                }
+            }
+
+            function vizLoop() {
+                if (!isVizPlaying) return;
+                vizAnimId = requestAnimationFrame(vizLoop);
+
+                if (analyser) {
+                    const freqByteData = new Uint8Array(MAX);
+                    analyser.getByteFrequencyData(freqByteData);
+                    
+                    freqByteDataArray.push(freqByteData);
+                    if (freqByteDataArray.length > MAX) freqByteDataArray.shift();
+
+                    for (let i = 0; i < freqByteDataArray.length; i++) {
+                        for (let j = 0; j < freqByteDataArray[i].length; j++) {
+                            const freqSum = freqByteDataArray[i][j] / 256;
+                            const id = i * MAX + j;
+                            const matrix = createMatrix4(i, j, freqSum);
+                            mesh.setMatrixAt(id, matrix);
+                        }
+                    }
+                    mesh.instanceMatrix.needsUpdate = true;
+                }
+
+                controls.update();
+                renderer.render(scene, camera);
+            }
+
+            function createMatrix4(i, j, value) {
+                const matrix = new THREE.Matrix4();
+                const boxInterval = (GRID_SIZE / FFT_SIZE) * 2;
+                const center = (boxInterval * FFT_SIZE) / 4;
+                matrix.setPosition(boxInterval * j - center, 0, boxInterval * i - center);
+                const yScale = Math.max(value, 0.002);
+                matrix.multiply(new THREE.Matrix4().makeScale(1, yScale, 1));
+                matrix.multiply(new THREE.Matrix4().makeTranslation(0, GRID_SIZE / 2, 0));
+                return matrix;
+            }
+
+            function onVizResize() {
+                const w = visualizerCanvas.clientWidth;
+                const h = visualizerCanvas.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h, false);
+            }
+            window.addEventListener('resize', onVizResize);
+
+            // 🚪 終了時に呼び出す用のクリーンアップ処理関数をグローバルに登録
+            window.currentCanvasStop = function() {
+                isVizPlaying = false;
+                cancelAnimationFrame(vizAnimId);
+                window.removeEventListener('resize', onVizResize);
+                geometry.dispose();
+                material.dispose();
+                mesh.dispose();
+                renderer.dispose();
+                window.currentCanvasStop = null;
+            };
         }
     </script>
 </body>

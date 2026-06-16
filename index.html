@@ -437,13 +437,30 @@ transform: scale(1.1);
 margin-top: 15px;
 }
 
-/* --- 今回追加した部分（画像アップロード用） --- */
+/* --- 📸 画像アップロード用（スマホ対応版に修正） --- */
 .hidden-file-input {
-display: none;
+position: absolute;
+width: 0;
+height: 0;
+opacity: 0;
+overflow: hidden;
+pointer-events: none;
+}
+
+/* --- 🎚️ 透過度バー専用の余白設定（新規追加） --- */
+.touka-slider-zone {
+display: flex;
+align-items: center;
+gap: 10px;
+margin-top: 5px; /* カラーパレットとの間に一行空行を開ける */
+}
+
+/* 🌟ここを追加：透過度スライダーの最大横幅を制限する */
+#toukaSlider {
+max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短くなります */
 }
 </style>
 </head>
-
 <body>
 <div class="info-text-area">
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a></p>
@@ -460,8 +477,8 @@ display: none;
 <div class="header-zone">
 <div class="title">2min VOICE and MUSIC WAVE MOVIE</div>
 <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>
-挙動がおかしいな？と思ったらページの更新(再読込)をしてください<br>
-録音中にブラウザを閉じると音が途切れるなど失敗の恐れがあります
+ページの更新(再読込)でフルリセットされます<br>
+録音中や保存中にブラウザを閉じると正常な動画が作れなくなります
 </div>
 </div>
 
@@ -526,7 +543,6 @@ display: none;
 <div id="btnBlack" class="color-option active"><span class="pointer">▶</span>BLACK</div>
 <div id="btnWhite" class="color-option"><span class="pointer">▶</span>WHITE</div>
 <div id="btnPicture" class="color-option"><span class="pointer">▶</span>PICTURE</div>
-<input type="file" id="bgImageInput" class="hidden-file-input" accept="image/*">
 </div>
 
 <div class="setting-section" id="menuStyle">
@@ -534,8 +550,9 @@ display: none;
 <div id="styleCorona" class="style-option active" data-style="corona"><span class="pointer">▶</span>CORONA</div>
 <div id="styleStar" class="style-option" data-style="star"><span class="pointer">▶</span>STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora"><span class="pointer">▶</span>AURORA</div>
-<div id="styleBuildingl" class="style-option" data-style="bill"><span class="pointer">▶</span>BUILDING</div>
+<div id="styleBuilding" class="style-option" data-style="building"><span class="pointer">▶</span>BUILDING</div>
 </div>
+
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
 <div class="palette-grid" id="standardGrid"></div>
@@ -544,11 +561,11 @@ display: none;
 <div class="setting-section monthly-section" id="menuMonthlyColor">
 <div class="setting-title" id="monthlyTitle">JUNE COLOR</div>
 <div class="palette-grid" id="monthlyGrid"></div>
-
-<div style="display: flex; align-items: center; gap: 10px;">
-<span style="font-size: 0.75rem; white-space: nowrap;">png</span>
-<input type="range" id="opacitySlider" class="audio-slider" style="width: 50%;" min="0.2" max="1.0" step="0.05" value="1.0">
 </div>
+
+<div class="touka-slider-zone" id="menuTouka">
+<div style="font-size: 0.6rem; width: 42px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVEpng</div>
+<input type="range" id="toukaSlider" class="audio-slider" min="0.4" max="1.0" step="0.05" value="0.9">
 </div>
 </div>
 </div>
@@ -565,7 +582,7 @@ display: none;
 <p style="margin-bottom: 15px; font-size: 0.75rem; opacity: 0.9; text-align: center; flex-shrink: 0;">⚠️ このタブを開いたままお待ちください<br>（別タブを開くとエラーになることがあります）</p>
 <iframe id="miniGameIframe" src="" style="width: 100%; max-width: 500px; flex: 1; border: none; background: transparent; margin-bottom: 4vh;"></iframe>
 </div>
-
+<input type="file" id="pictureInput" class="hidden-file-input" accept="image/*">
 <script>
 // ==========================================
 // 1. 定数・設定データの定義
@@ -582,12 +599,12 @@ patterns: [
 
 const STANDARD_PALETTES = [
 ["#fff0f5", "#faf0e6"], ["#dfe9f3", "#ffffff"], ["#fff1eb", "#ace0f9"], ["#fddb92", "#d1fdff"],
-["#bc8f8f", "#ffe4e1"], ["#eebbcb", "#cee4ae"], ["#4682b4", "#f0f8ff"], ["#ffee00", "#ffaa00"],
-["#FFF6B7", "#F6416C"], ["#a6c0fe", "#f68084"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
+["#bc8f8f", "#ffe4e1"], ["#a6c0fe", "#f68084"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
 ["#800080", "#f08080"], ["#f107a3", "#7b2ff7"], ["#00ffff", "#00008b"], ["#16a085", "#f4d03f"],
 ["#dc143c", "#8b0000"], ["#4b0082", "#6495ed"], ["#243949", "#517fa4"], ["#8b5a2b", "#2e8b57"],
 ["#dbd0e6", "#250d00"], ["#191970", "#fffacd"], ["#a8caba", "#5d4157"], ["#eeeeee", "#111111"]
 ];
+
 
 const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
 const IMG_PAUSE = "https://img1.mitemin.net/4b/sx/6qv9esjg9bk7bk7u93oe4bzh5p96_tw0_3u_3u_phc.png";
@@ -634,7 +651,7 @@ let source = null;
 let dataArray = null;
 let stream = null;
 let animationId = null;
-
+let isMovieRendering = false;
 let mediaRecorder = null;
 let recordedChunks = [];
 let audioBlob = null;
@@ -651,6 +668,14 @@ let isUserChangingIndex = false;
 let isRecording = false;
 let isPlayingRecorded = false;
 let isNoiseCancelOn = false;
+
+// --- 📸 追加要素と変数 ---
+const btnPicture = document.getElementById('btnPicture');
+const pictureInput = document.getElementById('pictureInput');
+const toukaSlider = document.getElementById('toukaSlider');
+
+let currentOpacity = 0.9; // 初期透過度
+let bgImage = null;       // 選択された背景画像オブジェクト
 
 let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
 
@@ -720,8 +745,13 @@ if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
 
 // キャンバスの背景クリア
 function clearCanvas(targetCtx, w, h) {
+if (currentBgColor === 'picture' && bgImage) {
+// 画像が選ばれている場合はCanvas全体に描画
+targetCtx.drawImage(bgImage, 0, 0, w, h);
+} else {
 targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
 targetCtx.fillRect(0, 0, w, h);
+}
 }
 
 // 波形の感度調整としきい値処理（微小ノイズのカット）
@@ -764,10 +794,14 @@ ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke(
 } else if (currentWaveStyle === 'aurora') {
 const centerY = canvas.height / 2;
 ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
+
+} else if (currentWaveStyle === 'building') {
+// ★BUILDINGの初期状態：画面下方に横線を一本表示
+const baseLineY = canvas.height - 80;
+ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 }
 }
 
-// 各種波形（CORONA, STAR, AURORA）の動的描画ロジック本体
 function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
@@ -785,62 +819,52 @@ targetCtx.lineCap = 'round';
 const centerX = targetCanvas.width / 2;
 const centerY = targetCanvas.height / 2;
 
-const validRange = Math.floor(dataArr.length * 0.82);
+const validRange =46 ;
 const steps = 120;
 
 if (currentWaveStyle === 'corona') {
+// 🌟【CORONA修正】曲線ではなく、密度の高い「放射状の細い線」で描写
 const baseRadius = 140;
-const coords = [];
+const barCount = 360; // 線の密度（360本に増やしてびっしり詰まった質感にします）
 
-for (let i = 0; i < steps; i++) {
-const angle = (i / steps) * Math.PI * 2;
-const mapRatio = i < steps / 2 ? (i / (steps / 2)) : ((steps - i) / (steps / 2));
-const dataIdx = Math.floor(mapRatio * (validRange - 1));
+targetCtx.save();
+targetCtx.globalAlpha = currentOpacity; // 透過度を適用
+targetCtx.lineWidth = 2.5;              // 線がきれいに密集するよう、少し細めに調整
+
+for (let i = 3; i < barCount; i++) {
+const angle = (i / barCount) * Math.PI * 2;
+const mapRatio = i / barCount;
+const dataIndex = Math.floor((i % (steps / 4)) / (steps / 4) * (validRange - 3)) + 3;
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 6 + (boosted * 120);
-const r = baseRadius + waveLength;
+const waveLength = 6 + (boosted * 150);
 
-coords.push({
-x: centerX + Math.cos(angle) * r,
-y: centerY + Math.sin(angle) * r
-});
-}
+// 内側の円周から、外側に向かって直線を引く
+const startX = centerX + Math.cos(angle) * baseRadius;
+const startY = centerY + Math.sin(angle) * baseRadius;
+const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
 
 targetCtx.beginPath();
-targetCtx.moveTo(coords[0].x, coords[0].y);
-for (let i = 0; i < steps; i++) {
-const curr = coords[i];
-const next = coords[(i + 1) % steps];
-const cpX = (curr.x + next.x) / 2;
-const cpY = (curr.y + next.y) / 2;
-targetCtx.quadraticCurveTo(curr.x, curr.y, cpX, cpY);
+targetCtx.moveTo(startX, startY);
+targetCtx.lineTo(endX, endY);
+targetCtx.stroke();
 }
-targetCtx.closePath();
-
-targetCtx.save();
-targetCtx.globalAlpha = 0.9;
-targetCtx.fill();
-targetCtx.restore();
-
-targetCtx.save();
-targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-targetCtx.beginPath();
-targetCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
-targetCtx.fill();
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'star') {
 const baseRadius = 138;
-const barCount = 48;
+const barCount = 64;
 
-for (let i = 0; i < barCount; i++) {
+targetCtx.save();
+targetCtx.globalAlpha = currentOpacity;
+for (let i = 2; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
-const mapRatio = i < barCount / 2 ? (i / (barCount / 2)) : ((barCount - i) / (barCount / 2));
+const mapRatio = i / barCount;
 const dataIdx = Math.floor(mapRatio * (validRange - 1));
 
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 5 + (boosted * 100);
+const waveLength = 5 + (boosted * 150);
 
 const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
 const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -852,6 +876,7 @@ targetCtx.moveTo(startX, startY);
 targetCtx.lineTo(endX, endY);
 targetCtx.stroke();
 }
+targetCtx.restore();
 
 } else if (currentWaveStyle === 'aurora') {
 const usedPoints = 32;
@@ -859,10 +884,10 @@ const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
 const activeCenterY = targetCanvas.height / 2;
 const coords = [];
 
-for (let i = 0; i < usedPoints; i++) {
+for (let i = 3; i < usedPoints; i++) {
 const dataIdx = Math.floor((i / usedPoints) * validRange);
 const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveHeight = 3 + (boosted * 155);
+const waveHeight = 3 + (boosted * 150);
 coords.push({x: 40 + i * spacing, waveHeight});
 }
 
@@ -884,8 +909,41 @@ targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY
 targetCtx.closePath();
 
 targetCtx.save();
-targetCtx.globalAlpha = 0.9;
+targetCtx.globalAlpha = currentOpacity;
 targetCtx.fill();
+targetCtx.restore();
+
+} else if (currentWaveStyle === 'building') {
+// 🌟【BUILDING修正】カチッとしたデジタルな矩形バーに変更
+const barCount = 30;
+const spacing = (targetCanvas.width - 80) / barCount;
+const baseLineY = targetCanvas.height - 80;
+
+// 常に表示される下方の横線（端を四角くしてカチッとさせます）
+targetCtx.save();
+targetCtx.lineCap = 'butt';
+targetCtx.beginPath();
+targetCtx.moveTo(40, baseLineY);
+targetCtx.lineTo(targetCanvas.width - 40, baseLineY);
+targetCtx.stroke();
+targetCtx.restore();
+
+targetCtx.save();
+targetCtx.globalAlpha = currentOpacity;
+
+const barWidth = spacing * 0.7; // バーの横幅（隙間に合わせた最適な太さ）
+
+for (let i = 2; i < barCount; i++) {
+const dataIdx = Math.floor((i / barCount) * validRange);
+const boosted = getBoostedValue(dataArr[dataIdx]);
+const barHeight = boosted * 250;
+
+if (barHeight > 0) {
+const x = 40 + i * spacing + (spacing - barWidth) / 2;
+// 🌟fillRect（塗りつぶし四角）を使うことで、丸みを完全に排除し、下線の下へのハミ出しを1ピクセルもなくします！
+targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
+}
+}
 targetCtx.restore();
 }
 }
@@ -917,7 +975,7 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
 analyser.smoothingTimeConstant = 0.75;
 newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser); gainNode.connect(recordDestination);
@@ -934,7 +992,7 @@ if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 clearInterval(timerInterval); recBtn.classList.remove('recording'); timerDisplay.style.display = 'none'; drawStaticWave();
 }
 
-// オーディオルートのWeb Audio APIノード構築
+// オーディールートのWeb Audio APIノード構築
 function setupAudioNodes(audioSource, isMuteSpeaker) {
 if (!audioCtx || !audioSource) return;
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
@@ -942,7 +1000,7 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.75;
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
 audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser);
 if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
@@ -954,15 +1012,15 @@ function updateTimerText() {
 const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
 timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
-
 // メニューのロック／解放
 function lockMenus() {
 menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
+document.getElementById('menuTouka').classList.add('locked'); // ★追加
 }
 function unlockMenus() {
 menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
+document.getElementById('menuTouka').classList.remove('locked'); // ★追加
 }
-
 // 録音データの内部完全リセット処理（確認ダイアログなし版）
 function resetDataWithoutPrompt() {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
@@ -999,16 +1057,47 @@ btnBlack.addEventListener('click', () => {
 currentBgColor = 'black';
 btnBlack.classList.add('active');
 btnWhite.classList.remove('active');
+btnPicture.classList.remove('active'); // 追加
 canvasBg.classList.remove('theme-white');
 triggerUIRefresh();
 });
-
 // 背景色変更：WHITE
 btnWhite.addEventListener('click', () => {
 currentBgColor = 'white';
 btnWhite.classList.add('active');
 btnBlack.classList.remove('active');
+btnPicture.classList.remove('active'); // 追加
 canvasBg.classList.add('theme-white');
+triggerUIRefresh();
+});
+
+// ★新規追加：PICTUREボタンを押したらカメラロールを起動
+btnPicture.addEventListener('click', () => {
+pictureInput.click();
+});
+pictureInput.addEventListener('change', (e) => {
+const file = e.target.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = function(event) {
+const img = new Image();
+img.onload = function() {
+bgImage = img;
+currentBgColor = 'picture';
+btnPicture.classList.add('active');
+btnBlack.classList.remove('active');
+btnWhite.classList.remove('active');
+triggerUIRefresh();
+};
+img.src = event.target.result;
+};
+reader.readAsDataURL(file);
+}
+});
+
+// ★新規追加：透過度バーを操作したときの処理
+toukaSlider.addEventListener('input', () => {
+currentOpacity = parseFloat(toukaSlider.value);
 triggerUIRefresh();
 });
 
@@ -1152,7 +1241,7 @@ const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voi
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
-
+isMovieRendering = false;
 const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
 
 if (finishGame) {
@@ -1160,14 +1249,14 @@ hideOverlayAndCleanup();
 alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
 }
 };
-
+isMovieRendering = true;
 movieRecorder.start(); bufferSource.start(0);
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
 
 function renderFrame() {
 const now = performance.now(); const elapsed = now - startTime;
 rAnalyser.getByteFrequencyData(rDataArray);
-rCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff'; rCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
+clearCanvas(rCtx, captureCanvas.width, captureCanvas.height);
 drawWaveLogic(rCtx, captureCanvas, rDataArray);
 if (elapsed < duration) requestAnimationFrame(renderFrame);
 else { bufferSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
@@ -1175,11 +1264,25 @@ else { bufferSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
 renderFrame();
 });
 
-// ミニゲーム側からの強制終了メッセージの検知
+// ミニゲーム側からのメッセージ検知（強制終了、またはリザルトを閉じたとき）
 window.addEventListener('message', (event) => {
+// ミニゲーム側から「終了したよ」というメッセージ（MINIGAME_FINISHED）を受け取った時
 if (event.data === 'MINIGAME_FINISHED') {
+
+// 1. まだ動画の書き出し（保存）が終わっていない場合
+if (isMovieRendering) {
+// iframeのsrcをもう一度入り直させて、ミニゲーム（選択画面など最初から）をリロードします
+const gameIframe = document.getElementById('miniGameIframe');
+if (gameIframe) {
+gameIframe.src = 'mini-game.html';
+}
+alert("動画を一所懸命に保存中です。完了の通知が出るまで、もう一回遊べる丼！");
+
+} else {
+// 2. すでに動画の保存（ダウンロードリンクの生成）が終わっている場合
 hideOverlayAndCleanup();
 alert("ミニゲーム終了お疲れ様でした！\n録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
+}
 }
 });
 
