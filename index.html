@@ -463,7 +463,7 @@ max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短
 </head>
 <body>
 <div class="info-text-area">
-<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a></p>
+<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br>2026.06.25</p><br>
 <p>声や音楽を視覚化して動画保存できます</p>
 <p>録音は２分まで</p>
 <p>お使いの端末にのみ、動画として保存されます</p>
@@ -1084,13 +1084,15 @@ if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
 // ==========================================
 
 // 背景色変更：BLACK
+// 背景色変更：BLACK
 btnBlack.addEventListener('click', () => {
 currentBgColor = 'black';
 btnBlack.classList.add('active');
 btnWhite.classList.remove('active');
-btnPicture.classList.remove('active'); // 追加
+btnPicture.classList.remove('active');
 canvasBg.classList.remove('theme-white');
-pictureInput.value = ""; // 🛠️ 追加：画像選択の記憶をリセット
+canvasBg.style.backgroundColor = ''; // 🛠️ 追加：CSSの元の色に戻す
+pictureInput.value = "";
 triggerUIRefresh();
 });
 
@@ -1099,9 +1101,10 @@ btnWhite.addEventListener('click', () => {
 currentBgColor = 'white';
 btnWhite.classList.add('active');
 btnBlack.classList.remove('active');
-btnPicture.classList.remove('active'); // 追加
+btnPicture.classList.remove('active');
 canvasBg.classList.add('theme-white');
-pictureInput.value = ""; // 🛠️ 追加：画像選択の記憶をリセット
+canvasBg.style.backgroundColor = ''; // 🛠️ 追加：CSSの元の色に戻す
+pictureInput.value = "";
 triggerUIRefresh();
 });
 
@@ -1121,6 +1124,7 @@ currentBgColor = 'picture';
 btnPicture.classList.add('active');
 btnBlack.classList.remove('active');
 btnWhite.classList.remove('active');
+canvasBg.style.backgroundColor = 'transparent'; // 🛠️ 追加：キャンバスの背景を強制的に「透明」にする！
 triggerUIRefresh();
 };
 img.src = event.target.result;
