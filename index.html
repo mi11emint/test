@@ -67,7 +67,7 @@ animation: twinkleCSS 3s infinite alternate-reverse ease-in-out;
 width: 100%;
 max-width: 420px;
 text-align: left;
-font-size: 0.75rem;
+font-size: 0.70rem;
 line-height: 1.6;
 letter-spacing: 1px;
 opacity: 0.8;
@@ -457,7 +457,7 @@ margin-top: 5px; /* カラーパレットとの間に一行空行を開ける */
 
 /* 🌟ここを追加：透過度スライダーの最大横幅を制限する */
 #toukaSlider {
-max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短くなります */
+max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短くなります */
 }
 </style>
 </head>
@@ -564,8 +564,8 @@ max-width: 40px; /* 👈 この数字（70px）を小さくするとさらに短
 </div>
 
 <div class="touka-slider-zone" id="menuTouka">
-<div style="font-size: 0.6rem; width: 42px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVEpng</div>
-<input type="range" id="toukaSlider" class="audio-slider" min="0.4" max="1.0" step="0.05" value="0.9">
+<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>png</div>
+<input type="range" id="toukaSlider" class="audio-slider" min="0" max="100" value="0">
 </div>
 </div>
 </div>
@@ -1133,10 +1133,15 @@ reader.readAsDataURL(file);
 }
 });
 
-// ★新規追加：透過度バーを操作したときの処理
+// 🛠️ 修正：スライダーを右に動かすと透過度が上がり、最大40%（0.4）に制限する処理
 toukaSlider.addEventListener('input', () => {
-currentOpacity = parseFloat(toukaSlider.value);
-triggerUIRefresh();
+    // ツマミの値（0〜100）を 0.0〜1.0 の割合に変換
+    const sliderRatio = parseFloat(toukaSlider.value) / 100;
+    
+    // 右に行くほど透明度を上げつつ、最大でも 0.4（40%）でストップさせる
+    currentOpacity = sliderRatio * 0.4;
+    
+    triggerUIRefresh();
 });
 
 // 波形スタイル（パターン）の切り替え
