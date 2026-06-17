@@ -1133,13 +1133,15 @@ reader.readAsDataURL(file);
 }
 });
 
-// 🛠️ 修正：スライダーを右に動かすと透過度が上がり、最大40%（0.4）に制限する処理
+// 🛠️ 再修正：スライダーの左端で透過度0%（くっきり）、右端で透過度40%（程よくシースルー）にする処理
 toukaSlider.addEventListener('input', () => {
     // ツマミの値（0〜100）を 0.0〜1.0 の割合に変換
     const sliderRatio = parseFloat(toukaSlider.value) / 100;
     
-    // 右に行くほど透明度を上げつつ、最大でも 0.4（40%）でストップさせる
-    currentOpacity = sliderRatio * 0.4;
+    // 【引き算の計算式に変更】
+    // 左端(0)のときは 1.0 - 0 = 1.0 (完全にくっきり不透明)
+    // 右端(100)のときは 1.0 - 0.4 = 0.6 (40%だけ透明になり、60%の濃さで残る)
+    currentOpacity = 1.0 - (sliderRatio * 0.6);
     
     triggerUIRefresh();
 });
