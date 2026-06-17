@@ -806,6 +806,50 @@ ctx.lineWidth = 4;
 ctx.lineCap = 'round';
 
 if (currentWaveStyle === 'corona') {
+ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
+} else if (currentWaveStyle === 'star') {
+const centerX = canvas.width / 2; const centerY = canvas.height / 2;
+const baseRadius = 140;
+for (let i = 0; i < 48; i++) {
+const angle = (i / 48) * Math.PI * 2;
+const startX = centerX + Math.cos(angle) * (baseRadius - 8);
+const startY = centerY + Math.sin(angle) * (baseRadius - 8);
+const endX = centerX + Math.cos(angle) * (baseRadius + 8);
+const endY = centerY + Math.sin(angle) * (baseRadius + 8);
+ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
+}
+} else if (currentWaveStyle === 'aurora') {
+const centerY = canvas.height / 2;
+ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
+
+} else if (currentWaveStyle === 'building') {
+// ★BUILDINGの初期状態：画面下方に横線を一本表示
+const baseLineY = canvas.height - 80;
+ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+}
+}
+
+function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
+const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
+gradient.addColorStop(0, currentWaveColors[0]);
+if (currentWaveColors.length > 2) {
+gradient.addColorStop(0.5, currentWaveColors[1]);
+gradient.addColorStop(1, currentWaveColors[2]);
+} else {
+gradient.addColorStop(1, currentWaveColors[1]);
+}
+targetCtx.strokeStyle = gradient;
+targetCtx.fillStyle = gradient;
+targetCtx.lineWidth = 4;
+targetCtx.lineCap = 'round';
+
+const centerX = targetCanvas.width / 2;
+const centerY = targetCanvas.height / 2;
+
+const validRange = 37;
+const steps = 120;
+
+if (currentWaveStyle === 'corona') {
     const baseRadius = 140;
     const barCount = 360; 
 
@@ -851,77 +895,6 @@ if (currentWaveStyle === 'corona') {
     targetCtx.restore();
 
 } else if (currentWaveStyle === 'star') {
-const centerX = canvas.width / 2; const centerY = canvas.height / 2;
-const baseRadius = 140;
-for (let i = 0; i < 48; i++) {
-const angle = (i / 48) * Math.PI * 2;
-const startX = centerX + Math.cos(angle) * (baseRadius - 8);
-const startY = centerY + Math.sin(angle) * (baseRadius - 8);
-const endX = centerX + Math.cos(angle) * (baseRadius + 8);
-const endY = centerY + Math.sin(angle) * (baseRadius + 8);
-ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
-}
-} else if (currentWaveStyle === 'aurora') {
-const centerY = canvas.height / 2;
-ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
-
-} else if (currentWaveStyle === 'building') {
-// ★BUILDINGの初期状態：画面下方に横線を一本表示
-const baseLineY = canvas.height - 80;
-ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
-}
-}
-
-function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
-const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-gradient.addColorStop(0, currentWaveColors[0]);
-if (currentWaveColors.length > 2) {
-gradient.addColorStop(0.5, currentWaveColors[1]);
-gradient.addColorStop(1, currentWaveColors[2]);
-} else {
-gradient.addColorStop(1, currentWaveColors[1]);
-}
-targetCtx.strokeStyle = gradient;
-targetCtx.fillStyle = gradient;
-targetCtx.lineWidth = 4;
-targetCtx.lineCap = 'round';
-
-const centerX = targetCanvas.width / 2;
-const centerY = targetCanvas.height / 2;
-
-const validRange = 37;
-const steps = 120;
-
-if (currentWaveStyle === 'corona') {
-// 🌟【CORONA修正】曲線ではなく、密度の高い「放射状の細い線」で描写
-const baseRadius = 140;
-const barCount = 360; // 線の密度（360本に増やしてびっしり詰まった質感にします）
-
-targetCtx.save();
-targetCtx.globalAlpha = currentOpacity; // 透過度を適用
-targetCtx.lineWidth = 2.5;              // 線がきれいに密集するよう、少し細めに調整
-
-for (let i = 0; i < barCount; i++) {
-const angle = (i / barCount) * Math.PI * 2;
-const mapRatio = i / barCount;
-// 3番目(60Hz)から46番目(1000Hz)の間を等間隔で割り振る
-const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
-
-const boosted = getBoostedValue(dataArr[dataIdx]);
-const waveLength = 6 + (boosted * 150);
-
-// 内側の円周から、外側に向かって直線を引く
-const startX = centerX + Math.cos(angle) * baseRadius;
-const startY = centerY + Math.sin(angle) * baseRadius;
-const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-
-targetCtx.beginPath();
-targetCtx.moveTo(startX, startY);
-targetCtx.lineTo(endX, endY);
-targetCtx.stroke();
-}
-targetCtx.restore();
 
 } else if (currentWaveStyle === 'star') {
 const baseRadius = 138;
