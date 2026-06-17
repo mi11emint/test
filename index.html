@@ -573,7 +573,7 @@ max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短
 <div class="bottom-notice-text">
 ⋆☄録音中に色、波のパターン、イコライザ、音量を操作できますが、最終的に保存されるのは最後に選択した値になります。イコライザと音量は、録音後も調整できます<br>
 ⋆☄保存された動画ファイルの読込や再生、編集の可否は、お使いの動画プレイヤーや編集アプリの仕様に準じます<br>
-⋆☄ド素人がGeminiさんにお願いしまくって生成、修正加工、調整したウェブサービスです。AIアレルギーの方はごめんなさい。製作者はバグがあった場合の一切の責任を負いかねます。素材はイラストAC、効果音ラボからダウンロードして加工しています。すてきな音の波がお手元に残りますように✧ *･ﾟ.
+⋆☄ド素人がGeminiさんにお願いしまくって生成、修正加工、調整したウェブサービスです。AIアレルギーの方はごめんなさい。製作者はユーザーに発生したバグや不具合、動画作成失敗、その他不利益があった場合の一切の責任を負いかねます。素材はイラストAC、効果音ラボからダウンロードして加工しています。すてきな音の波がお手元に残りますように✧ *･ﾟ.
 </div>
 </div>
 
@@ -996,7 +996,11 @@ targetCtx.restore();
 // 録音用ストリーム・ノード生成の開始
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false // 🛠️ true から false に変更してこもりを解消！
+}
 });
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 source = audioCtx.createMediaStreamSource(stream);
@@ -1012,7 +1016,11 @@ if (!isRecording || !mediaRecorder) return;
 if (stream) stream.getTracks().forEach(track => track.stop());
 try {
 stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false // 🛠️ true から false に変更してこもりを解消！
+}
 });
 const newSource = audioCtx.createMediaStreamSource(stream);
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
@@ -1199,38 +1207,107 @@ volSlider.value = 1.0; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlid
 syncAudioParams();
 });
 
-// 録音開始ボタン
+// ==========================================
+// 🛠️ 録音コントロール系の処理（アップデート版）
+// ==========================================
+
+// 一時停止からの再開か、新規録音かを判別するための変数（上部に追加）
+let isPaused = false;
+
+// 録音開始（または一時停止からの再開）ボタン
 recBtn.addEventListener('click', async () => {
-if (isRecording) return;
-resetDataWithoutPrompt();
-try {
-unlockMenus();
-await startRecordingStream();
-isRecording = true; draw();
-recordedChunks = [];
-mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
-mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-mediaRecorder.onstop = () => {
-audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-audioBlobUrl = URL.createObjectURL(audioBlob);
-playbackAudio = new Audio(audioBlobUrl);
-playbackAudio.preload = "auto";
-const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
-setupAudioNodes(playbackSource, false);
-playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
-playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
-playbackAudio.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; isPlayingRecorded = false; if (animationId) cancelAnimationFrame(animationId); playbackAudio.currentTime = 0; seekBar.value = 0; drawStaticWave(); });
-downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
-lockMenus();
-};
-mediaRecorder.start();
-recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
-timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
-} catch (err) { alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); }
+    // 1. すでに通常の録音中なら何もしない
+    if (isRecording && !isPaused) return;
+
+    // 2. 一時停止からの「再開（追録）」処理
+    if (isRecording && isPaused) {
+        if (mediaRecorder && mediaRecorder.state === "paused") {
+            mediaRecorder.resume(); // 録音を再開
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        isPaused = false;
+        recBtn.classList.add('recording');
+        document.getElementById('topPauseBtn').classList.remove('active'); // 一時停止の灯りを消す
+        
+        // タイマーとアニメーションを再開
+        draw();
+        timerInterval = setInterval(() => { 
+            timeLeft--; 
+            updateTimerText(); 
+            if (timeLeft <= 0) stopRecording(); 
+        }, 1000);
+        return;
+    }
+
+    // 3. 新規録音の開始処理（ここは元々の処理です）
+    resetDataWithoutPrompt();
+    try {
+        unlockMenus();
+        await startRecordingStream();
+        isRecording = true; 
+        isPaused = false;
+        draw();
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            audioBlobUrl = URL.createObjectURL(audioBlob);
+            playbackAudio = new Audio(audioBlobUrl);
+            playbackAudio.preload = "auto";
+            const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+            setupAudioNodes(playbackSource, false);
+            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
+            playbackAudio.addEventListener('ended', () => { playPauseImg.src = IMG_PLAY; isPlayingRecorded = false; if (animationId) cancelAnimationFrame(animationId); playbackAudio.currentTime = 0; seekBar.value = 0; drawStaticWave(); });
+            downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
+            lockMenus();
+        };
+        mediaRecorder.start();
+        recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
+        timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
+    } catch (err) { 
+        alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); 
+    }
 });
 
-// 録音停止ボタン
-stopBtn.addEventListener('click', () => { stopRecording(); });
+// 🛠️ 新規追加：録音一時停止ボタン（topPauseBtn）の処理
+document.getElementById('topPauseBtn').addEventListener('click', () => {
+    // 録音中、かつまだ一時停止していない場合のみ作動
+    if (isRecording && !isPaused) {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.pause(); // 録音データを一時停止
+        }
+        isPaused = true;
+        
+        // 画面上の演出を一時停止状態にする
+        recBtn.classList.remove('recording'); // 録音ボタンの点滅などを止める
+        document.getElementById('topPauseBtn').classList.add('active'); // 一時停止ボタンを光らせる（CSS用）
+        
+        // タイマーと波形アニメーションのループをストップ
+        clearInterval(timerInterval);
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        
+        // 一時停止した瞬間の波形（または静止波形）でストップさせる
+        if (analyser && dataArray) {
+            analyser.getByteFrequencyData(dataArray);
+            clearCanvas(ctx, canvas.width, canvas.height);
+            drawWaveLogic(ctx, canvas, dataArray);
+        }
+    }
+});
+
+// 録音停止ボタン（□）の処理（一時停止状態からでも完全にストップできるように調整）
+stopBtn.addEventListener('click', () => { 
+    isPaused = false;
+    document.getElementById('topPauseBtn').classList.remove('active');
+    stopRecording(); 
+});
 
 // 最初からやり直す（リセット）ボタン
 resetBtn.addEventListener('click', () => {
