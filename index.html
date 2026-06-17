@@ -806,7 +806,50 @@ ctx.lineWidth = 4;
 ctx.lineCap = 'round';
 
 if (currentWaveStyle === 'corona') {
-ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
+    const baseRadius = 140;
+    const barCount = 360; 
+
+    targetCtx.save();
+    targetCtx.globalAlpha = currentOpacity; 
+    targetCtx.lineWidth = 2.5;              
+
+    // 60Hz(3番目)から1000Hz(46番目)までのデータ個数（43個）
+    const startIdx = 3;
+    const endIdx = 46;
+    const dataRange = endIdx - startIdx;
+
+    for (let i = 0; i < barCount; i++) {
+        const angle = (i / barCount) * Math.PI * 2;
+        const mapRatio = i / barCount;
+
+        // 🛠️ 改良：段々にならないよう、データの間を滑らかに補間する（線形補間）
+        const exactIdx = startIdx + mapRatio * dataRange; // 小数点を含む正確な位置
+        const idxLeft = Math.floor(exactIdx);            // 左側の部屋の番号
+        const idxRight = Math.min(idxLeft + 1, endIdx);   // 右側の部屋の番号
+        const fraction = exactIdx - idxLeft;             // 右側にどれくらい近いかの割合
+
+        // 左の部屋の値と右の部屋の値を、割合（fraction）に応じて滑らかに混ぜ合わせる
+        const valueLeft = dataArr[idxLeft];
+        const valueRight = dataArr[idxRight];
+        const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
+
+        // 滑らかになった値を使って音圧ブーストを計算
+        const boosted = getBoostedValue(interpolatedValue);
+        const waveLength = 6 + (boosted * 150);
+
+        // 内側の円周から、外側に向かって直線を引く
+        const startX = centerX + Math.cos(angle) * baseRadius;
+        const startY = centerY + Math.sin(angle) * baseRadius;
+        const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+        const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(startX, startY);
+        targetCtx.lineTo(endX, endY);
+        targetCtx.stroke();
+    }
+    targetCtx.restore();
+
 } else if (currentWaveStyle === 'star') {
 const centerX = canvas.width / 2; const centerY = canvas.height / 2;
 const baseRadius = 140;
