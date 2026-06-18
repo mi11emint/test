@@ -319,63 +319,6 @@ cursor: pointer;
 border: none;
 }
 
-/* 🛠️ ボタンコンテナの追加 */
-.dual-control-zone {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-    width: 100%;
-}
-
-/* 🛠️ 新しい正方形ボタンのスタイル */
-.square-btn {
-    flex: 1; /* 横に並べて均等に */
-    aspect-ratio: 1 / 1;
-    background: transparent;
-    color: #777777;
-    border: 1px solid rgba(119, 119, 119, 0.4);
-    font-family: 'Cinecaption', 'Courier New', sans-serif;
-    font-size: 0.65rem;
-    letter-spacing: 1px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.2;
-}
-.square-btn.active {
-    color: #ffffff;
-    background: rgba(119, 119, 119, 0.4);
-    border-color: #ffffff;
-}
-.square-btn:active { transform: scale(0.95); }
-
-.noise-cancel-btn {
-width: 100%;
-background: transparent;
-color: #777777;
-border: 1px solid rgba(119, 119, 119, 0.4);
-padding: 5px 0;
-font-family: 'Cinecaption', 'Courier New', sans-serif;
-font-size: 0.65rem;
-letter-spacing: 1.5px;
-text-align: center;
-cursor: pointer;
-transition: all 0.2s ease;
-margin-top: 12px;
-border-radius: 4px;
-}
-.noise-cancel-btn.active {
-color: #ffffff;
-background: rgba(119, 119, 119, 0.4);
-border-color: #ffffff;
-}
-.noise-cancel-btn:active { transform: scale(0.98); }
-
 .audio-reset-btn {
 width: 100%;
 background: transparent;
@@ -565,10 +508,8 @@ max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短
 </div>
 </div>
 </div>
-<div class="dual-control-zone">
-    <button id="noiseCancelBtn" class="square-btn">NOISE<br>WAVE✂</button>
-    <button id="audioResetBtn" class="square-btn">RESET<br>AUDIO↺</button>
-</div>
+
+<button id="audioResetBtn" class="audio-reset-btn">RESET AUDIO</button>
 </div>
 </div>
 
@@ -675,7 +616,6 @@ const eqLowSlider = document.getElementById('eqLowSlider');
 const eqMidSlider = document.getElementById('eqMidSlider');
 const eqHighSlider = document.getElementById('eqHighSlider');
 
-const noiseCancelBtn = document.getElementById('noiseCancelBtn');
 const audioResetBtn = document.getElementById('audioResetBtn');
 
 // ==========================================
@@ -703,7 +643,7 @@ let currentWaveStyle = 'corona';
 let isUserChangingIndex = false;
 let isRecording = false;
 let isPlayingRecorded = false;
-let isNoiseCancelOn = false;
+
 
 // --- 📸 追加要素と変数 ---
 const btnPicture = document.getElementById('btnPicture');
@@ -713,7 +653,7 @@ const toukaSlider = document.getElementById('toukaSlider');
 let currentOpacity = 0.9; // 初期透過度
 let bgImage = null;       // 選択された背景画像オブジェクト
 
-let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, recordDestination = null;
+let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
 
 // ==========================================
 // 4. 関数の定義
@@ -776,6 +716,7 @@ if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
 if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
 if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
 if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
+
 }
 
 // キャンバスの背景クリア
@@ -1031,7 +972,7 @@ targetCtx.restore();
 // 録音用ストリーム・ノード生成の開始
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+
 });
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 source = audioCtx.createMediaStreamSource(stream);
@@ -1041,26 +982,7 @@ gainNode.connect(recordDestination);
 dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 
-// ノイキャン切り替え時のストリーム再生成
-async function restartRecordingStream() {
-if (!isRecording || !mediaRecorder) return;
-if (stream) stream.getTracks().forEach(track => track.stop());
-try {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
-});
-const newSource = audioCtx.createMediaStreamSource(stream);
-eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
-analyser.smoothingTimeConstant = 0.75;
-newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh);
-gainNode.connect(analyser); gainNode.connect(recordDestination);
-syncAudioParams();
-} catch (err) { console.error(err); }
-}
+
 
 // 録音処理の停止
 function stopRecording() {
@@ -1077,10 +999,10 @@ if (!audioCtx || !audioSource) return;
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
-audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh);
+audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser);
 if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
 syncAudioParams();
@@ -1107,7 +1029,7 @@ if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; isRecording = false;
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; gainNode = null; source = null; analyser = null; dataArray = null;
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
 unlockMenus(); drawStaticWave();
 }
 
@@ -1131,6 +1053,7 @@ if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
 // 5. イベントリスナー（ボタン操作など）の登録
 // ==========================================
 
+// 背景色変更：BLACK
 // 背景色変更：BLACK
 btnBlack.addEventListener('click', () => {
 currentBgColor = 'black';
@@ -1209,16 +1132,6 @@ eqLowSlider.addEventListener('input', syncAudioParams);
 eqMidSlider.addEventListener('input', syncAudioParams);
 eqHighSlider.addEventListener('input', syncAudioParams);
 
-// ノイズキャンセルボタン切り替え
-// ノイズキャンセル（視覚エフェクト）切り替え
-noiseCancelBtn.addEventListener('click', () => {
-    isNoiseWaveOn = !isNoiseWaveOn;
-    if (isNoiseWaveOn) {
-        noiseCancelBtn.classList.add('active');
-    } else {
-        noiseCancelBtn.classList.remove('active');
-    }
-});
 
 // オーディオ設定値のリセット
 audioResetBtn.addEventListener('click', () => {
@@ -1374,12 +1287,7 @@ const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf';
 const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
 const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
-bufferSource.connect(rEqLow); 
-rEqLow.connect(rEqMid); 
-rEqMid.connect(rEqHigh); 
-rEqHigh.connect(rGain); // ここで rNcFilter を飛ばして rGain に繋ぎます
-rGain.connect(rAnalyser);
-
+bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
 const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
 
 const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
