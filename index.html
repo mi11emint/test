@@ -319,6 +319,28 @@ cursor: pointer;
 border: none;
 }
 
+.noise-cancel-btn {
+width: 100%;
+background: transparent;
+color: #777777;
+border: 1px solid rgba(119, 119, 119, 0.4);
+padding: 5px 0;
+font-family: 'Cinecaption', 'Courier New', sans-serif;
+font-size: 0.65rem;
+letter-spacing: 1.5px;
+text-align: center;
+cursor: pointer;
+transition: all 0.2s ease;
+margin-top: 12px;
+border-radius: 4px;
+}
+.noise-cancel-btn.active {
+color: #ffffff;
+background: rgba(119, 119, 119, 0.4);
+border-color: #ffffff;
+}
+.noise-cancel-btn:active { transform: scale(0.98); }
+
 .audio-reset-btn {
 width: 100%;
 background: transparent;
@@ -509,6 +531,7 @@ max-width: 50px; /* 👈 この数字（70px）を小さくするとさらに短
 </div>
 </div>
 
+<button id="noiseCancelBtn" class="noise-cancel-btn">NOISE CANCEL: OFF</button>
 <button id="audioResetBtn" class="audio-reset-btn">RESET AUDIO</button>
 </div>
 </div>
@@ -616,6 +639,7 @@ const eqLowSlider = document.getElementById('eqLowSlider');
 const eqMidSlider = document.getElementById('eqMidSlider');
 const eqHighSlider = document.getElementById('eqHighSlider');
 
+const noiseCancelBtn = document.getElementById('noiseCancelBtn');
 const audioResetBtn = document.getElementById('audioResetBtn');
 
 // ==========================================
@@ -643,7 +667,7 @@ let currentWaveStyle = 'corona';
 let isUserChangingIndex = false;
 let isRecording = false;
 let isPlayingRecorded = false;
-
+let isNoiseCancelOn = false;
 
 // --- 📸 追加要素と変数 ---
 const btnPicture = document.getElementById('btnPicture');
@@ -716,7 +740,7 @@ if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
 if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
 if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
 if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
-
+if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
 }
 
 // キャンバスの背景クリア
@@ -972,7 +996,7 @@ targetCtx.restore();
 // 録音用ストリーム・ノード生成の開始
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
-
+audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
 });
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 source = audioCtx.createMediaStreamSource(stream);
@@ -982,7 +1006,31 @@ gainNode.connect(recordDestination);
 dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 
-
+// ノイキャン切り替え時のストリーム再生成
+async function restartRecordingStream() {
+if (!isRecording || !mediaRecorder) return;
+if (stream) stream.getTracks().forEach(track => track.stop());
+try {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+});
+const newSource = audioCtx.createMediaStreamSource(stream);
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+// ncFilterの定義部分を差し替え
+ncFilter = audioCtx.createBiquadFilter(); 
+ncFilter.type = 'highpass'; 
+ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048;
+analyser.smoothingTimeConstant = 0.75;
+newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser); gainNode.connect(recordDestination);
+syncAudioParams();
+} catch (err) { console.error(err); }
+}
 
 // 録音処理の停止
 function stopRecording() {
@@ -999,7 +1047,11 @@ if (!audioCtx || !audioSource) return;
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
 eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'peaking'; ncFilter.frequency.value = 2200; ncFilter.Q.value = 0.7;
+// ncFilterの定義部分を差し替え
+ncFilter = audioCtx.createBiquadFilter(); 
+ncFilter.type = 'highpass'; 
+ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
 analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
 audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
@@ -1132,6 +1184,22 @@ eqLowSlider.addEventListener('input', syncAudioParams);
 eqMidSlider.addEventListener('input', syncAudioParams);
 eqHighSlider.addEventListener('input', syncAudioParams);
 
+// ノイズキャンセルボタン切り替え
+noiseCancelBtn.addEventListener('click', () => {
+isNoiseCancelOn = !isNoiseCancelOn;
+if (isNoiseCancelOn) {
+noiseCancelBtn.classList.add('active');
+noiseCancelBtn.innerText = "NOISE CANCEL: ON";
+} else {
+noiseCancelBtn.classList.remove('active');
+noiseCancelBtn.innerText = "NOISE CANCEL: OFF";
+}
+if (isRecording) {
+restartRecordingStream();
+} else if (playbackAudio) {
+syncAudioParams();
+}
+});
 
 // オーディオ設定値のリセット
 audioResetBtn.addEventListener('click', () => {
@@ -1283,7 +1351,11 @@ bufferSource.buffer = audioBuffer;
 const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
 const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
 const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-
+// 保存用処理内の rNcFilter 定義を修正
+const rNcFilter = renderAudioCtx.createBiquadFilter(); 
+rNcFilter.type = 'highpass'; 
+rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; 
+rNcFilter.Q.value = 0.7;
 const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
 const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
