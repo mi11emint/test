@@ -1214,12 +1214,18 @@ recBtn.addEventListener('click', async () => {
     resetDataWithoutPrompt();
     try {
         unlockMenus();
+        
+        // 1. 先にマイクのストリームを開始
         await startRecordingStream();
         isRecording = true; 
         recordedChunks = [];
+        
+        // 2. 録音用のレコーダーを設定
         mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        
         mediaRecorder.onstop = () => {
+            // 録音停止後の処理：録音された「声」の再生準備
             audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
             audioBlobUrl = URL.createObjectURL(audioBlob);
             playbackAudio = new Audio(audioBlobUrl);
@@ -1228,20 +1234,10 @@ recBtn.addEventListener('click', async () => {
             const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
             setupAudioNodes(playbackSource, false);
             
+            // ⚠️【変更】録音時の接続は既に完了しているため、ここではアナライザーの再確認とゲインの再同期のみを行います
             if (playbackBgm) {
-                bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
-                bgmGainNode = audioCtx.createGain();
-                
-                // 🎵 BGM波形解析用のアナライザーを設定・接続
-                bgmAnalyser = audioCtx.createAnalyser();
-                bgmAnalyser.fftSize = 1024; // 🎤と同じサイズ
-                bgmAnalyser.smoothingTimeConstant = 0.75;
-                bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-                
-                // ルート：BGMソース -> アナライザー -> ゲイン -> 出力
-                bgmMediaSource.connect(bgmAnalyser);
-                bgmAnalyser.connect(bgmGainNode);
-                bgmGainNode.connect(audioCtx.destination);
+                // スライダーの値を反映
+                syncAudioParams();
             }
 
             playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
@@ -1253,21 +1249,53 @@ recBtn.addEventListener('click', async () => {
                 playbackAudio.currentTime = 0; 
                 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
                 seekBar.value = 0; 
-                bgmAnalyser = null; bgmDataArray = null; // 🎵 再生終了時に解析停止
+                bgmAnalyser = null; bgmDataArray = null; // 再生終了時に解析停止
                 drawStaticWave(); 
             });
             downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
             syncAudioParams();
             lockMenus();
         };
+
+        // 3. ✨【重要】録音開始のこのタイミングでBGMをWeb Audio APIのルートに接続する
+        if (playbackBgm) {
+            playbackBgm.currentTime = 0; // 頭出し
+
+            // 一度も接続されていない場合のみソースを作成（エラー回避）
+            if (!bgmMediaSource) {
+                bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+            }
+            
+            // BGM用のアナライザーとゲイン（音量調整）を設定
+            bgmAnalyser = audioCtx.createAnalyser();
+            bgmAnalyser.fftSize = 1024;
+            bgmAnalyser.smoothingTimeConstant = 0.75;
+            bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+            
+            bgmGainNode = audioCtx.createGain();
+            
+            // ルート接続：BGMソース -> BGMアナライザー -> BGMゲイン -> スピーカー（イヤホン）
+            bgmMediaSource.connect(bgmAnalyser);
+            bgmAnalyser.connect(bgmGainNode);
+            bgmGainNode.connect(audioCtx.destination); // これでイヤホンから聴こえるようになります
+            
+            syncAudioParams(); // 音量の同期
+            
+            // 4. ✨ 接続が完了した後にBGMを再生スタート
+            playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
+        }
+
+        // 5. レコーダーの録音を開始し、描画ループを起動
         mediaRecorder.start();
         draw();
+        
         recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
         timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
     } catch (err) { 
         alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); 
     }
 });
+
 
 stopBtn.addEventListener('click', () => { stopRecording(); });
 
