@@ -1235,10 +1235,6 @@ recBtn.addEventListener('click', async () => {
             const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
             setupAudioNodes(playbackSource, false);
             
-            if (playbackBgm) {
-                syncAudioParams();
-            }
-
             playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
             playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
             playbackAudio.addEventListener('ended', () => { 
@@ -1248,7 +1244,6 @@ recBtn.addEventListener('click', async () => {
                 playbackAudio.currentTime = 0; 
                 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
                 seekBar.value = 0; 
-                bgmAnalyser = null; bgmDataArray = null; // 再生終了時に解析停止
                 drawStaticWave(); 
             });
             downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
@@ -1264,6 +1259,7 @@ recBtn.addEventListener('click', async () => {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
             }
             
+            // アナライザーとゲインの生成・接続
             bgmAnalyser = audioCtx.createAnalyser();
             bgmAnalyser.fftSize = 1024;
             bgmAnalyser.smoothingTimeConstant = 0.75;
@@ -1271,6 +1267,7 @@ recBtn.addEventListener('click', async () => {
             
             bgmGainNode = audioCtx.createGain();
             
+            bgmMediaSource.disconnect(); // 二重接続防止
             bgmMediaSource.connect(bgmAnalyser);
             bgmAnalyser.connect(bgmGainNode);
             bgmGainNode.connect(audioCtx.destination);
@@ -1291,12 +1288,11 @@ recBtn.addEventListener('click', async () => {
     }
 });
 
-// 🛠️【修正】停止ボタンを押した時に、BGMもしっかり止めるようにしました
 function stopRecording() {
     if (!isRecording) return; 
     isRecording = false;
     
-    // ✨ 録音停止時にBGMを一時停止し、位置を先頭に戻す
+    // 録音停止時にBGMを一時停止し、位置を先頭に戻す
     if (playbackBgm) {
         playbackBgm.pause();
         playbackBgm.currentTime = 0;
@@ -1308,7 +1304,7 @@ function stopRecording() {
     clearInterval(timerInterval); 
     recBtn.classList.remove('recording'); 
     timerDisplay.style.display = 'none'; 
-    bgmAnalyser = null; bgmDataArray = null; // 録音停止時にBGMの解析もクリア
+    // 💡 bgmAnalyser と bgmDataArray の初期化（null化）を削除し、再生・保存時にも使い回せるように残します
     drawStaticWave();
 }
 
@@ -1332,10 +1328,24 @@ playbackAudio.play().then(() => {
             playbackBgm.currentTime = playbackAudio.currentTime; 
         }
         
-        // 再生時に改めてアナライザーなどのデータ枠を再確保
-        if (!bgmDataArray && bgmAnalyser) {
+        // ✨ 再生時、アナライザーやデータ配列がクリアされていたら再生成する
+        if (!bgmAnalyser) {
+            bgmAnalyser = audioCtx.createAnalyser();
+            bgmAnalyser.fftSize = 1024;
+            bgmAnalyser.smoothingTimeConstant = 0.75;
+        }
+        if (!bgmDataArray) {
             bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
         }
+        
+        // 再接続を保証
+        if (bgmMediaSource && bgmGainNode) {
+            bgmMediaSource.disconnect();
+            bgmMediaSource.connect(bgmAnalyser);
+            bgmAnalyser.connect(bgmGainNode);
+            bgmGainNode.connect(audioCtx.destination);
+        }
+
         playbackBgm.play(); 
     } 
     draw(); 
@@ -1354,6 +1364,7 @@ seekBar.addEventListener('input', () => {
     if (playbackBgm) playbackBgm.currentTime = seekBar.value; 
 });
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
+
 
 
 downloadBtn.addEventListener('click', async () => {
