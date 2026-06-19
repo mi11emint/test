@@ -30,7 +30,7 @@ overflow-y: auto;
 overflow-x: hidden;
 }
 
-/* --- 🌌 宇宙の背景エフェクト（超軽量・CSS版） --- */
+/* --- 🌌 宇宙の背景エフェクト --- */
 body::before, body::after {
 content: "";
 position: fixed;
@@ -61,7 +61,6 @@ animation: twinkleCSS 3s infinite alternate-reverse ease-in-out;
 0% { opacity: 0.1; }
 100% { opacity: 1; }
 }
-/* ------------------------------ */
 
 .info-text-area {
 width: 100%;
@@ -166,7 +165,6 @@ display: none;
 z-index: 10;
 }
 
-/* スライダー行のスタイル共通化 */
 .volume-row-zone {
 width: 100%;
 display: flex;
@@ -179,7 +177,7 @@ gap: 10px;
 .volume-label {
 font-size: 0.75rem;
 color: #777777;
-width: 38px; /* BGM Vol の文字が入るように少し幅を広げました */
+width: 38px;
 flex-shrink: 0;
 letter-spacing: 1px;
 font-weight: bold;
@@ -360,7 +358,6 @@ border-radius: 4px;
 .audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
 .audio-reset-btn:active { transform: scale(0.98); }
 
-/* 🎵 BGMインポートボタン用のスタイル設定 */
 .bgm-import-btn {
 width: 100%;
 background: transparent;
@@ -473,14 +470,13 @@ overflow: hidden;
 pointer-events: none;
 }
 
-/* --- 🎚️ 透過度バー専用の余白設定 --- */
+/* --- 🎚️ 透過度バー専用 --- */
 .touka-slider-zone {
 display: flex;
 align-items: center;
 gap: 10px;
 margin-top: 5px;
 }
-
 #toukaSlider {
 max-width: 50px;
 }
@@ -490,9 +486,8 @@ max-width: 50px;
 <div class="info-text-area">
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作れます</p>
-<p>お使いの端末にのみ保存されます</p>
-<p>使い方やルールなどの詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
-
+<p>お使い of 端末にのみ保存されます</p>
+<p>使い方やルールなどの詳細は　<a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
 
@@ -652,6 +647,8 @@ const timerDisplay = document.getElementById('timer');
 const canvasBg = document.getElementById('canvasBg');
 const btnBlack = document.getElementById('btnBlack');
 const btnWhite = document.getElementById('btnWhite');
+const btnPicture = document.getElementById('btnPicture');
+const pictureInput = document.getElementById('pictureInput');
 const styleOptions = document.querySelectorAll('.style-option');
 
 const menuBg = document.getElementById('menuBg');
@@ -664,7 +661,7 @@ const playPauseImg = document.getElementById('playPauseImg');
 const seekBar = document.getElementById('seekBar');
 
 const volSlider = document.getElementById('volSlider');
-const bgmVolSlider = document.getElementById('bgmVolSlider'); // 新規取得
+const bgmVolSlider = document.getElementById('bgmVolSlider');
 const eqLowSlider = document.getElementById('eqLowSlider');
 const eqMidSlider = document.getElementById('eqMidSlider');
 const eqHighSlider = document.getElementById('eqHighSlider');
@@ -673,6 +670,7 @@ const noiseCancelBtn = document.getElementById('noiseCancelBtn');
 const audioResetBtn = document.getElementById('audioResetBtn');
 const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
+const toukaSlider = document.getElementById('toukaSlider');
 
 // ==========================================
 // 3. アプリケーションの状態管理変数
@@ -701,10 +699,6 @@ let isRecording = false;
 let isPlayingRecorded = false;
 let isNoiseCancelOn = false;
 
-const btnPicture = document.getElementById('btnPicture');
-const pictureInput = document.getElementById('pictureInput');
-const toukaSlider = document.getElementById('toukaSlider');
-
 let currentOpacity = 0.9;
 let bgImage = null;
 
@@ -714,7 +708,8 @@ let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null,
 let bgmBlob = null;
 let bgmBlobUrl = null;
 let playbackBgm = null;
-let bgmGainNode = null; // BGM用の専用ボリューム調整ノード
+let bgmGainNode = null;
+let bgmMediaSource = null;
 
 // ==========================================
 // 4. 関数の定義
@@ -768,7 +763,7 @@ drawStaticWave();
 
 function syncAudioParams() {
 if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
-if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value); // BGM音量同期
+if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
 if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
 if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
 if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
@@ -872,8 +867,8 @@ if (currentWaveStyle === 'corona') {
     targetCtx.globalAlpha = currentOpacity; 
     targetCtx.lineWidth = 2.5;              
 
-    const startIdx = 3;
-    const endIdx = 46;
+    const startIdx = 2;
+    const endIdx = 24;
     const dataRange = endIdx - startIdx;
 
     for (let i = 0; i < barCountCorona; i++) {
@@ -885,8 +880,8 @@ if (currentWaveStyle === 'corona') {
         const idxRight = Math.min(idxLeft + 1, endIdx);
         const fraction = exactIdx - idxLeft;
 
-        const valueLeft = dataArr[idxLeft];
-        const valueRight = dataArr[idxRight];
+        const valueLeft = dataArr[idxLeft] || 0;
+        const valueRight = dataArr[idxRight] || 0;
         const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
 
         const boosted = getBoostedValue(interpolatedValue);
@@ -912,8 +907,8 @@ targetCtx.globalAlpha = currentOpacity;
 for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
-const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
-const boosted = getBoostedValue(dataArr[dataIdx]);
+const dataIdx = 2 + Math.floor(mapRatio * (24 - 2));
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
 const waveLength = 5 + (boosted * 150);
 const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
 const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
@@ -931,8 +926,8 @@ const coords = [];
 
 for (let i = 0; i < usedPoints; i++) {
 const mapRatio = i / usedPoints;
-const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
-const boosted = getBoostedValue(dataArr[dataIdx]);
+const dataIdx = 2 + Math.floor(mapRatio * (24 - 2));
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
 const waveHeight = 3 + (boosted * 150);
 coords.push({x: 40 + i * spacing, waveHeight});
 }
@@ -971,8 +966,8 @@ const barWidth = spacing * 0.7;
 
 for (let i = 0; i < barCount; i++) {
 const mapRatio = i / barCount;
-const dataIdx = 3 + Math.floor(mapRatio * (46 - 3));
-const boosted = getBoostedValue(dataArr[dataIdx]);
+const dataIdx = 2 + Math.floor(mapRatio * (24 - 2));
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
 const barHeight = boosted * 250;
 if (barHeight > 0) {
 const x = 40 + i * spacing + (spacing - barWidth) / 2;
@@ -985,7 +980,11 @@ targetCtx.restore();
 
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false 
+}
 });
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 source = audioCtx.createMediaStreamSource(stream);
@@ -1000,7 +999,11 @@ if (!isRecording || !mediaRecorder) return;
 if (stream) stream.getTracks().forEach(track => track.stop());
 try {
 stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: isNoiseCancelOn }
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false 
+}
 });
 const newSource = audioCtx.createMediaStreamSource(stream);
 eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
@@ -1008,7 +1011,9 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
+
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+
 newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser); gainNode.connect(recordDestination);
 syncAudioParams();
@@ -1030,7 +1035,9 @@ eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1
 eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
 ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
 gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.75;
+
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+
 audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
 gainNode.connect(analyser);
 if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
@@ -1058,7 +1065,7 @@ if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; isRecording = false;
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null;
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
 unlockMenus(); drawStaticWave();
 }
 
@@ -1077,7 +1084,7 @@ if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
 }
 
 // ==========================================
-// 5. イベントリスナー（ボタン操作など）の登録
+// 5. イベントリスナーの登録
 // ==========================================
 btnBlack.addEventListener('click', () => {
 currentBgColor = 'black';
@@ -1139,7 +1146,7 @@ triggerUIRefresh();
 });
 
 volSlider.addEventListener('input', syncAudioParams);
-bgmVolSlider.addEventListener('input', syncAudioParams); // BGM音量バー変更時に即座に反映
+bgmVolSlider.addEventListener('input', syncAudioParams);
 
 eqLowSlider.addEventListener('input', syncAudioParams);
 eqMidSlider.addEventListener('input', syncAudioParams);
@@ -1191,7 +1198,6 @@ recBtn.addEventListener('click', async () => {
         unlockMenus();
         await startRecordingStream();
         isRecording = true; 
-        draw();
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
@@ -1200,13 +1206,14 @@ recBtn.addEventListener('click', async () => {
             audioBlobUrl = URL.createObjectURL(audioBlob);
             playbackAudio = new Audio(audioBlobUrl);
             playbackAudio.preload = "auto";
+            
             const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
             setupAudioNodes(playbackSource, false);
             
             if (playbackBgm) {
-                const bgmSource = audioCtx.createMediaElementSource(playbackBgm);
-                bgmGainNode = audioCtx.createGain(); // BGM用のGainを設定
-                bgmSource.connect(bgmGainNode);
+                bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+                bgmGainNode = audioCtx.createGain();
+                bgmMediaSource.connect(bgmGainNode);
                 bgmGainNode.connect(audioCtx.destination);
             }
 
@@ -1222,10 +1229,11 @@ recBtn.addEventListener('click', async () => {
                 drawStaticWave(); 
             });
             downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
-            syncAudioParams(); // 初期音量の再同期
+            syncAudioParams();
             lockMenus();
         };
         mediaRecorder.start();
+        draw();
         recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
         timerInterval = setInterval(() => { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopRecording(); }, 1000);
     } catch (err) { 
@@ -1243,11 +1251,17 @@ playPauseBtn.addEventListener('click', () => {
 if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
 if (playbackAudio.paused) {
 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-syncAudioParams(); // 再生前にボリュームノード設定を確実に同期
+syncAudioParams();
 playbackAudio.play().then(() => { 
     isPlayingRecorded = true; 
     playPauseImg.src = IMG_PAUSE; 
-    if (playbackBgm) { playbackBgm.currentTime = playbackAudio.currentTime; playbackBgm.play(); } 
+    
+    if (playbackBgm) { 
+        if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
+            playbackBgm.currentTime = playbackAudio.currentTime; 
+        }
+        playbackBgm.play(); 
+    } 
     draw(); 
 }).catch(err => { alert("再生に失敗しました"); });
 } else { 
@@ -1284,6 +1298,7 @@ const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEq
 const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
 const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'highpass'; rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; rNcFilter.Q.value = 0.7;
 const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
+
 const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 256; rAnalyser.smoothingTimeConstant = 0.75;
 
 bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
@@ -1303,7 +1318,7 @@ if (bgmBlob) {
     rBgmSource.buffer = bgmBuffer;
     
     const rBgmGain = renderAudioCtx.createGain();
-    rBgmGain.gain.value = parseFloat(bgmVolSlider.value); // 動画作成時にもBGMボリュームを反映
+    rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
     
     rBgmSource.connect(rBgmGain);
     rBgmGain.connect(renderDest);
