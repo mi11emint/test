@@ -166,11 +166,12 @@ display: none;
 z-index: 10;
 }
 
+/* スライダー行のスタイル共通化 */
 .volume-row-zone {
 width: 100%;
 display: flex;
 align-items: center;
-margin-top: 14px;
+margin-top: 10px;
 margin-bottom: 2px;
 padding: 0 4px;
 gap: 10px;
@@ -178,7 +179,7 @@ gap: 10px;
 .volume-label {
 font-size: 0.75rem;
 color: #777777;
-width: 32px;
+width: 38px; /* BGM Vol の文字が入るように少し幅を広げました */
 flex-shrink: 0;
 letter-spacing: 1px;
 font-weight: bold;
@@ -490,7 +491,7 @@ max-width: 50px;
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作れます</p>
 <p>お使いの端末にのみ保存されます</p>
-<p>使い方やルールなどの詳細は　<a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p>使い方やルールなどの詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
 
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
@@ -513,6 +514,13 @@ max-width: 50px;
 <div class="volume-label">Vol</div>
 <div class="volume-slider-container">
 <input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
+</div>
+</div>
+
+<div class="volume-row-zone">
+<div class="volume-label">BGM</div>
+<div class="volume-slider-container">
+<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
 </div>
 </div>
 
@@ -656,6 +664,7 @@ const playPauseImg = document.getElementById('playPauseImg');
 const seekBar = document.getElementById('seekBar');
 
 const volSlider = document.getElementById('volSlider');
+const bgmVolSlider = document.getElementById('bgmVolSlider'); // 新規取得
 const eqLowSlider = document.getElementById('eqLowSlider');
 const eqMidSlider = document.getElementById('eqMidSlider');
 const eqHighSlider = document.getElementById('eqHighSlider');
@@ -705,6 +714,7 @@ let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null,
 let bgmBlob = null;
 let bgmBlobUrl = null;
 let playbackBgm = null;
+let bgmGainNode = null; // BGM用の専用ボリューム調整ノード
 
 // ==========================================
 // 4. 関数の定義
@@ -758,6 +768,7 @@ drawStaticWave();
 
 function syncAudioParams() {
 if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
+if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value); // BGM音量同期
 if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
 if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
 if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
@@ -1047,7 +1058,7 @@ if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; isRecording = false;
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null;
 unlockMenus(); drawStaticWave();
 }
 
@@ -1128,6 +1139,8 @@ triggerUIRefresh();
 });
 
 volSlider.addEventListener('input', syncAudioParams);
+bgmVolSlider.addEventListener('input', syncAudioParams); // BGM音量バー変更時に即座に反映
+
 eqLowSlider.addEventListener('input', syncAudioParams);
 eqMidSlider.addEventListener('input', syncAudioParams);
 eqHighSlider.addEventListener('input', syncAudioParams);
@@ -1149,7 +1162,7 @@ syncAudioParams();
 });
 
 audioResetBtn.addEventListener('click', () => {
-volSlider.value = 1.0; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
+volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
 syncAudioParams();
 });
 
@@ -1192,7 +1205,9 @@ recBtn.addEventListener('click', async () => {
             
             if (playbackBgm) {
                 const bgmSource = audioCtx.createMediaElementSource(playbackBgm);
-                bgmSource.connect(audioCtx.destination);
+                bgmGainNode = audioCtx.createGain(); // BGM用のGainを設定
+                bgmSource.connect(bgmGainNode);
+                bgmGainNode.connect(audioCtx.destination);
             }
 
             playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
@@ -1207,6 +1222,7 @@ recBtn.addEventListener('click', async () => {
                 drawStaticWave(); 
             });
             downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
+            syncAudioParams(); // 初期音量の再同期
             lockMenus();
         };
         mediaRecorder.start();
@@ -1227,6 +1243,7 @@ playPauseBtn.addEventListener('click', () => {
 if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
 if (playbackAudio.paused) {
 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+syncAudioParams(); // 再生前にボリュームノード設定を確実に同期
 playbackAudio.play().then(() => { 
     isPlayingRecorded = true; 
     playPauseImg.src = IMG_PAUSE; 
@@ -1249,7 +1266,7 @@ seekBar.addEventListener('input', () => {
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
 downloadBtn.addEventListener('click', async () => {
-if (!audioBlob) { alert("これは録音後に保存するボタンです^.ˬ.^ฅⳊ"); return; }
+if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
 if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
 
 document.getElementById('renderOverlay').style.display = 'flex';
@@ -1284,7 +1301,12 @@ if (bgmBlob) {
     const bgmBuffer = await renderAudioCtx.decodeAudioData(bgmArrayBuffer);
     rBgmSource = renderAudioCtx.createBufferSource();
     rBgmSource.buffer = bgmBuffer;
-    rBgmSource.connect(renderDest);
+    
+    const rBgmGain = renderAudioCtx.createGain();
+    rBgmGain.gain.value = parseFloat(bgmVolSlider.value); // 動画作成時にもBGMボリュームを反映
+    
+    rBgmSource.connect(rBgmGain);
+    rBgmGain.connect(renderDest);
 }
 
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
