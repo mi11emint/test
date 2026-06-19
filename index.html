@@ -710,6 +710,8 @@ let bgmBlobUrl = null;
 let playbackBgm = null;
 let bgmGainNode = null;
 let bgmMediaSource = null;
+let bgmAnalyser = null; // 🎵 BGM解析用の専用アナライザー
+let bgmDataArray = null; // 🎵 BGM解析データ用の配列
 
 // ==========================================
 // 4. 関数の定義
@@ -843,7 +845,8 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
 }
 }
 
-function drawWaveLogic(targetCtx, targetCanvas, dataArr) {
+// 🎨 波形描画ロジック本体（透過度引数を追加）
+function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
 if (currentWaveColors.length > 2) {
@@ -864,7 +867,7 @@ const barCountCorona = 360;
 if (currentWaveStyle === 'corona') {
     const baseRadius = 140;
     targetCtx.save();
-    targetCtx.globalAlpha = currentOpacity; 
+    targetCtx.globalAlpha = opacity; // 🎨 引数の透過度を適用
     targetCtx.lineWidth = 2.5;              
 
     const startIdx = 2;
@@ -903,7 +906,7 @@ if (currentWaveStyle === 'corona') {
 const baseRadius = 138;
 const barCount = 64;
 targetCtx.save();
-targetCtx.globalAlpha = currentOpacity;
+targetCtx.globalAlpha = opacity; // 🎨
 for (let i = 0; i < barCount; i++) {
 const angle = (i / barCount) * Math.PI * 2;
 const mapRatio = i / barCount;
@@ -948,7 +951,7 @@ const cpX = (curr.x + next.x) / 2;
 targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY + next.waveHeight, next.x, activeCenterY + next.waveHeight);
 }
 targetCtx.closePath();
-targetCtx.save(); targetCtx.globalAlpha = currentOpacity; targetCtx.fill(); targetCtx.restore();
+targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.fill(); targetCtx.restore(); // 🎨
 
 } else if (currentWaveStyle === 'building') {
 const barCount = 30;
@@ -961,7 +964,7 @@ targetCtx.beginPath(); targetCtx.moveTo(40, baseLineY); targetCtx.lineTo(targetC
 targetCtx.restore();
 
 targetCtx.save();
-targetCtx.globalAlpha = currentOpacity;
+targetCtx.globalAlpha = opacity; // 🎨
 const barWidth = spacing * 0.7;
 
 for (let i = 0; i < barCount; i++) {
@@ -1066,6 +1069,7 @@ audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.cl
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; isRecording = false;
 audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
+bgmAnalyser = null; bgmDataArray = null; // 🎵 リセット
 unlockMenus(); drawStaticWave();
 }
 
@@ -1075,12 +1079,26 @@ document.getElementById('miniGameIframe').src = 'about:blank';
 resetDataWithoutPrompt();
 }
 
+// 🖌️ メイン描画ループ（BGM波形描画を追加）
 function draw() {
 if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
 animationId = requestAnimationFrame(draw);
+
+// 解析データの取得
 if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray); // 🎵 BGMデータ取得
+
 clearCanvas(ctx, canvas.width, canvas.height);
-if (dataArray) drawWaveLogic(ctx, canvas, dataArray);
+
+// 🎵 1. BGM波形を「背面」に描画（透過度0.3 = 70%透過）
+if (bgmDataArray) {
+    drawWaveLogic(ctx, canvas, bgmDataArray, 0.3); // 🎨
+}
+
+// 🎤 2. 録音（声）波形を「前面」に描画（ユーザー設定透過度）
+if (dataArray) {
+    drawWaveLogic(ctx, canvas, dataArray, currentOpacity); // 🎨
+}
 }
 
 // ==========================================
@@ -1184,7 +1202,7 @@ playbackBgm = new Audio(bgmBlobUrl);
 playbackBgm.preload = "auto";
 bgmImportBtn.classList.add('loaded');
 bgmImportBtn.innerText = "BGM: LOADED";
-alert("BGMを読み込みました^.ˬ.^ฅ\n録音後の再生や、動画の保存時にきれいにミックスされます。");
+alert("BGMを読み込みました^.ˬ.^ฅ\n録音後の再生や、動画の保存時にきれいにミックスされ、波形も描画されます。");
 }
 });
 
@@ -1213,7 +1231,16 @@ recBtn.addEventListener('click', async () => {
             if (playbackBgm) {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
                 bgmGainNode = audioCtx.createGain();
-                bgmMediaSource.connect(bgmGainNode);
+                
+                // 🎵 BGM波形解析用のアナライザーを設定・接続
+                bgmAnalyser = audioCtx.createAnalyser();
+                bgmAnalyser.fftSize = 1024; // 🎤と同じサイズ
+                bgmAnalyser.smoothingTimeConstant = 0.75;
+                bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+                
+                // ルート：BGMソース -> アナライザー -> ゲイン -> 出力
+                bgmMediaSource.connect(bgmAnalyser);
+                bgmAnalyser.connect(bgmGainNode);
                 bgmGainNode.connect(audioCtx.destination);
             }
 
@@ -1226,6 +1253,7 @@ recBtn.addEventListener('click', async () => {
                 playbackAudio.currentTime = 0; 
                 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
                 seekBar.value = 0; 
+                bgmAnalyser = null; bgmDataArray = null; // 🎵 再生終了時に解析停止
                 drawStaticWave(); 
             });
             downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
@@ -1311,16 +1339,27 @@ const renderDest = renderAudioCtx.createMediaStreamDestination();
 rGain.connect(renderDest);
 
 let rBgmSource = null;
+let rBgmAnalyser = null; // 🎵 保存用BGMアナライザー
+let rBgmDataArray = null; // 🎵 保存用BGMデータ配列
+
 if (bgmBlob) {
     const bgmArrayBuffer = await bgmBlob.arrayBuffer();
     const bgmBuffer = await renderAudioCtx.decodeAudioData(bgmArrayBuffer);
     rBgmSource = renderAudioCtx.createBufferSource();
     rBgmSource.buffer = bgmBuffer;
     
+    // 🎵 保存動画内のBGM波形解析用設定
+    rBgmAnalyser = renderAudioCtx.createAnalyser();
+    rBgmAnalyser.fftSize = 256; // 書き出し用サイズ
+    rBgmAnalyser.smoothingTimeConstant = 0.75;
+    rBgmDataArray = new Uint8Array(rBgmAnalyser.frequencyBinCount);
+
     const rBgmGain = renderAudioCtx.createGain();
     rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
     
-    rBgmSource.connect(rBgmGain);
+    // 接続：BGM -> アナライザー -> ゲイン -> 出力
+    rBgmSource.connect(rBgmAnalyser);
+    rBgmAnalyser.connect(rBgmGain);
     rBgmGain.connect(renderDest);
 }
 
@@ -1352,11 +1391,24 @@ if (rBgmSource) rBgmSource.start(0);
 
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
 
+// 🖌️ 動画保存用の描画フレーム処理（BGM波形を追加）
 function renderFrame() {
 const now = performance.now(); const elapsed = now - startTime;
+
+// 解析データの取得
 rAnalyser.getByteFrequencyData(rDataArray);
+if (rBgmAnalyser && rBgmDataArray) rBgmAnalyser.getByteFrequencyData(rBgmDataArray); // 🎵 BGMデータ
+
 clearCanvas(rCtx, captureCanvas.width, captureCanvas.height);
-drawWaveLogic(rCtx, captureCanvas, rDataArray);
+
+// 🎵 1. BGM波形を背面に描画（0.3 = 70%透過）
+if (rBgmDataArray) {
+    drawWaveLogic(rCtx, captureCanvas, rBgmDataArray, 0.3); // 🎨
+}
+
+// 🎤 2. 声の波形を前面に描画（ユーザー設定透過度）
+drawWaveLogic(rCtx, captureCanvas, rDataArray, currentOpacity); // 🎨
+
 if (elapsed < duration) requestAnimationFrame(renderFrame);
 else { 
     bufferSource.stop(); 
