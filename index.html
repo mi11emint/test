@@ -486,14 +486,15 @@ max-width: 50px;
 <div class="info-text-area">
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作れます</p>
-<p>お使い of 端末にのみ保存されます</p>
-<p>使い方やルールなどの詳細は　<a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p>歌みたやボイス投稿をもっと気軽に！</p>
+<p>使い方、ルール、仕様書など詳細は　<a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
 
 <div class="header-zone">
 <div class="title">2min VOICE & MUSIC WAVE MOVIE</div>
-<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
+<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>フルリセットしたい時はページを更新してください
+
 </div>
 </div>
 
@@ -1234,9 +1235,7 @@ recBtn.addEventListener('click', async () => {
             const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
             setupAudioNodes(playbackSource, false);
             
-            // ⚠️【変更】録音時の接続は既に完了しているため、ここではアナライザーの再確認とゲインの再同期のみを行います
             if (playbackBgm) {
-                // スライダーの値を反映
                 syncAudioParams();
             }
 
@@ -1257,16 +1256,14 @@ recBtn.addEventListener('click', async () => {
             lockMenus();
         };
 
-        // 3. ✨【重要】録音開始のこのタイミングでBGMをWeb Audio APIのルートに接続する
+        // 3. 録音開始のタイミングでBGMを接続する
         if (playbackBgm) {
             playbackBgm.currentTime = 0; // 頭出し
 
-            // 一度も接続されていない場合のみソースを作成（エラー回避）
             if (!bgmMediaSource) {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
             }
             
-            // BGM用のアナライザーとゲイン（音量調整）を設定
             bgmAnalyser = audioCtx.createAnalyser();
             bgmAnalyser.fftSize = 1024;
             bgmAnalyser.smoothingTimeConstant = 0.75;
@@ -1274,18 +1271,16 @@ recBtn.addEventListener('click', async () => {
             
             bgmGainNode = audioCtx.createGain();
             
-            // ルート接続：BGMソース -> BGMアナライザー -> BGMゲイン -> スピーカー（イヤホン）
             bgmMediaSource.connect(bgmAnalyser);
             bgmAnalyser.connect(bgmGainNode);
-            bgmGainNode.connect(audioCtx.destination); // これでイヤホンから聴こえるようになります
+            bgmGainNode.connect(audioCtx.destination);
             
-            syncAudioParams(); // 音量の同期
+            syncAudioParams();
             
-            // 4. ✨ 接続が完了した後にBGMを再生スタート
+            // 4. BGMを再生スタート
             playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
         }
 
-        // 5. レコーダーの録音を開始し、描画ループを起動
         mediaRecorder.start();
         draw();
         
@@ -1296,6 +1291,26 @@ recBtn.addEventListener('click', async () => {
     }
 });
 
+// 🛠️【修正】停止ボタンを押した時に、BGMもしっかり止めるようにしました
+function stopRecording() {
+    if (!isRecording) return; 
+    isRecording = false;
+    
+    // ✨ 録音停止時にBGMを一時停止し、位置を先頭に戻す
+    if (playbackBgm) {
+        playbackBgm.pause();
+        playbackBgm.currentTime = 0;
+    }
+    
+    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+    clearInterval(timerInterval); 
+    recBtn.classList.remove('recording'); 
+    timerDisplay.style.display = 'none'; 
+    bgmAnalyser = null; bgmDataArray = null; // 録音停止時にBGMの解析もクリア
+    drawStaticWave();
+}
 
 stopBtn.addEventListener('click', () => { stopRecording(); });
 
@@ -1316,6 +1331,11 @@ playbackAudio.play().then(() => {
         if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
             playbackBgm.currentTime = playbackAudio.currentTime; 
         }
+        
+        // 再生時に改めてアナライザーなどのデータ枠を再確保
+        if (!bgmDataArray && bgmAnalyser) {
+            bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+        }
         playbackBgm.play(); 
     } 
     draw(); 
@@ -1334,6 +1354,7 @@ seekBar.addEventListener('input', () => {
     if (playbackBgm) playbackBgm.currentTime = seekBar.value; 
 });
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
+
 
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
