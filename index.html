@@ -1442,7 +1442,7 @@ playPauseBtn.addEventListener('click', async () => {
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
             console.error("Safari Play Blocked:", err);
-            alert("再生に失敗しました。もう一度再生ボタンを押してみてください！");
+            alert("再生に失敗しました。Safariだと再生できないことがあります");
         });
     } else {
         playbackAudio.pause();
