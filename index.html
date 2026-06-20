@@ -1276,7 +1276,9 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
-            audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            audioBlob = new Blob(recordedChunks, {
+    type: currentAudioMimeType
+});
             audioBlobUrl = URL.createObjectURL(audioBlob);
             playbackAudio = new Audio(audioBlobUrl);
             playbackAudio.preload = "auto";
@@ -1375,9 +1377,9 @@ playPauseBtn.addEventListener('click', () => {
     }
 
     // 🍏 Safari/Android共通：再生前にオーディオコンテキストを安全に再開
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+if (audioCtx && audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+}
 
     // 🍏 プレイヤーがまだない、または空の場合は、このタップの瞬間に「直接データ」をバインドして作成
     if (!playbackAudio) {
