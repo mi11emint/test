@@ -1276,7 +1276,7 @@ recBtn.addEventListener('click', async () => {
         playbackBgm.play().catch(e => console.log("Safari BGM pre-play bypass:", e));
     }
 
-    resetDataWithoutPrompt();
+    resetDataWithoutPrompt(true); // ✨ 【修正】true を渡して、BGMを消さずに保持する！
     try {
         unlockMenus();
         await startRecordingStream();
