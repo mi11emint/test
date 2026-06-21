@@ -1070,24 +1070,30 @@ menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuCol
 document.getElementById('menuTouka').classList.remove('locked');
 }
 
-function resetDataWithoutPrompt() {
+function resetDataWithoutPrompt(keepBgm = false) {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
-if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
 
-// 🎵 インポートしたBGMデータとURLも完全にクリアする
-if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
-bgmBlob = null;
-playbackBgm = null; // BGMの本体も空っぽにする
-
-// ️ BGMインポートボタンの見た目を最初の状態（グレー）に戻す
-bgmImportBtn.classList.remove('loaded');
-bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
-bgmInput.value = ""; // 選択されていたファイル情報もリセット
+if (!keepBgm) {
+    // keepBgmがfalse（デフォルト）の時だけBGMを完全に削除する
+    if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
+    if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
+    bgmBlob = null;
+    playbackBgm = null; 
+    bgmImportBtn.classList.remove('loaded');
+    bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
+    bgmInput.value = ""; 
+} else {
+    // BGMをキープするときは、一旦停止して再生位置を先頭に戻すだけにする
+    if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
+}
 
 // ノイズキャンセルボタンをデフォルト（OFF）に戻す
-isNoiseCancelOn = false;
-noiseCancelBtn.classList.remove('active');
-noiseCancelBtn.innerText = "NOISE\nCANCEL\n✂";
+// （※注意：録音中にキープしたい場合はここも!keepBgmの枠内に入れるか、そのままにしてください）
+if (!keepBgm) {
+    isNoiseCancelOn = false;
+    noiseCancelBtn.classList.remove('active');
+    noiseCancelBtn.innerText = "NOISE\nCANCEL\n✂";
+}
 
 if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
 audioBlob = null; 
@@ -1099,10 +1105,16 @@ if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; 
 isRecording = false; 
 isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
+pauseBtnImg.src = IMG_PAUSE; 
 
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; 
-bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+// BGMノード系を完全にリセットさせないため、キープ時は条件を変更
+if (!keepBgm) {
+    audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; 
+    bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+} else {
+    // 録音の音声をクリアするための初期化
+    eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
+}
 
 unlockMenus(); 
 drawStaticWave();
@@ -1249,13 +1261,13 @@ recBtn.addEventListener('click', async () => {
     if (isRecording) {
         if (isRecordingPaused) {
             isRecordingPaused = false;
-            pauseBtnImg.src = IMG_PAUSE;
+            pauseBtnImg.src = IMG_PAUSE; 
             if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
             if (playbackBgm) playbackBgm.play().catch(e => {});
         }
         return;
     }
-    resetDataWithoutPrompt();
+    resetDataWithoutPrompt(true); // ← true を渡して、BGMを消さずに保持する！
     try {
         unlockMenus();
         await startRecordingStream();
@@ -1372,7 +1384,7 @@ resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
 });
 
-playPauseBtn.addEventListener('click', async () => {
+playPauseBtn.addEventListener('click', async () => { 
     if (!audioBlobUrl || !playbackAudio) { 
         alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); 
         return; 
@@ -1429,7 +1441,7 @@ playPauseBtn.addEventListener('click', async () => {
                     bgmAnalyser.connect(bgmGainNode);
                     bgmGainNode.connect(audioCtx.destination);
 
-                    // BGMの再生
+                    // 🔊 【ここに一本化】正しくWeb Audioに繋がった後にBGMを再生
                     playbackBgm.play().catch(e => console.log("BGM play error:", e));
                 }
 
@@ -1446,6 +1458,7 @@ playPauseBtn.addEventListener('click', async () => {
             alert("再生に失敗しました。もう一度再生ボタンを押してみてください！");
         });
     } else {
+        // ⏸️ 一時停止時の処理
         playbackAudio.pause();
         if (playbackBgm) playbackBgm.pause();
         playPauseImg.src = IMG_PLAY;
