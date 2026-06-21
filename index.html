@@ -335,7 +335,7 @@ border: none;
   color: #777777;
   border: 1px solid rgba(119, 119, 119, 0.4);
   font-family: 'Cinecaption', 'Courier New', sans-serif;
-  font-size: 0.55rem; /* 正方形に収まるサイズ */
+  font-size: 0.75rem; /* 正方形に収まるサイズ */
   line-height: 1.3;
   letter-spacing: 0.5px;
   text-align: center;
@@ -543,9 +543,9 @@ max-width: 50px;
 </div>
 
 <div class="square-btn-zone">
-  <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL<br>OFF</button>
-  <button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO</button>
-  <button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM</button>
+  <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL<br>✂︎</button>
+  <button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO<br>↺</button>
+  <button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM<br>♬</button>
 </div>
 </div>
 </div>
@@ -1068,70 +1068,40 @@ document.getElementById('menuTouka').classList.remove('locked');
 }
 
 function resetDataWithoutPrompt() {
-    // 1. 録音データのクリア
-    recordedChunks = [];
-    if (audioBlobUrl) {
-        URL.revokeObjectURL(audioBlobUrl);
-        audioBlobUrl = null;
-    }
-    
-    // 2. プレイヤーとアナライザーの安全な停止・破棄
-    if (playbackAudio) {
-        playbackAudio.pause();
-        playbackAudio = null;
-    }
-    if (source) {
-        source.disconnect();
-        source = null;
-    }
-    
-    // 3. アニメーションの停止
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-    }
-    
-    // 4. ボタン状態とUIの初期化
-    isRecording = false;
-    isRecordingPaused = false;
-    isPlayingRecorded = false;
-    
-    recBtn.classList.remove('recording');
-    playPauseImg.src = IMG_PLAY;
-    downloadBtn.classList.remove('ready');
-    timerDisplay.style.display = 'none';
-    timeLeft = 120;
-    updateTimerText();
-    
-    // 5. 波形を静止状態（線）に戻す
-    drawStaticWave();
-    
-    // 6. メニューのロック解除（もしあれば）
-    unlockMenus();
-    // --- 🍏 BGMインポート状態を初期化する追加処理 ---
-    if (playbackBgm) {
-        playbackBgm.pause();
-        playbackBgm = null; // BGM音源のメモリを解放
-    }
-    
-    // BGMの接続経路も完全にリセット
-    if (bgmSourceNode) {
-        bgmSourceNode.disconnect();
-        bgmSourceNode = null;
-    }
-    if (bgmMediaSource) {
-        bgmMediaSource = null; 
-    }
+if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
+if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
+audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
+if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+isPlayingRecorded = false; isRecording = false; isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
+bgmAnalyser = null; bgmDataArray = null;
+unlockMenus();
+// BGM関連のリセット
+if (bgmBlobUrl) {
+    URL.revokeObjectURL(bgmBlobUrl);
+    bgmBlobUrl = null;
+}
 
-    // --- ボタンの見た目を初期化 ---
-    const bgmImportBtn = document.getElementById('importBtn'); 
-    if (bgmImportBtn) {
-        bgmImportBtn.classList.remove('active'); // 色が変わるクラスを削除
-        bgmImportBtn.style.backgroundColor = ''; // 背景色をCSSの状態に戻す
-    }
-    
-    
-    console.log("リセットしました^.ˬ.^ฅⳊ");
+bgmBlob = null;
+
+if (playbackBgm) {
+    playbackBgm.pause();
+    playbackBgm = null;
+}
+
+bgmMediaSource = null;
+bgmAnalyser = null;
+bgmDataArray = null;
+bgmGainNode = null;
+
+bgmInput.value = ""; // 同じファイルを再選択できるようにする
+
+bgmImportBtn.classList.remove("loaded");
+bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
+
+drawStaticWave();
 }
 
 function hideOverlayAndCleanup() {
