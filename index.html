@@ -335,7 +335,7 @@ border: none;
   color: #777777;
   border: 1px solid rgba(119, 119, 119, 0.4);
   font-family: 'Cinecaption', 'Courier New', sans-serif;
-  font-size: 0.7rem; /* 正方形に収まるサイズ */
+  font-size: 0.55rem; /* 正方形に収まるサイズ */
   line-height: 1.3;
   letter-spacing: 0.5px;
   text-align: center;
@@ -472,16 +472,16 @@ max-width: 50px;
 </head>
 <body>
 <div class="info-text-area">
-  <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br>
+<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作れます</p>
-<p>歌みたや音声投稿をもっと気軽に自由に！</p>
-<p>使い方、ルール、仕様書など詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p><br>
+<p>お使い of 端末にのみ保存されます</p>
+<p>使い方やルールなどの詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
+
 <div class="header-zone">
 <div class="title">2min VOICE & MUSIC WAVE MOVIE</div>
-<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>
-録音中や保存中にブラウザを閉じると正常な動画が作れなくなります
-
+<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
 </div>
 </div>
 
@@ -543,9 +543,9 @@ max-width: 50px;
 </div>
 
 <div class="square-btn-zone">
-  <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL︎<br>✂︎</button>
-  <button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO<br>↺</button>
-  <button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM<br>♬</button>
+  <button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL<br>OFF</button>
+  <button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO</button>
+  <button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM</button>
 </div>
 </div>
 </div>
@@ -1070,39 +1070,14 @@ document.getElementById('menuTouka').classList.remove('locked');
 function resetDataWithoutPrompt() {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
-
-// 🎵 インポートしたBGMデータとURLも完全にクリアする
-if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
-bgmBlob = null;
-playbackBgm = null; // BGMの本体も空っぽにする
-
-// ️ BGMインポートボタンの見た目を最初の状態（グレー）に戻す
-bgmImportBtn.classList.remove('loaded');
-bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
-bgmInput.value = ""; // 選択されていたファイル情報もリセット
-
-// ノイズキャンセルボタンをデフォルト（OFF）に戻す
-isNoiseCancelOn = false;
-noiseCancelBtn.classList.remove('active');
-noiseCancelBtn.innerText = "NOISE\nCANCEL\n✂";
-
 if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-audioBlob = null; 
-seekBar.value = 0; 
-playPauseImg.src = IMG_PLAY; 
-downloadBtn.classList.remove('ready');
-
+audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-isPlayingRecorded = false; 
-isRecording = false; 
-isRecordingPaused = false;
+isPlayingRecorded = false; isRecording = false; isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
-
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; 
-bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
-
-unlockMenus(); 
-drawStaticWave();
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
+bgmAnalyser = null; bgmDataArray = null;
+unlockMenus(); drawStaticWave();
 }
 
 function hideOverlayAndCleanup() {
@@ -1260,17 +1235,7 @@ recBtn.addEventListener('click', async () => {
         isRecordingPaused = false;
         recordedChunks = [];
         
-// パソコン・Android・iPhoneすべてで audio/mp4 を最優先にする
-let audioMimeType = '';
-if (MediaRecorder.isTypeSupported('audio/mp4')) {
-    audioMimeType = 'audio/mp4';
-} else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-    audioMimeType = 'audio/webm;codecs=opus'; // 万が一mp4非対応のブラウザ用
-}
-
-const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
-mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
-
+        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
@@ -1470,31 +1435,15 @@ if (bgmBlob) {
 }
 
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-
-// パソコン・Android・iPhoneすべてで video/mp4 を最優先にする
-let videoMimeType = '';
-let extension = 'mp4'; // 拡張子はmp4に固定
-
-if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a')) {
-    videoMimeType = 'video/mp4;codecs=avc1,mp4a'; // 一般的な高品質mp4形式
-} else if (MediaRecorder.isTypeSupported('video/mp4')) {
-    videoMimeType = 'video/mp4';
-} else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-    videoMimeType = 'video/webm;codecs=vp9,opus'; // 万が一のフォールバック
-    extension = 'webm';
-}
-
-const movieOptions = videoMimeType ? { mimeType: videoMimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 } : { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
-const movieRecorder = new MediaRecorder(combinedStream, movieOptions);
+const options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+const movieRecorder = new MediaRecorder(combinedStream, options);
 const movieChunks = [];
 
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
 movieRecorder.onstop = () => {
-const blobType = videoMimeType || 'video/mp4';
-const finalBlob = new Blob(movieChunks, { type: blobType });
+const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
 const finalVideoUrl = URL.createObjectURL(finalBlob);
-const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.${extension}`;
-
+const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
@@ -1560,7 +1509,7 @@ initMonthlyColors();
 initStandardColors();
 setupPaletteEvents();
 unlockMenus();
-drawStaticWave();nois
+drawStaticWave();
 
 </script>
 </body>
