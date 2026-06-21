@@ -480,7 +480,7 @@ max-width: 50px;
 <div class="header-zone">
 <div class="title">2min VOICE & MUSIC WAVE MOVIE</div>
 <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>
-録音中やダウンロード中にブラウザを閉じると正常な動画が作れなくなります
+録音中や保存中にブラウザを閉じると正常な動画が作れなくなります
 
 </div>
 </div>
@@ -621,14 +621,16 @@ const STANDARD_PALETTES = [
 ["#dbd0e6", "#250d00"], ["#191970", "#fffacd"], ["#a8caba", "#5d4157"], ["#eeeeee", "#111111"]
 ];
 
-const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
-const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
+// アイコン画像の定義
+const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";     // 再生（三角）
+const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";  // 一時停止（二本線）
 
 // ==========================================
 // 2. DOM要素の取得
 // ==========================================
 const canvas = document.getElementById('waveCanvas');
 const ctx = canvas.getContext('2d');
+
 const recBtn = document.getElementById('recBtn');
 const stopBtn = document.getElementById('stopBtn');
 const pauseBtn = document.getElementById('pauseBtn');
@@ -642,18 +644,22 @@ const btnWhite = document.getElementById('btnWhite');
 const btnPicture = document.getElementById('btnPicture');
 const pictureInput = document.getElementById('pictureInput');
 const styleOptions = document.querySelectorAll('.style-option');
+
 const menuBg = document.getElementById('menuBg');
 const menuStyle = document.getElementById('menuStyle');
 const menuColor = document.getElementById('menuColor');
 const menuMonthlyColor = document.getElementById('menuMonthlyColor');
+
 const playPauseBtn = document.getElementById('playPauseBtn');
 const playPauseImg = document.getElementById('playPauseImg');
 const seekBar = document.getElementById('seekBar');
+
 const volSlider = document.getElementById('volSlider');
 const bgmVolSlider = document.getElementById('bgmVolSlider');
 const eqLowSlider = document.getElementById('eqLowSlider');
 const eqMidSlider = document.getElementById('eqMidSlider');
 const eqHighSlider = document.getElementById('eqHighSlider');
+
 const noiseCancelBtn = document.getElementById('noiseCancelBtn');
 const audioResetBtn = document.getElementById('audioResetBtn');
 const bgmImportBtn = document.getElementById('bgmImportBtn');
@@ -661,7 +667,7 @@ const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
 
 // ==========================================
-// 3. 状態管理変数
+// 3. アプリケーションの状態管理変数
 // ==========================================
 let audioCtx = null;
 let analyser = null;
@@ -675,10 +681,10 @@ let recordedChunks = [];
 let audioBlob = null;
 let audioBlobUrl = null;
 let playbackAudio = null;
-let playbackAudioSource = null; // 録音再生用の配線
 
 let timerInterval = null;
 let timeLeft = 120;
+
 let currentBgColor = 'black';
 let currentWaveColors = ["#fff0f5", "#faf0e6"];
 let currentWaveStyle = 'corona';
@@ -687,6 +693,7 @@ let isRecording = false;
 let isRecordingPaused = false; 
 let isPlayingRecorded = false;
 let isNoiseCancelOn = false;
+
 let currentOpacity = 0.9;
 let bgImage = null;
 
@@ -700,295 +707,548 @@ let bgmGainNode = null;
 let bgmMediaSource = null;
 let bgmAnalyser = null;
 let bgmDataArray = null;
-let isBgmNodesSetup = false; // Safari複数回接続エラー防止用
 
 // ==========================================
-// 4. 音声配線（AudioContext）のセットアップ
+// 4. 関数の定義
 // ==========================================
+function initMonthlyColors() {
+document.getElementById('monthlyTitle').innerText = MONTHLY_SETTING.title;
+const grid = document.getElementById('monthlyGrid');
+grid.innerHTML = '';
+
+MONTHLY_SETTING.patterns.forEach((colors) => {
+const circle = document.createElement('div');
+circle.className = 'palette-circle';
+circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]}, ${colors[2]})`;
+circle.dataset.colors = JSON.stringify(colors);
+grid.appendChild(circle);
+});
+}
+
+function initStandardColors() {
+const grid = document.getElementById('standardGrid');
+grid.innerHTML = '';
+
+STANDARD_PALETTES.forEach((colors, index) => {
+const circle = document.createElement('div');
+circle.className = 'palette-circle';
+if (index === 0) circle.classList.add('selected');
+
+circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+circle.dataset.colors = JSON.stringify(colors);
+grid.appendChild(circle);
+});
+}
+
+function setupPaletteEvents() {
+const allPalettes = document.querySelectorAll('.palette-circle');
+allPalettes.forEach(palette => {
+palette.addEventListener('click', () => {
+allPalettes.forEach(p => p.classList.remove('selected'));
+palette.classList.add('selected');
+currentWaveColors = JSON.parse(palette.dataset.colors);
+triggerUIRefresh();
+});
+});
+}
+
+function triggerUIRefresh() {
+if (!isRecording && !isPlayingRecorded) {
+drawStaticWave();
+}
+}
+
 function syncAudioParams() {
-    if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
-    if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
-    if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
-    if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
-    if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
-    if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
+if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
+if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
+if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
+if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
+if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
+if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
 }
 
-// 🍏 BGM用の配線を構築（1回だけ実行）
-function setupBgmNodes() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (!playbackBgm || isBgmNodesSetup) return;
-    
-    bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
-    bgmAnalyser = audioCtx.createAnalyser();
-    bgmAnalyser.fftSize = 1024;
-    bgmAnalyser.smoothingTimeConstant = 0.75;
-    bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-    bgmGainNode = audioCtx.createGain();
-    
-    bgmMediaSource.connect(bgmAnalyser);
-    bgmAnalyser.connect(bgmGainNode);
-    bgmGainNode.connect(audioCtx.destination); // BGMはスピーカーへ直行（録音には混ぜない）
-    
-    isBgmNodesSetup = true;
-    syncAudioParams();
-}
-
-// 🍏 再生用の配線を構築
-function setupPlaybackAudioNodes() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (!playbackAudio) return;
-
-    if (source) { try { source.disconnect(); } catch(e){} }
-    if (!playbackAudioSource) playbackAudioSource = audioCtx.createMediaElementSource(playbackAudio);
-
-    if (!eqLow) {
-        eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-        eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-        eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-        ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-        gainNode = audioCtx.createGain();
-        analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-    }
-
-    try { playbackAudioSource.disconnect(); } catch(e){}
-    playbackAudioSource.connect(eqLow);
-    eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-    
-    try { gainNode.disconnect(); } catch(e){}
-    gainNode.connect(analyser);
-    gainNode.connect(audioCtx.destination); 
-
-    syncAudioParams();
-}
-
-// 🍏 録音用（マイク）の配線を構築
-async function startRecordingStream() {
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
-    });
-    
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    
-    if (source) { try { source.disconnect(); } catch(e){} }
-    source = audioCtx.createMediaStreamSource(stream);
-    
-    eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-    eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-    eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-    ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-    gainNode = audioCtx.createGain();
-    analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    source.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-    gainNode.connect(analyser); // 波形描画用
-    
-    recordDestination = audioCtx.createMediaStreamDestination();
-    gainNode.connect(recordDestination); // 録音機へ（声だけ！）
-    
-    syncAudioParams();
-}
-
-// ==========================================
-// 5. 描画・UI関数
-// ==========================================
 function clearCanvas(targetCtx, w, h) {
-    if (currentBgColor === 'picture' && bgImage) {
-        targetCtx.clearRect(0, 0, w, h);
-        const imgRatio = bgImage.width / bgImage.height;
-        const canvasRatio = w / h;
-        let renderW, renderH, renderX, renderY;
-        if (imgRatio > canvasRatio) { renderW = w; renderH = w / imgRatio; renderX = 0; renderY = (h - renderH) / 2; } 
-        else { renderH = h; renderW = h * imgRatio; renderX = (w - renderW) / 2; renderY = 0; }
-        targetCtx.drawImage(bgImage, renderX, renderY, renderW, renderH);
+if (currentBgColor === 'picture' && bgImage) {
+    targetCtx.clearRect(0, 0, w, h);
+    const imgW = bgImage.width;
+    const imgH = bgImage.height;
+    const imgRatio = imgW / imgH;
+    const canvasRatio = w / h;
+
+    let renderW, renderH;
+    let renderX, renderY;
+
+    if (imgRatio > canvasRatio) {
+        renderW = w;
+        renderH = w / imgRatio;
+        renderX = 0;
+        renderY = (h - renderH) / 2;
     } else {
-        targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-        targetCtx.fillRect(0, 0, w, h);
+        renderH = h;
+        renderW = h * imgRatio;
+        renderX = (w - renderW) / 2;
+        renderY = 0;
     }
+    targetCtx.drawImage(bgImage, renderX, renderY, renderW, renderH);
+} else {
+    targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+    targetCtx.fillRect(0, 0, w, h);
+}
 }
 
 function getBoostedValue(rawByteValue) {
-    const threshold = 25;
-    if (rawByteValue < threshold) return 0;
-    return Math.pow((rawByteValue - threshold) / (255 - threshold), 1.5);
-}
-
-function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
-    const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-    gradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) { gradient.addColorStop(0.5, currentWaveColors[1]); gradient.addColorStop(1, currentWaveColors[2]); } 
-    else { gradient.addColorStop(1, currentWaveColors[1]); }
-    targetCtx.strokeStyle = gradient; targetCtx.fillStyle = gradient; targetCtx.lineWidth = 4; targetCtx.lineCap = 'round';
-    const centerX = targetCanvas.width / 2, centerY = targetCanvas.height / 2;
-    const startIdx = 2, endIdx = 35, dataRange = endIdx - startIdx;
-
-    if (currentWaveStyle === 'corona') {
-        const baseRadius = 140, barCountCorona = 360; 
-        targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.lineWidth = 2.5;              
-        for (let i = 0; i < barCountCorona; i++) {
-            const angle = (i / barCountCorona) * Math.PI * 2;
-            const exactIdx = startIdx + (i / barCountCorona) * dataRange;
-            const idxLeft = Math.floor(exactIdx), idxRight = Math.min(idxLeft + 1, endIdx);
-            const val = (dataArr[idxLeft] || 0) + ((dataArr[idxRight] || 0) - (dataArr[idxLeft] || 0)) * (exactIdx - idxLeft);
-            const waveLength = 6 + (getBoostedValue(val) * 150);
-            targetCtx.beginPath();
-            targetCtx.moveTo(centerX + Math.cos(angle) * baseRadius, centerY + Math.sin(angle) * baseRadius);
-            targetCtx.lineTo(centerX + Math.cos(angle) * (baseRadius + waveLength), centerY + Math.sin(angle) * (baseRadius + waveLength));
-            targetCtx.stroke();
-        }
-        targetCtx.restore();
-    } else if (currentWaveStyle === 'star') {
-        targetCtx.save(); targetCtx.globalAlpha = opacity;
-        for (let i = 0; i < 64; i++) {
-            const angle = (i / 64) * Math.PI * 2;
-            const waveLength = 5 + (getBoostedValue(dataArr[startIdx + Math.floor((i / 64) * dataRange)] || 0) * 150);
-            targetCtx.beginPath(); targetCtx.moveTo(centerX + Math.cos(angle) * (138 - waveLength), centerY + Math.sin(angle) * (138 - waveLength));
-            targetCtx.lineTo(centerX + Math.cos(angle) * (138 + waveLength), centerY + Math.sin(angle) * (138 + waveLength)); targetCtx.stroke();
-        }
-        targetCtx.restore();
-    } else if (currentWaveStyle === 'aurora') {
-        const coords = [];
-        for (let i = 0; i < 32; i++) coords.push({ x: 40 + i * ((targetCanvas.width - 80) / 31), waveHeight: 3 + (getBoostedValue(dataArr[startIdx + Math.floor((i / 32) * dataRange)] || 0) * 150) });
-        targetCtx.beginPath(); targetCtx.moveTo(coords[0].x, centerY - coords[0].waveHeight);
-        for (let i = 1; i < 32; i++) targetCtx.bezierCurveTo((coords[i-1].x + coords[i].x)/2, centerY - coords[i-1].waveHeight, (coords[i-1].x + coords[i].x)/2, centerY - coords[i].waveHeight, coords[i].x, centerY - coords[i].waveHeight);
-        targetCtx.lineTo(coords[31].x, centerY + coords[31].waveHeight);
-        for (let i = 31; i > 0; i--) targetCtx.bezierCurveTo((coords[i].x + coords[i-1].x)/2, centerY + coords[i].waveHeight, (coords[i].x + coords[i-1].x)/2, centerY + coords[i-1].waveHeight, coords[i-1].x, centerY + coords[i-1].waveHeight);
-        targetCtx.closePath(); targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.fill(); targetCtx.restore();
-    } else if (currentWaveStyle === 'building') {
-        const baseLineY = targetCanvas.height - 80, spacing = (targetCanvas.width - 80) / 30;
-        targetCtx.save(); targetCtx.lineCap = 'butt'; targetCtx.beginPath(); targetCtx.moveTo(40, baseLineY); targetCtx.lineTo(targetCanvas.width - 40, baseLineY); targetCtx.stroke(); targetCtx.restore();
-        targetCtx.save(); targetCtx.globalAlpha = opacity;
-        for (let i = 0; i < 30; i++) {
-            const h = getBoostedValue(dataArr[startIdx + Math.floor((i / 30) * dataRange)] || 0) * 250;
-            if (h > 0) targetCtx.fillRect(40 + i * spacing + (spacing - spacing * 0.7) / 2, baseLineY - h, spacing * 0.7, h);
-        }
-        targetCtx.restore();
-    }
+const threshold = 25;
+if (rawByteValue < threshold) return 0;
+const normalized = (rawByteValue - threshold) / (255 - threshold);
+return Math.pow(normalized, 1.5);
 }
 
 function drawStaticWave() {
-    clearCanvas(ctx, canvas.width, canvas.height);
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) { gradient.addColorStop(0.5, currentWaveColors[1]); gradient.addColorStop(1, currentWaveColors[2]); } 
-    else gradient.addColorStop(1, currentWaveColors[1]);
-    ctx.fillStyle = gradient; ctx.strokeStyle = gradient; ctx.lineWidth = 4; ctx.lineCap = 'round';
-    if (currentWaveStyle === 'corona') { ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke(); } 
-    else if (currentWaveStyle === 'star') {
-        for (let i = 0; i < 48; i++) {
-            const a = (i / 48) * Math.PI * 2; ctx.beginPath(); ctx.moveTo(canvas.width/2 + Math.cos(a)*132, canvas.height/2 + Math.sin(a)*132);
-            ctx.lineTo(canvas.width/2 + Math.cos(a)*148, canvas.height/2 + Math.sin(a)*148); ctx.stroke();
-        }
-    } else if (currentWaveStyle === 'aurora' || currentWaveStyle === 'building') {
-        const y = currentWaveStyle === 'aurora' ? canvas.height / 2 : canvas.height - 80;
-        ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(canvas.width - 40, y); ctx.stroke();
+clearCanvas(ctx, canvas.width, canvas.height);
+const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+gradient.addColorStop(0, currentWaveColors[0]);
+if (currentWaveColors.length > 2) {
+gradient.addColorStop(0.5, currentWaveColors[1]);
+gradient.addColorStop(1, currentWaveColors[2]);
+} else {
+gradient.addColorStop(1, currentWaveColors[1]);
+}
+ctx.fillStyle = gradient;
+ctx.strokeStyle = gradient;
+ctx.lineWidth = 4;
+ctx.lineCap = 'round';
+
+if (currentWaveStyle === 'corona') {
+ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
+} else if (currentWaveStyle === 'star') {
+const centerX = canvas.width / 2; const centerY = canvas.height / 2;
+const baseRadius = 140;
+for (let i = 0; i < 48; i++) {
+const angle = (i / 48) * Math.PI * 2;
+const startX = centerX + Math.cos(angle) * (baseRadius - 8);
+const startY = centerY + Math.sin(angle) * (baseRadius - 8);
+const endX = centerX + Math.cos(angle) * (baseRadius + 8);
+const endY = centerY + Math.sin(angle) * (baseRadius + 8);
+ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
+}
+} else if (currentWaveStyle === 'aurora') {
+const centerY = canvas.height / 2;
+ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
+} else if (currentWaveStyle === 'building') {
+const baseLineY = canvas.height - 80;
+ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+}
+}
+
+function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
+const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
+gradient.addColorStop(0, currentWaveColors[0]);
+if (currentWaveColors.length > 2) {
+gradient.addColorStop(0.5, currentWaveColors[1]);
+gradient.addColorStop(1, currentWaveColors[2]);
+} else {
+gradient.addColorStop(1, currentWaveColors[1]);
+}
+targetCtx.strokeStyle = gradient;
+targetCtx.fillStyle = gradient;
+targetCtx.lineWidth = 4;
+targetCtx.lineCap = 'round';
+
+const centerX = targetCanvas.width / 2;
+const centerY = targetCanvas.height / 2;
+
+const startIdx = 2;
+const endIdx = 35;
+const dataRange = endIdx - startIdx;
+
+const barCountCorona = 360; 
+if (currentWaveStyle === 'corona') {
+    const baseRadius = 140;
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity; 
+    targetCtx.lineWidth = 2.5;              
+
+    for (let i = 0; i < barCountCorona; i++) {
+        const angle = (i / barCountCorona) * Math.PI * 2;
+        const mapRatio = i / barCountCorona;
+
+        const exactIdx = startIdx + mapRatio * dataRange;
+        const idxLeft = Math.floor(exactIdx);
+        const idxRight = Math.min(idxLeft + 1, endIdx);
+        const fraction = exactIdx - idxLeft;
+
+        const valueLeft = dataArr[idxLeft] || 0;
+        const valueRight = dataArr[idxRight] || 0;
+        const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
+
+        const boosted = getBoostedValue(interpolatedValue);
+        const waveLength = 6 + (boosted * 150);
+
+        const startX = centerX + Math.cos(angle) * baseRadius;
+        const startY = centerY + Math.sin(angle) * baseRadius;
+        const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+        const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(startX, startY);
+        targetCtx.lineTo(endX, endY);
+        targetCtx.stroke();
     }
+    targetCtx.restore();
+
+} else if (currentWaveStyle === 'star') {
+const baseRadius = 138;
+const barCount = 64;
+targetCtx.save();
+targetCtx.globalAlpha = opacity;
+for (let i = 0; i < barCount; i++) {
+const angle = (i / barCount) * Math.PI * 2;
+const mapRatio = i / barCount;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const waveLength = 5 + (boosted * 150);
+const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
+const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
+const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+}
+targetCtx.restore();
+
+} else if (currentWaveStyle === 'aurora') {
+const usedPoints = 32;
+const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
+const activeCenterY = targetCanvas.height / 2;
+const coords = [];
+
+for (let i = 0; i < usedPoints; i++) {
+const mapRatio = i / usedPoints;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const waveHeight = 3 + (boosted * 150);
+coords.push({x: 40 + i * spacing, waveHeight});
+}
+
+targetCtx.beginPath();
+targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
+for (let i = 1; i < usedPoints; i++) {
+const prev = coords[i - 1];
+const curr = coords[i];
+const cpX = (prev.x + curr.x) / 2;
+targetCtx.bezierCurveTo(cpX, activeCenterY - prev.waveHeight, cpX, activeCenterY - curr.waveHeight, curr.x, activeCenterY - curr.waveHeight);
+}
+targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
+for (let i = usedPoints - 1; i > 0; i--) {
+const curr = coords[i];
+const next = coords[i - 1];
+const cpX = (curr.x + next.x) / 2;
+targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY + curr.waveHeight, next.x, activeCenterY + next.waveHeight);
+}
+targetCtx.closePath();
+targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.fill(); targetCtx.restore();
+
+} else if (currentWaveStyle === 'building') {
+const barCount = 30;
+const spacing = (targetCanvas.width - 80) / barCount;
+const baseLineY = targetCanvas.height - 80;
+
+targetCtx.save();
+targetCtx.lineCap = 'butt';
+targetCtx.beginPath(); targetCtx.moveTo(40, baseLineY); targetCtx.lineTo(targetCanvas.width - 40, baseLineY); targetCtx.stroke();
+targetCtx.restore();
+
+targetCtx.save();
+targetCtx.globalAlpha = opacity;
+const barWidth = spacing * 0.7;
+
+for (let i = 0; i < barCount; i++) {
+const mapRatio = i / barCount;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const barHeight = boosted * 250;
+if (barHeight > 0) {
+const x = 40 + i * spacing + (spacing - barWidth) / 2;
+targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
+}
+}
+targetCtx.restore();
+}
+}
+
+async function startRecordingStream() {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false 
+}
+});
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+source = audioCtx.createMediaStreamSource(stream);
+setupAudioNodes(source, true);
+recordDestination = audioCtx.createMediaStreamDestination();
+gainNode.connect(recordDestination);
+dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+async function restartRecordingStream() {
+if (!isRecording || !mediaRecorder) return;
+if (stream) stream.getTracks().forEach(track => track.stop());
+try {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: { 
+    echoCancellation: isNoiseCancelOn, 
+    noiseSuppression: isNoiseCancelOn, 
+    autoGainControl: false 
+}
+});
+const newSource = audioCtx.createMediaStreamSource(stream);
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+
+newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser); gainNode.connect(recordDestination);
+syncAudioParams();
+} catch (err) { console.error(err); }
+}
+
+function stopRecording() {
+if (!isRecording) return; 
+isRecording = false;
+isRecordingPaused = false; 
+pauseBtnImg.src = IMG_PAUSE; // 初期画像（二本線）に戻す
+
+if (playbackBgm) {
+    playbackBgm.pause();
+    playbackBgm.currentTime = 0;
+}
+
+if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+if (stream) stream.getTracks().forEach(track => track.stop());
+if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+clearInterval(timerInterval); 
+recBtn.classList.remove('recording'); 
+timerDisplay.style.display = 'none'; 
+drawStaticWave();
+}
+
+function setupAudioNodes(audioSource, isMuteSpeaker) {
+if (!audioCtx || !audioSource) return;
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+
+audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser);
+if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
+syncAudioParams();
+}
+
+function updateTimerText() {
+const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function lockMenus() {
+menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuMonthlyColor.classList.add('locked');
+document.getElementById('menuTouka').classList.add('locked');
+}
+function unlockMenus() {
+menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuMonthlyColor.classList.remove('locked');
+document.getElementById('menuTouka').classList.remove('locked');
+}
+
+function resetDataWithoutPrompt() {
+if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
+
+// 🎵 インポートしたBGMデータとURLも完全にクリアする
+if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
+bgmBlob = null;
+playbackBgm = null; // BGMの本体も空っぽにする
+
+// ️ BGMインポートボタンの見た目を最初の状態（グレー）に戻す
+bgmImportBtn.classList.remove('loaded');
+bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
+bgmInput.value = ""; // 選択されていたファイル情報もリセット
+
+// ノイズキャンセルボタンをデフォルト（OFF）に戻す
+isNoiseCancelOn = false;
+noiseCancelBtn.classList.remove('active');
+noiseCancelBtn.innerText = "NOISE\nCANCEL\n✂";
+
+if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
+audioBlob = null; 
+seekBar.value = 0; 
+playPauseImg.src = IMG_PLAY; 
+downloadBtn.classList.remove('ready');
+
+if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+isPlayingRecorded = false; 
+isRecording = false; 
+isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
+
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; 
+bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+
+unlockMenus(); 
+drawStaticWave();
+}
+
+function hideOverlayAndCleanup() {
+document.getElementById('renderOverlay').style.display = 'none';
+document.getElementById('miniGameIframe').src = 'about:blank';
+resetDataWithoutPrompt();
 }
 
 function draw() {
-    // 録音も再生もしていないなら、即座にループを完全に停止（電池節約）
-    if (!isRecording && !isPlayingRecorded) {
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
-        return;
-    }
+if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
+animationId = requestAnimationFrame(draw);
 
-    // エラーが起きてもスマホが止まらないための安全装置
-    try {
-        if (isRecording && isRecordingPaused) {
-            if (dataArray) dataArray.fill(0);
-            if (bgmDataArray) bgmDataArray.fill(0);
-        } else {
-            if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
-            if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
-        }
-
-        clearCanvas(ctx, canvas.width, canvas.height);
-        if (bgmDataArray) drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
-        if (dataArray) drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
-
-        animationId = requestAnimationFrame(draw);
-    } catch (e) {
-        console.error("描画エラー停止:", e);
-        animationId = null; 
-    }
+if (isRecording && isRecordingPaused) {
+    if (dataArray) dataArray.fill(0);
+    if (bgmDataArray) bgmDataArray.fill(0);
+} else {
+    if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+    if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
 }
 
-function updateTimerText() { timerDisplay.innerText = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`; }
-function lockMenus() { [menuBg, menuStyle, menuColor, menuMonthlyColor, document.getElementById('menuTouka')].forEach(e => e.classList.add('locked')); }
-function unlockMenus() { [menuBg, menuStyle, menuColor, menuMonthlyColor, document.getElementById('menuTouka')].forEach(e => e.classList.remove('locked')); }
+clearCanvas(ctx, canvas.width, canvas.height);
 
-function resetDataWithoutPrompt() {
-    if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
-    if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
-    if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
-    bgmBlob = null; playbackBgm = null; isBgmNodesSetup = false;
-    bgmImportBtn.classList.remove('loaded'); bgmImportBtn.innerText = "IMPORT\nBGM\n♬"; bgmInput.value = "";
-    isNoiseCancelOn = false; noiseCancelBtn.classList.remove('active'); noiseCancelBtn.innerText = "NOISE\nCANCEL\n✂";
-    if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-    audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
-    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-    if (playbackAudioSource) { try{playbackAudioSource.disconnect();}catch(e){} playbackAudioSource = null; }
-    isPlayingRecorded = false; isRecording = false; isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
-    audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
-    unlockMenus(); drawStaticWave();
+if (bgmDataArray) {
+    drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
 }
-function hideOverlayAndCleanup() { document.getElementById('renderOverlay').style.display = 'none'; document.getElementById('miniGameIframe').src = 'about:blank'; resetDataWithoutPrompt(); }
-function triggerUIRefresh() { if (!isRecording && !isPlayingRecorded) drawStaticWave(); }
+
+if (dataArray) {
+    drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
+}
+}
 
 // ==========================================
-// 6. UIイベントリスナー
+// 5. イベントリスナーの登録
 // ==========================================
-document.getElementById('monthlyTitle').innerText = MONTHLY_SETTING.title;
-MONTHLY_SETTING.patterns.forEach(c => { const el = document.createElement('div'); el.className = 'palette-circle'; el.style.background = `linear-gradient(135deg, ${c[0]}, ${c[1]}, ${c[2]})`; el.dataset.colors = JSON.stringify(c); document.getElementById('monthlyGrid').appendChild(el); });
-STANDARD_PALETTES.forEach((c, i) => { const el = document.createElement('div'); el.className = 'palette-circle'; if(i===0)el.classList.add('selected'); el.style.background = `linear-gradient(135deg, ${c[0]}, ${c[1]})`; el.dataset.colors = JSON.stringify(c); document.getElementById('standardGrid').appendChild(el); });
-document.querySelectorAll('.palette-circle').forEach(p => p.addEventListener('click', () => { document.querySelectorAll('.palette-circle').forEach(x => x.classList.remove('selected')); p.classList.add('selected'); currentWaveColors = JSON.parse(p.dataset.colors); triggerUIRefresh(); }));
-btnBlack.addEventListener('click', () => { currentBgColor='black'; btnBlack.classList.add('active'); btnWhite.classList.remove('active'); btnPicture.classList.remove('active'); canvasBg.classList.remove('theme-white'); canvasBg.style.backgroundColor=''; pictureInput.value=""; triggerUIRefresh(); });
-btnWhite.addEventListener('click', () => { currentBgColor='white'; btnWhite.classList.add('active'); btnBlack.classList.remove('active'); btnPicture.classList.remove('active'); canvasBg.classList.add('theme-white'); canvasBg.style.backgroundColor=''; pictureInput.value=""; triggerUIRefresh(); });
-btnPicture.addEventListener('click', () => pictureInput.click());
-pictureInput.addEventListener('change', (e) => { if(e.target.files[0]) { const r = new FileReader(); r.onload = ev => { const img = new Image(); img.onload = () => { bgImage=img; currentBgColor='picture'; btnPicture.classList.add('active'); btnBlack.classList.remove('active'); btnWhite.classList.remove('active'); canvasBg.style.backgroundColor='transparent'; triggerUIRefresh(); }; img.src=ev.target.result; }; r.readAsDataURL(e.target.files[0]); } });
-toukaSlider.addEventListener('input', () => { currentOpacity = 1.0 - ((parseFloat(toukaSlider.value)/100) * 0.6); triggerUIRefresh(); });
-styleOptions.forEach(opt => opt.addEventListener('click', () => { styleOptions.forEach(o => o.classList.remove('active')); opt.classList.add('active'); currentWaveStyle = opt.dataset.style; triggerUIRefresh(); }));
-volSlider.addEventListener('input', syncAudioParams); bgmVolSlider.addEventListener('input', syncAudioParams); eqLowSlider.addEventListener('input', syncAudioParams); eqMidSlider.addEventListener('input', syncAudioParams); eqHighSlider.addEventListener('input', syncAudioParams);
-audioResetBtn.addEventListener('click', () => { volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4; syncAudioParams(); });
-bgmImportBtn.addEventListener('click', () => bgmInput.click());
+btnBlack.addEventListener('click', () => {
+currentBgColor = 'black';
+btnBlack.classList.add('active');
+btnWhite.classList.remove('active');
+btnPicture.classList.remove('active');
+canvasBg.classList.remove('theme-white');
+canvasBg.style.backgroundColor = '';
+pictureInput.value = "";
+triggerUIRefresh();
+});
+
+btnWhite.addEventListener('click', () => {
+currentBgColor = 'white';
+btnWhite.classList.add('active');
+btnBlack.classList.remove('active');
+btnPicture.classList.remove('active');
+canvasBg.classList.add('theme-white');
+canvasBg.style.backgroundColor = '';
+pictureInput.value = "";
+triggerUIRefresh();
+});
+
+btnPicture.addEventListener('click', () => { pictureInput.click(); });
+pictureInput.addEventListener('change', (e) => {
+const file = e.target.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = function(event) {
+const img = new Image();
+img.onload = function() {
+bgImage = img;
+currentBgColor = 'picture';
+btnPicture.classList.add('active');
+btnBlack.classList.remove('active');
+btnWhite.classList.remove('active');
+canvasBg.style.backgroundColor = 'transparent';
+triggerUIRefresh();
+};
+img.src = event.target.result;
+};
+reader.readAsDataURL(file);
+}
+});
+
+toukaSlider.addEventListener('input', () => {
+    const sliderRatio = parseFloat(toukaSlider.value) / 100;
+    currentOpacity = 1.0 - (sliderRatio * 0.6);
+    triggerUIRefresh();
+});
+
+styleOptions.forEach(opt => {
+opt.addEventListener('click', () => {
+styleOptions.forEach(o => o.classList.remove('active'));
+opt.classList.add('active');
+currentWaveStyle = opt.dataset.style;
+triggerUIRefresh();
+});
+});
+
+volSlider.addEventListener('input', syncAudioParams);
+bgmVolSlider.addEventListener('input', syncAudioParams);
+
+eqLowSlider.addEventListener('input', syncAudioParams);
+eqMidSlider.addEventListener('input', syncAudioParams);
+eqHighSlider.addEventListener('input', syncAudioParams);
+
+noiseCancelBtn.addEventListener('click', () => {
+isNoiseCancelOn = !isNoiseCancelOn;
+if (isNoiseCancelOn) {
+noiseCancelBtn.classList.add('active');
+noiseCancelBtn.innerText = "NOISE\nCANCEL\nON";
+} else {
+noiseCancelBtn.classList.remove('active');
+noiseCancelBtn.innerText = "NOISE\nCANCEL\nOFF";
+}
+if (isRecording) {
+restartRecordingStream();
+} else if (playbackAudio) {
+syncAudioParams();
+}
+});
+
+audioResetBtn.addEventListener('click', () => {
+volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
+syncAudioParams();
+});
+
+bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
 bgmInput.addEventListener('change', (e) => {
-    if (e.target.files[0]) {
-        if (bgmBlobUrl) URL.revokeObjectURL(bgmBlobUrl);
-        bgmBlob = e.target.files[0]; bgmBlobUrl = URL.createObjectURL(bgmBlob);
-        playbackBgm = new Audio(bgmBlobUrl); playbackBgm.preload = "auto";
-        isBgmNodesSetup = false;
-        bgmImportBtn.classList.add('loaded'); bgmImportBtn.innerText = "BGM\nLOADED";
-        alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
-    }
+const file = e.target.files[0];
+if (file) {
+if (bgmBlobUrl) URL.revokeObjectURL(bgmBlobUrl);
+bgmBlob = file;
+bgmBlobUrl = URL.createObjectURL(bgmBlob);
+playbackBgm = new Audio(bgmBlobUrl);
+playbackBgm.preload = "auto";
+bgmImportBtn.classList.add('loaded');
+bgmImportBtn.innerText = "BGM\nLOADED";
+alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
+}
 });
 
 // ==========================================
-// 7. 録音・再生コントロール
+// 6. 録音コントロール系の処理
 // ==========================================
-
-// 【リセットボタンの復活と修正】
-resetBtn.addEventListener('click', () => {
-    if (confirm("全てのデータをリセットして最初からやり直しますか？")) {
-        resetDataWithoutPrompt();
-    }
-});
-
 recBtn.addEventListener('click', async () => {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-  
     if (isRecording) {
         if (isRecordingPaused) {
-            isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
-            if (mediaRecorder) mediaRecorder.resume();
-            if (playbackBgm) playbackBgm.play().catch(e=>{});
+            isRecordingPaused = false;
+            pauseBtnImg.src = IMG_PAUSE; // 動いているときは二本線マークにする
+            if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+            if (playbackBgm) playbackBgm.play().catch(e => {});
         }
         return;
     }
@@ -996,159 +1256,350 @@ recBtn.addEventListener('click', async () => {
     try {
         unlockMenus();
         await startRecordingStream();
+        isRecording = true; 
+        isRecordingPaused = false;
+        recordedChunks = [];
         
-        // BGMがあれば録音時に流す
-        if (playbackBgm) {
-            setupBgmNodes();
-            playbackBgm.currentTime = 0;
-            playbackBgm.play().catch(e=>{});
-        }
+// パソコン・Android・iPhoneすべてで audio/mp4 を最優先にする
+let audioMimeType = '';
+if (MediaRecorder.isTypeSupported('audio/mp4')) {
+    audioMimeType = 'audio/mp4';
+} else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+    audioMimeType = 'audio/webm;codecs=opus'; // 万が一mp4非対応のブラウザ用
+}
 
-        isRecording = true; isRecordingPaused = false; recordedChunks = [];
-        let mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '');
-        mediaRecorder = new MediaRecorder(recordDestination.stream, mime ? { mimeType: mime, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 });
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
+mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
+
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        
         mediaRecorder.onstop = () => {
             audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
             audioBlobUrl = URL.createObjectURL(audioBlob);
-            playbackAudio = new Audio(audioBlobUrl); playbackAudio.preload = "auto";
-            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
-            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex) seekBar.value = playbackAudio.currentTime; });
-            playbackAudio.addEventListener('ended', () => {
-                playPauseImg.src = IMG_PLAY; isPlayingRecorded = false;
-                if (animationId) cancelAnimationFrame(animationId);
-                playbackAudio.currentTime = 0;
-                if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-                seekBar.value = 0; drawStaticWave();
-            });
-            downloadBtn.classList.add('ready'); lockMenus();
-        };
-        mediaRecorder.start(); draw();
-        recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
-        timerInterval = setInterval(() => { if (!isRecordingPaused) { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopBtn.click(); } }, 1000);
-    } catch (err) { alert("マイク起動失敗: " + err); }
-});
+            playbackAudio = new Audio(audioBlobUrl);
+            playbackAudio.preload = "auto";
+            
+            const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+            setupAudioNodes(playbackSource, false);
+            
+            if (playbackBgm) {
+                syncAudioParams();
+            }
 
-pauseBtn.addEventListener('click', () => {
-    if (!isRecording) return;
-    if (!isRecordingPaused) {
-        isRecordingPaused = true; pauseBtnImg.src = IMG_PLAY;
-        if (mediaRecorder) mediaRecorder.pause();
-        if (playbackBgm) playbackBgm.pause();
-    } else {
-        isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
-        if (mediaRecorder) mediaRecorder.resume();
-        if (playbackBgm) playbackBgm.play().catch(e=>{});
+            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
+            playbackAudio.addEventListener('ended', () => { 
+                playPauseImg.src = IMG_PLAY; 
+                isPlayingRecorded = false; 
+                if (animationId) cancelAnimationFrame(animationId); 
+                playbackAudio.currentTime = 0; 
+                if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
+                seekBar.value = 0; 
+                drawStaticWave(); 
+            });
+            downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
+            syncAudioParams();
+            lockMenus();
+        };
+
+        if (playbackBgm) {
+            playbackBgm.currentTime = 0;
+
+            if (!bgmMediaSource) {
+                bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+            }
+            
+            bgmAnalyser = audioCtx.createAnalyser();
+            bgmAnalyser.fftSize = 1024;
+            bgmAnalyser.smoothingTimeConstant = 0.75;
+            bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+            
+            bgmGainNode = audioCtx.createGain();
+            
+            bgmMediaSource.disconnect(); 
+            bgmMediaSource.connect(bgmAnalyser);
+            bgmAnalyser.connect(bgmGainNode);
+            bgmGainNode.connect(audioCtx.destination);
+            
+            syncAudioParams();
+            playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
+        }
+
+        mediaRecorder.start();
+        draw();
+        
+        recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
+        timerInterval = setInterval(() => { 
+            if (!isRecordingPaused) { 
+                timeLeft--; 
+                updateTimerText(); 
+                if (timeLeft <= 0) stopRecording(); 
+            }
+        }, 1000);
+    } catch (err) { 
+        alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err); 
     }
 });
 
-stopBtn.addEventListener('click', () => {
-    if (!isRecording) return;
-    isRecording = false; isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
-    if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-    if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-    clearInterval(timerInterval); recBtn.classList.remove('recording'); timerDisplay.style.display = 'none'; drawStaticWave();
+// ⏸️ 録音一時停止ボタンのクリックイベント
+pauseBtn.addEventListener('click', () => {
+    if (!isRecording) return; 
+    
+    if (!isRecordingPaused) {
+        // 一時停止する
+        isRecordingPaused = true;
+        pauseBtnImg.src = IMG_PLAY; // 一時停止中は「再開（三角）」マークにする
+        if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
+        if (playbackBgm) playbackBgm.pause();
+    } else {
+        // 再開する
+        isRecordingPaused = false;
+        pauseBtnImg.src = IMG_PAUSE; // 再開したら「二本線」マークに戻す
+        if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+        if (playbackBgm) playbackBgm.play().catch(e => {});
+    }
+});
+
+stopBtn.addEventListener('click', () => { stopRecording(); });
+
+resetBtn.addEventListener('click', () => {
+if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
 });
 
 playPauseBtn.addEventListener('click', async () => {
-    if (!audioBlobUrl) { alert("録音完了後に再生してください"); return; }
-    // Safari対策: ユーザー操作で確実にAudioContextを起動する
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!audioBlobUrl) { 
+        alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); 
+        return; 
+    }
 
-    if (isPlayingRecorded) {
-        playbackAudio.pause();
-        if (playbackBgm) playbackBgm.pause();
-        playPauseImg.src = IMG_PLAY; isPlayingRecorded = false;
-    } else {
-        setupPlaybackAudioNodes();
-        if (playbackBgm) setupBgmNodes();
+    // 🍏 1. iPhone・Safariのオーディオコンテキストを即座に復帰
+    if (audioCtx && audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+
+    // 🍏 2. 録音データ再生用のオブジェクトがない場合、ボタンを押した「この瞬間」にその場で作る
+    if (!playbackAudio) {
+        playbackAudio = new Audio(audioBlobUrl);
         
-        // 【修正箇所: playPauseBtn内】
-// catch句も含めて以下のように書き換えてください
-        isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE;
-        try {
-            await playbackAudio.play();
-            if (playbackBgm) {
-                playbackBgm.currentTime = playbackAudio.currentTime;
-                await playbackBgm.play();
+        // 再生位置が更新されたらシークバーを動かすイベントも紐付け
+        playbackAudio.addEventListener('timeupdate', () => {
+            if (!isUserChangingIndex) {
+                seekBar.value = playbackAudio.currentTime;
             }
-            if (!animationId) draw();
-        } catch(err) {
-            isPlayingRecorded = false; playPauseImg.src = IMG_PLAY;
-            alert("再生失敗。もう一度押してみてください。");
-            console.error(err);
-        }
+        });
+        
+        // 再生が終わったら自動で停止状態に戻す
+        playbackAudio.addEventListener('ended', () => {
+            isPlayingRecorded = false;
+            playPauseImg.src = IMG_PLAY;
+            if (playbackBgm) playbackBgm.pause();
+        });
+    }
+
+    // 3. 再生・一時停止の切り替え処理
+    if (isPlayingRecorded) {
+        // 一時停止する
+        if (playbackAudio) playbackAudio.pause();
+        if (playbackBgm) playbackBgm.pause();
+        playPauseImg.src = IMG_PLAY;
+        isPlayingRecorded = false;
+    } else {
+        // 再生する
+        syncAudioParams(); // 音量やエフェクトの同期
+        
+        // 🍏 4. ユーザーのタップ直下で、直接再生を呼び出す（Safariのガードを突破）
+        playbackAudio.play().then(() => { 
+            isPlayingRecorded = true; 
+            playPauseImg.src = IMG_PAUSE; 
+            
+            // BGMがインポートされている場合は、遅れて連動再生
+            if (playbackBgm) { 
+                if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
+                    playbackBgm.currentTime = playbackAudio.currentTime; 
+                }
+                
+                if (!bgmAnalyser && audioCtx) {
+                    bgmAnalyser = audioCtx.createAnalyser();
+                    bgmAnalyser.fftSize = 1024;
+                    bgmAnalyser.smoothingTimeConstant = 0.75;
+                }
+                if (!bgmDataArray && bgmAnalyser) {
+                    bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+                }
+                
+                if (bgmMediaSource && bgmGainNode && audioCtx) {
+                    bgmMediaSource.disconnect();
+                    bgmMediaSource.connect(bgmAnalyser);
+                    bgmAnalyser.connect(bgmGainNode);
+                    bgmGainNode.connect(audioCtx.destination);
+                }
+
+                playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
+            } 
+            draw(); // 波形の描画スタート
+        }).catch(err => { 
+            console.error("Safari Play Error:", err);
+            alert("再生に失敗しました。画面を一度タップしてからもう一度お試しください。"); 
+        });
+    }
 });
 
-seekBar.addEventListener('input', () => { if (!playbackAudio) return; isUserChangingIndex = true; playbackAudio.currentTime = seekBar.value; if (playbackBgm) playbackBgm.currentTime = seekBar.value; });
+// 🎛️ 再生シークバーの連動（ここも問題なく動きます）
+seekBar.addEventListener('input', () => { 
+    if (!playbackAudio) return; 
+    isUserChangingIndex = true; 
+    playbackAudio.currentTime = seekBar.value; 
+    if (playbackBgm) playbackBgm.currentTime = seekBar.value; 
+});
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
 downloadBtn.addEventListener('click', async () => {
-    if (!audioBlob) { alert("保存するデータがありません^.ˬ.^ฅⳊ"); return; }
-    if (!confirm("動画の書き出しを開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
-    document.getElementById('renderOverlay').style.display = 'flex'; document.getElementById('miniGameIframe').src = 'mini-game.html'; downloadBtn.style.pointerEvents = 'none';
+if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
+if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
 
-    const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const audioBuffer = await renderAudioCtx.decodeAudioData(await audioBlob.arrayBuffer());
-    const bufferSource = renderAudioCtx.createBufferSource(); bufferSource.buffer = audioBuffer;
+document.getElementById('renderOverlay').style.display = 'flex';
+document.getElementById('miniGameIframe').src = 'mini-game.html';
+downloadBtn.style.pointerEvents = 'none';
 
-    const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
-    const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
-    const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-    const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'highpass'; rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; rNcFilter.Q.value = 0.7;
-    const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
-    const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 1024; rAnalyser.smoothingTimeConstant = 0.75;
+const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const arrayBuffer = await audioBlob.arrayBuffer();
+const audioBuffer = await renderAudioCtx.decodeAudioData(arrayBuffer);
+const bufferSource = renderAudioCtx.createBufferSource();
+bufferSource.buffer = audioBuffer;
 
-    bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
-    const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
-    const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600; const rCtx = captureCanvas.getContext('2d');
-    const renderDest = renderAudioCtx.createMediaStreamDestination(); rGain.connect(renderDest);
+const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
+const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
+const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
+const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'highpass'; rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; rNcFilter.Q.value = 0.7;
+const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
 
-    let rBgmSource = null, rBgmAnalyser = null, rBgmDataArray = null;
-    if (bgmBlob) {
-        rBgmSource = renderAudioCtx.createBufferSource(); rBgmSource.buffer = await renderAudioCtx.decodeAudioData(await bgmBlob.arrayBuffer());
-        rBgmAnalyser = renderAudioCtx.createAnalyser(); rBgmAnalyser.fftSize = 1024; rBgmAnalyser.smoothingTimeConstant = 0.75;
-        rBgmDataArray = new Uint8Array(rBgmAnalyser.frequencyBinCount);
-        const rBgmGain = renderAudioCtx.createGain(); rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
-        rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.connect(renderDest);
-    }
+const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 1024; rAnalyser.smoothingTimeConstant = 0.75;
 
-    const combinedStream = new MediaStream([...captureCanvas.captureStream(30).getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-    let vMime = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a') ? 'video/mp4;codecs=avc1,mp4a' : (MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm;codecs=vp9,opus');
-    let ext = vMime.includes('mp4') ? 'mp4' : 'webm';
-    const movieRecorder = new MediaRecorder(combinedStream, { mimeType: vMime, videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 });
-    const movieChunks = [];
-    movieRecorder.ondataavailable = e => { if (e.data.size > 0) movieChunks.push(e.data); };
-    movieRecorder.onstop = () => {
-        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(movieChunks, { type: vMime })); a.download = `voice-wave-${Date.now()}.${ext}`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        downloadBtn.style.pointerEvents = 'auto'; isMovieRendering = false;
-        if (confirm("お待たせしました。動画のダウンロード処理完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）")) { hideOverlayAndCleanup(); alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ"); }
-    };
+bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
+const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
+
+const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
+const rCtx = captureCanvas.getContext('2d');
+const canvasStream = captureCanvas.captureStream(30);
+const renderDest = renderAudioCtx.createMediaStreamDestination();
+rGain.connect(renderDest);
+
+let rBgmSource = null;
+let rBgmAnalyser = null; 
+let rBgmDataArray = null; 
+
+if (bgmBlob) {
+    const bgmArrayBuffer = await bgmBlob.arrayBuffer();
+    const bgmBuffer = await renderAudioCtx.decodeAudioData(bgmArrayBuffer);
+    rBgmSource = renderAudioCtx.createBufferSource();
+    rBgmSource.buffer = bgmBuffer;
     
-    isMovieRendering = true; movieRecorder.start(); bufferSource.start(0); if (rBgmSource) rBgmSource.start(0);
-    const startTime = performance.now(), duration = audioBuffer.duration * 1000;
-    function renderFrame() {
-        rAnalyser.getByteFrequencyData(rDataArray); if (rBgmAnalyser) rBgmAnalyser.getByteFrequencyData(rBgmDataArray);
-        clearCanvas(rCtx, 600, 600);
-        if (rBgmDataArray) drawWaveLogic(rCtx, captureCanvas, rBgmDataArray, 0.3); // 動画書き出し時のBGM透過度70%
-        drawWaveLogic(rCtx, captureCanvas, rDataArray, currentOpacity);
-        if (performance.now() - startTime < duration) requestAnimationFrame(renderFrame); else { bufferSource.stop(); if (rBgmSource) rBgmSource.stop(); movieRecorder.stop(); renderAudioCtx.close(); }
-    }
-    renderFrame();
+    rBgmAnalyser = renderAudioCtx.createAnalyser();
+    rBgmAnalyser.fftSize = 1024; 
+    rBgmAnalyser.smoothingTimeConstant = 0.75;
+    rBgmDataArray = new Uint8Array(rBgmAnalyser.frequencyBinCount);
+
+    const rBgmGain = renderAudioCtx.createGain();
+    rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
+    
+    rBgmSource.connect(rBgmAnalyser);
+    rBgmAnalyser.connect(rBgmGain);
+    rBgmGain.connect(renderDest);
+}
+
+const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
+
+// パソコン・Android・iPhoneすべてで video/mp4 を最優先にする
+let videoMimeType = '';
+let extension = 'mp4'; // 拡張子はmp4に固定
+
+if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a')) {
+    videoMimeType = 'video/mp4;codecs=avc1,mp4a'; // 一般的な高品質mp4形式
+} else if (MediaRecorder.isTypeSupported('video/mp4')) {
+    videoMimeType = 'video/mp4';
+} else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+    videoMimeType = 'video/webm;codecs=vp9,opus'; // 万が一のフォールバック
+    extension = 'webm';
+}
+
+const movieOptions = videoMimeType ? { mimeType: videoMimeType, videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 } : { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+const movieRecorder = new MediaRecorder(combinedStream, movieOptions);
+const movieChunks = [];
+
+movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
+movieRecorder.onstop = () => {
+const blobType = videoMimeType || 'video/mp4';
+const finalBlob = new Blob(movieChunks, { type: blobType });
+const finalVideoUrl = URL.createObjectURL(finalBlob);
+const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.${extension}`;
+
+document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+downloadBtn.style.pointerEvents = 'auto';
+isMovieRendering = false;
+const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
+
+if (finishGame) {
+hideOverlayAndCleanup();
+alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
+}
+};
+isMovieRendering = true;
+movieRecorder.start(); 
+bufferSource.start(0);
+if (rBgmSource) rBgmSource.start(0);
+
+const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
+
+function renderFrame() {
+const now = performance.now(); const elapsed = now - startTime;
+
+rAnalyser.getByteFrequencyData(rDataArray);
+if (rBgmAnalyser && rBgmDataArray) rBgmAnalyser.getByteFrequencyData(rBgmDataArray); 
+
+clearCanvas(rCtx, captureCanvas.width, captureCanvas.height);
+
+if (rBgmDataArray) {
+    drawWaveLogic(rCtx, captureCanvas, rBgmDataArray, 0.3);
+}
+
+drawWaveLogic(rCtx, captureCanvas, rDataArray, currentOpacity); 
+
+if (elapsed < duration) requestAnimationFrame(renderFrame);
+else { 
+    bufferSource.stop(); 
+    if (rBgmSource) { try { rBgmSource.stop(); } catch(e){} }
+    movieRecorder.stop(); 
+    renderAudioCtx.close(); 
+}
+}
+renderFrame();
 });
 
 window.addEventListener('message', (event) => {
-    if (event.data === 'MINIGAME_FINISHED') {
-        if (isMovieRendering) { document.getElementById('miniGameIframe').src = 'mini-game.html'; alert("動画を一所懸命に書き出し中です。完了の通知が出るまで、もう一回遊べる丼！"); } 
-        else { hideOverlayAndCleanup(); alert("ミニゲーム終了お疲れ様でした！\n録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ"); }
-    }
+if (event.data === 'MINIGAME_FINISHED') {
+if (isMovieRendering) {
+const gameIframe = document.getElementById('miniGameIframe');
+if (gameIframe) {
+gameIframe.src = 'mini-game.html';
+}
+alert("動画を一所懸命に保存中です。完了の通知が出るまで、もう一回遊べる丼！");
+} else {
+hideOverlayAndCleanup();
+alert("ミニゲーム終了お疲れ様でした！\n録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
+}
+}
 });
 
-unlockMenus(); drawStaticWave();
+// ==========================================
+// 7. 初期化処理の実行
+// ==========================================
+initMonthlyColors();
+initStandardColors();
+setupPaletteEvents();
+unlockMenus();
+drawStaticWave();nois
+
 </script>
 </body>
 </html>
