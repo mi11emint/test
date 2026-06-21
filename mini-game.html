@@ -642,7 +642,7 @@
             let timeLeft = 30, timerInterval, bloomProgress = 0, flowers = [];
 
 let shootingStars = [];
-let lightParticles = [];
+let lightSnow = [];
 let ripples = [];
 
             const centerX = canvas.width / 2, centerY = canvas.height / 2;
@@ -703,8 +703,6 @@ let ripples = [];
     updateAudio();
     let now = Date.now();
 
-
-
     // 60%～ 流れ星
     if (bloomProgress > 0.6 && Math.random() < 0.01) {
         shootingStars.push({
@@ -716,7 +714,20 @@ let ripples = [];
         });
     }
 
+// 75%～ 白い光が降る
+if (bloomProgress > 0.75 && Math.random() < 0.08) {
 
+    lightSnow.push({
+        x: Math.random() * canvas.width,
+        y: -10,
+        size: 1 + Math.random() * 1,
+        vx: -0.3 + Math.random() * 0.6,
+        vy: 0.3 + Math.random() * 0.8,
+        alpha: 0.3 + Math.random() * 0.7,
+        phase: Math.random() * Math.PI * 2
+    });
+
+}
     // 90% 光の波紋
     if (bloomProgress >= 0.9 && Math.random() < 0.03) {
         ripples.push({
@@ -765,6 +776,36 @@ for (let i = shootingStars.length - 1; i >= 0; i--) {
     }
 }
 
+// ===== ❄️ 白い光 =====
+for (let i = lightSnow.length - 1; i >= 0; i--) {
+
+    let p = lightSnow[i];
+
+    ctx.save();
+
+    ctx.globalAlpha = p.alpha;
+
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // ゆらゆら左右に揺れる
+    p.x += p.vx + Math.sin(now / 700 + p.phase) * 0.3;
+
+    // ゆっくり落下
+    p.y += p.vy;
+
+    // 画面外に出たら削除
+    if (p.y > canvas.height + 20) {
+        lightSnow.splice(i, 1);
+    }
+}
 
 // ===== 💫 光の波紋 =====
 for (let i = ripples.length - 1; i >= 0; i--) {
