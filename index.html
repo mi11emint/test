@@ -1273,6 +1273,12 @@ recBtn.addEventListener('click', async () => {
     if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
     isPlayingRecorded = false; 
 
+    //  古い音声の接続を切る
+    if (recordedSourceNode) {
+        recordedSourceNode.disconnect();
+        recordedSourceNode = null;
+    }
+
     // 🍏 2. 全ブラウザ共通：最速でオーディオシステム（audioCtx）を起動・再開
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1445,19 +1451,10 @@ playPauseBtn.addEventListener('click', () => {
 
         syncAudioParams(); 
 
-        // 🍏 BGMを録音音声の再生位置に合わせて同時に再生する処理
+        // 🍏 録音データ（声＋BGM）だけを再生すれば良いので、元のBGM単体はミュート（停止）しておく
         if (playbackBgm) { 
-            playbackBgm.currentTime = playbackAudio.currentTime; 
-            
-            // 再生モード用に、BGMの配線をスピーカー（audioCtx.destination）だけに繋ぎ替える（録音箱への接続を切る）
-            if (bgmMediaSource && bgmGainNode && bgmAnalyser) {
-                bgmMediaSource.disconnect();
-                bgmMediaSource.connect(bgmAnalyser);
-                bgmAnalyser.connect(bgmGainNode);
-                bgmGainNode.connect(audioCtx.destination); // スピーカーへ直行
-            }
-            playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
-        } 
+            playbackBgm.pause(); 
+        }
 
         // 録音音声の再生
         playbackAudio.play().then(() => { 
@@ -1514,7 +1511,7 @@ let rBgmSource = null;
 let rBgmAnalyser = null; 
 let rBgmDataArray = null; 
 
-if (bgmBlob) {
+if (false) {
     const bgmArrayBuffer = await bgmBlob.arrayBuffer();
     const bgmBuffer = await renderAudioCtx.decodeAudioData(bgmArrayBuffer);
     rBgmSource = renderAudioCtx.createBufferSource();
