@@ -890,18 +890,34 @@ function drawStaticWave() {
 }
 
 function draw() {
-    if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
-    animationId = requestAnimationFrame(draw);
-    if (isRecording && isRecordingPaused) {
-        if (dataArray) dataArray.fill(0);
-        if (bgmDataArray) bgmDataArray.fill(0);
-    } else {
-        if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
-        if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+    // 録音も再生もしていないなら、即座にループを完全に停止（電池節約）
+    if (!isRecording && !isPlayingRecorded) {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        return;
     }
-    clearCanvas(ctx, canvas.width, canvas.height);
-    if (bgmDataArray) drawWaveLogic(ctx, canvas, bgmDataArray, 0.3); // BGM透過度70%
-    if (dataArray) drawWaveLogic(ctx, canvas, dataArray, currentOpacity); // 声の透過度
+
+    // エラーが起きてもスマホが止まらないための安全装置
+    try {
+        if (isRecording && isRecordingPaused) {
+            if (dataArray) dataArray.fill(0);
+            if (bgmDataArray) bgmDataArray.fill(0);
+        } else {
+            if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+            if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+        }
+
+        clearCanvas(ctx, canvas.width, canvas.height);
+        if (bgmDataArray) drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
+        if (dataArray) drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
+
+        animationId = requestAnimationFrame(draw);
+    } catch (e) {
+        console.error("描画エラー停止:", e);
+        animationId = null; 
+    }
 }
 
 function updateTimerText() { timerDisplay.innerText = `${String(Math.floor(timeLeft / 60)).padStart(2, '0')}:${String(timeLeft % 60).padStart(2, '0')}`; }
@@ -965,6 +981,9 @@ resetBtn.addEventListener('click', () => {
 });
 
 recBtn.addEventListener('click', async () => {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+  
     if (isRecording) {
         if (isRecordingPaused) {
             isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
@@ -1047,12 +1066,21 @@ playPauseBtn.addEventListener('click', async () => {
         setupPlaybackAudioNodes();
         if (playbackBgm) setupBgmNodes();
         
+        // 【修正箇所: playPauseBtn内】
+// catch句も含めて以下のように書き換えてください
         isPlayingRecorded = true; playPauseImg.src = IMG_PAUSE;
-        playbackAudio.play().then(() => {
-            if (playbackBgm) { playbackBgm.currentTime = playbackAudio.currentTime; playbackBgm.play().catch(e=>{}); }
+        try {
+            await playbackAudio.play();
+            if (playbackBgm) {
+                playbackBgm.currentTime = playbackAudio.currentTime;
+                await playbackBgm.play();
+            }
             if (!animationId) draw();
-        }).catch(err => { isPlayingRecorded = false; playPauseImg.src = IMG_PLAY; alert("再生失敗"); });
-    }
+        } catch(err) {
+            isPlayingRecorded = false; playPauseImg.src = IMG_PLAY;
+            alert("再生失敗。もう一度押してみてください。");
+            console.error(err);
+        }
 });
 
 seekBar.addEventListener('input', () => { if (!playbackAudio) return; isUserChangingIndex = true; playbackAudio.currentTime = seekBar.value; if (playbackBgm) playbackBgm.currentTime = seekBar.value; });
