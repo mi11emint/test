@@ -980,19 +980,37 @@ targetCtx.restore();
 }
 
 async function startRecordingStream() {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: { 
-    echoCancellation: isNoiseCancelOn, 
-    noiseSuppression: isNoiseCancelOn, 
-    autoGainControl: false 
-}
-});
-audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-source = audioCtx.createMediaStreamSource(stream);
-setupAudioNodes(source, true);
-recordDestination = audioCtx.createMediaStreamDestination();
-gainNode.connect(recordDestination);
-dataArray = new Uint8Array(analyser.frequencyBinCount);
+    // 1. マイクの取得
+    stream = await navigator.mediaDevices.getUserMedia({
+        audio: { 
+            echoCancellation: isNoiseCancelOn, 
+            noiseSuppression: isNoiseCancelOn, 
+            autoGainControl: false 
+        }
+    });
+
+    // 2. AudioContextの作成
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    // 3. マイクソースの設定
+    source = audioCtx.createMediaStreamSource(stream);
+    setupAudioNodes(source, true); // マイク用ノード（エフェクト等）の設定
+
+    // 4. 録音用ストリームの作成
+    recordDestination = audioCtx.createMediaStreamDestination();
+
+    // 5. 【重要】マイクの音を録音先へ接続
+    gainNode.connect(recordDestination);
+
+    // 6. 【ここを追加】BGMがロード済みなら、録音先へも接続する
+    if (bgmMediaSource) {
+        // BGMがスピーカーにも流れるようにしつつ、録音先にも分岐させる
+        bgmGainNode.connect(recordDestination);
+    }
+
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 
 async function restartRecordingStream() {
