@@ -956,6 +956,14 @@ bgmInput.addEventListener('change', (e) => {
 // ==========================================
 // 7. 録音・再生コントロール
 // ==========================================
+
+// 【リセットボタンの復活と修正】
+resetBtn.addEventListener('click', () => {
+    if (confirm("全てのデータをリセットして最初からやり直しますか？")) {
+        resetDataWithoutPrompt();
+    }
+});
+
 recBtn.addEventListener('click', async () => {
     if (isRecording) {
         if (isRecordingPaused) {
@@ -970,6 +978,7 @@ recBtn.addEventListener('click', async () => {
         unlockMenus();
         await startRecordingStream();
         
+        // BGMがあれば録音時に流す
         if (playbackBgm) {
             setupBgmNodes();
             playbackBgm.currentTime = 0;
@@ -998,7 +1007,7 @@ recBtn.addEventListener('click', async () => {
         mediaRecorder.start(); draw();
         recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
         timerInterval = setInterval(() => { if (!isRecordingPaused) { timeLeft--; updateTimerText(); if (timeLeft <= 0) stopBtn.click(); } }, 1000);
-    } catch (err) { alert("マイク起動失敗^.ˬ.^ฅⳊ: " + err); }
+    } catch (err) { alert("マイク起動失敗: " + err); }
 });
 
 pauseBtn.addEventListener('click', () => {
@@ -1024,9 +1033,11 @@ stopBtn.addEventListener('click', () => {
     clearInterval(timerInterval); recBtn.classList.remove('recording'); timerDisplay.style.display = 'none'; drawStaticWave();
 });
 
-playPauseBtn.addEventListener('click', () => {
-    if (!audioBlobUrl) { alert("録音完了後に再生するボタンです^.ˬ.^ฅⳊ"); return; }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+playPauseBtn.addEventListener('click', async () => {
+    if (!audioBlobUrl) { alert("録音完了後に再生してください"); return; }
+    // Safari対策: ユーザー操作で確実にAudioContextを起動する
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
 
     if (isPlayingRecorded) {
         playbackAudio.pause();
@@ -1040,7 +1051,7 @@ playPauseBtn.addEventListener('click', () => {
         playbackAudio.play().then(() => {
             if (playbackBgm) { playbackBgm.currentTime = playbackAudio.currentTime; playbackBgm.play().catch(e=>{}); }
             if (!animationId) draw();
-        }).catch(err => { isPlayingRecorded = false; playPauseImg.src = IMG_PLAY; alert("再生失敗しました"); });
+        }).catch(err => { isPlayingRecorded = false; playPauseImg.src = IMG_PLAY; alert("再生失敗"); });
     }
 });
 
