@@ -1076,31 +1076,32 @@ if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false; isRecording = false; isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
 audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
-bgmAnalyser = null; bgmDataArray = null;
-unlockMenus();
-// BGM関連のリセット
+bgmAnalyser = null; 
+bgmDataArray = null;
+
+// ★ここから追加
 if (bgmBlobUrl) {
     URL.revokeObjectURL(bgmBlobUrl);
-    bgmBlobUrl = null;
 }
 
 bgmBlob = null;
+bgmBlobUrl = null;
 
 if (playbackBgm) {
     playbackBgm.pause();
-    playbackBgm = null;
 }
 
+playbackBgm = null;
 bgmMediaSource = null;
-bgmAnalyser = null;
-bgmDataArray = null;
 bgmGainNode = null;
 
-bgmInput.value = ""; // 同じファイルを再選択できるようにする
+bgmInput.value = "";
 
-bgmImportBtn.classList.remove("loaded");
+bgmImportBtn.classList.remove('loaded');
 bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
+// ★ここまで追加
 
+unlockMenus();
 drawStaticWave();
 }
 
