@@ -1263,7 +1263,27 @@ recBtn.addEventListener('click', async () => {
         return;
     }
 
-    // 🍏 1. Safari・全ブラウザ最速対策：クリックした瞬間にAudioContextを起動
+    // 🍏 1. 【最優先】まず古い録音音声オブジェクトだけを停止・クリアする
+    // resetDataWithoutPrompt(true)のセルフブレーキを回避するため、ここで手動で安全にクリアします
+    if (playbackAudio) { 
+        playbackAudio.pause(); 
+        playbackAudio = null; 
+    }
+    if (audioBlobUrl) { 
+        URL.revokeObjectURL(audioBlobUrl); 
+        audioBlobUrl = null; 
+    }
+    audioBlob = null; 
+    seekBar.value = 0; 
+    playPauseImg.src = IMG_PLAY; 
+    downloadBtn.classList.remove('ready');
+    if (animationId) { 
+        cancelAnimationFrame(animationId); 
+        animationId = null; 
+    }
+    isPlayingRecorded = false; 
+
+    // 🍏 2. ブラウザのセキュリティロック解除（クリックしたこの瞬間にAudioContextを最速起動）
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -1271,17 +1291,17 @@ recBtn.addEventListener('click', async () => {
         await audioCtx.resume();
     }
 
-    // 🍏 2. 【超重要】BGMの音源ルート（ノード）を再生前にここで最優先接続！
+    // 🍏 3. 【超重要】マイクを待つ（awaitする）前に、BGMのWeb Audio接続と再生を完了させる！
     if (playbackBgm) {
         playbackBgm.currentTime = 0;
         playbackBgm.volume = parseFloat(bgmVolSlider.value);
 
-        // ソース要素が生涯で一度も作られていなければ作成
+        // メディアソースノードが生涯で一度も作られていなければ作成
         if (!bgmMediaSource) {
             bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
         }
         
-        // アナライザー（波形取得用）の準備
+        // アナライザー（BGMの波形表示用）の作成
         if (!bgmAnalyser) {
             bgmAnalyser = audioCtx.createAnalyser();
             bgmAnalyser.fftSize = 1024;
@@ -1289,29 +1309,31 @@ recBtn.addEventListener('click', async () => {
             bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
         }
         
-        // 音量調節ノードの準備
+        // BGM用の音量ノードの作成
         if (!bgmGainNode) {
             bgmGainNode = audioCtx.createGain();
         }
         
-        // 安全にスピーカーとアナライザーへ接続を確立する
+        // 安全に再接続（スピーカー：audioCtx.destination に合流させる）
         bgmMediaSource.disconnect(); 
         bgmMediaSource.connect(bgmAnalyser);
         bgmAnalyser.connect(bgmGainNode);
         bgmGainNode.connect(audioCtx.destination);
         
-        syncAudioParams(); // 音量の同期
+        // スライダーの音量を即座に反映
+        bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
 
-        // 🔊 接続が完全に完了した直後に再生をスタートさせる！
-        playbackBgm.play().catch(e => console.log("BGM play error on record start:", e));
+        // 🔊 準備完了！マイクの非同期処理を待つ前に、ここで確実に再生をスタート！
+        playbackBgm.play().catch(e => console.log("BGM Play Error on Click:", e));
     }
 
-    // 🍏 3. BGMを保持したまま古い録音データを初期化
-    resetDataWithoutPrompt(true); 
-
+    // 🍏 4. メニューをロックしてマイクの起動（非同期処理）へ入る
     try {
         unlockMenus();
+        
+        // マイクストリームを取得して、マイク用のEQやアナライザーに繋ぐ関数
         await startRecordingStream();
+        
         isRecording = true; 
         isRecordingPaused = false;
         recordedChunks = [];
@@ -1353,7 +1375,7 @@ recBtn.addEventListener('click', async () => {
             lockMenus();
         };
 
-        // マイク録音の開始と波形描画のスタート
+        // MediaRecorderによる実際の録音開始と、描画ループ（BGM波形＋マイク波形）を開始
         mediaRecorder.start();
         draw();
         
