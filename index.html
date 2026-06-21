@@ -1315,14 +1315,16 @@ recBtn.addEventListener('click', async () => {
             bgmGainNode = audioCtx.createGain();
         }
         
-        // 🛠️ 録音用の配線：一度全部切断してから、正しいルートに繋ぎ直す
-        bgmMediaSource.disconnect(); 
+// 🛠️ 録音用の配線：確実な接続を行う
+        try { bgmMediaSource.disconnect(); } catch(e) {}
+        
         bgmMediaSource.connect(bgmAnalyser);
         bgmAnalyser.connect(bgmGainNode);
         
-        // 🔊 BGMの音を ①自分のスピーカー と ②録音機 の両方に確実に分岐して流す！
+        // ①スピーカーへ流す
         bgmGainNode.connect(audioCtx.destination); 
-        bgmGainNode.connect(recordDestination);     
+        // ②録音機（recordDestination）へ流す
+        bgmGainNode.connect(recordDestination);  
         
         bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
 
