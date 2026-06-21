@@ -1249,7 +1249,7 @@ recBtn.addEventListener('click', async () => {
     if (isRecording) {
         if (isRecordingPaused) {
             isRecordingPaused = false;
-            pauseBtnImg.src = IMG_PAUSE; // 動いているときは二本線マークにする
+            pauseBtnImg.src = IMG_PAUSE;
             if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
             if (playbackBgm) playbackBgm.play().catch(e => {});
         }
@@ -1263,33 +1263,19 @@ recBtn.addEventListener('click', async () => {
         isRecordingPaused = false;
         recordedChunks = [];
         
-        // 利用可能な形式を自動で探す
-let audioMimeType = 'audio/webm;codecs=opus';
-if (!MediaRecorder.isTypeSupported(audioMimeType)) {
-    if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        audioMimeType = 'audio/mp4'; // iPhone(Safari)用の形式
-    } else {
-        audioMimeType = ''; // 端末のデフォルトに任せる
-    }
-}
-
-const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
-mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
-
+        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
             audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
             audioBlobUrl = URL.createObjectURL(audioBlob);
             
-            // 🍏 Safari対策：毎回新規作成せず、器をきれいにリセットして使い回す
             if (!playbackAudio) {
                 playbackAudio = new Audio();
             }
             playbackAudio.src = audioBlobUrl;
             playbackAudio.preload = "auto";
             
-            // 🍏 シークバー最大値の設定と連動（重複登録を防ぐため一度クリアして登録）
             playbackAudio.onloadedmetadata = () => { 
                 seekBar.max = playbackAudio.duration; 
                 seekBar.value = 0; 
@@ -1317,17 +1303,25 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
         if (playbackBgm) {
             playbackBgm.currentTime = 0;
 
+            // 🍏 Safari・全ブラウザ共通対策：すでに作られている（変数に入っている）場合は二重に作成しない！
             if (!bgmMediaSource) {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
             }
             
-            bgmAnalyser = audioCtx.createAnalyser();
-            bgmAnalyser.fftSize = 1024;
-            bgmAnalyser.smoothingTimeConstant = 0.75;
-            bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+            // アナライザーなどの初期設定
+            if (!bgmAnalyser) {
+                bgmAnalyser = audioCtx.createAnalyser();
+                bgmAnalyser.fftSize = 1024;
+                bgmAnalyser.smoothingTimeConstant = 0.75;
+            }
+            if (!bgmDataArray) {
+                bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+            }
+            if (!bgmGainNode) {
+                bgmGainNode = audioCtx.createGain();
+            }
             
-            bgmGainNode = audioCtx.createGain();
-            
+            // 安全に再接続
             bgmMediaSource.disconnect(); 
             bgmMediaSource.connect(bgmAnalyser);
             bgmAnalyser.connect(bgmGainNode);
