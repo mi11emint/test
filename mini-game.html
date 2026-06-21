@@ -646,7 +646,7 @@
             function animate() { drawGame(); animId = requestAnimationFrame(animate); }
             animate();
 
-            flowers = []; const totalFlowers = 350;
+            flowers = []; const totalFlowers = 700;
             for(let i = 0; i < totalFlowers; i++) {
                 let angle = Math.random() * Math.PI * 2; let dist = Math.pow(Math.random(), 0.8) * 140;
                 flowers.push({ x: centerX + Math.cos(angle) * dist, y: centerY + Math.sin(angle) * dist, color: ["#ffb7d5", "#b2ebf2", "#fff59d", "#c8e6c9", "#e1bee7", "#ffcc80"][Math.floor(Math.random() * 6)], maxSize: Math.random() * 3.5 + 2.5, requiredProgress: 0.01 + Math.random() * 0.98, sparkleOffset: Math.random() * 100 });
@@ -682,7 +682,7 @@
                 let total = 0; for (let i = 0; i < dataArray.length; i++) total += dataArray[i];
                 let currentVolume = total / dataArray.length;
 
-                if (currentVolume > 5) { bloomProgress += 0.0035; if (bloomProgress > 1.1) bloomProgress = 1.1; }
+                if (currentVolume > 5) { bloomProgress += 0.0015; if (bloomProgress > 1.1) bloomProgress = 1.1; }
             }
 
             function drawGame() {
