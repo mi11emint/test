@@ -1068,16 +1068,48 @@ document.getElementById('menuTouka').classList.remove('locked');
 }
 
 function resetDataWithoutPrompt() {
-if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
-if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
-if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
-if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-isPlayingRecorded = false; isRecording = false; isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; bgmMediaSource = null;
-bgmAnalyser = null; bgmDataArray = null;
-unlockMenus(); drawStaticWave();
+    // 1. 録音データのクリア
+    recordedChunks = [];
+    if (audioBlobUrl) {
+        URL.revokeObjectURL(audioBlobUrl);
+        audioBlobUrl = null;
+    }
+    
+    // 2. プレイヤーとアナライザーの安全な停止・破棄
+    if (playbackAudio) {
+        playbackAudio.pause();
+        playbackAudio = null;
+    }
+    if (source) {
+        source.disconnect();
+        source = null;
+    }
+    
+    // 3. アニメーションの停止
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    
+    // 4. ボタン状態とUIの初期化
+    isRecording = false;
+    isRecordingPaused = false;
+    isPlayingRecorded = false;
+    
+    recBtn.classList.remove('recording');
+    playPauseImg.src = IMG_PLAY;
+    downloadBtn.classList.remove('ready');
+    timerDisplay.style.display = 'none';
+    timeLeft = 120;
+    updateTimerText();
+    
+    // 5. 波形を静止状態（線）に戻す
+    drawStaticWave();
+    
+    // 6. メニューのロック解除（もしあれば）
+    unlockMenus();
+    
+    console.log("アプリの状態をクリーンにリセットしました！");
 }
 
 function hideOverlayAndCleanup() {
