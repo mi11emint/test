@@ -1108,8 +1108,30 @@ function resetDataWithoutPrompt() {
     
     // 6. メニューのロック解除（もしあれば）
     unlockMenus();
+    // --- 🍏 BGMインポート状態を初期化する追加処理 ---
+    if (playbackBgm) {
+        playbackBgm.pause();
+        playbackBgm = null; // BGM音源のメモリを解放
+    }
     
-    console.log("アプリの状態をクリーンにリセットしました！");
+    // BGMの接続経路も完全にリセット
+    if (bgmSourceNode) {
+        bgmSourceNode.disconnect();
+        bgmSourceNode = null;
+    }
+    if (bgmMediaSource) {
+        bgmMediaSource = null; 
+    }
+
+    // --- ボタンの見た目を初期化 ---
+    const bgmImportBtn = document.getElementById('importBtn'); 
+    if (bgmImportBtn) {
+        bgmImportBtn.classList.remove('active'); // 色が変わるクラスを削除
+        bgmImportBtn.style.backgroundColor = ''; // 背景色をCSSの状態に戻す
+    }
+    
+    
+    console.log("リセットしました^.ˬ.^ฅⳊ");
 }
 
 function hideOverlayAndCleanup() {
