@@ -1267,7 +1267,23 @@ recBtn.addEventListener('click', async () => {
         }
         return;
     }
-    resetDataWithoutPrompt(true); // ← true を渡して、BGMを消さずに保持する！
+
+    // 🍏 Safari最速対策：awaitでマイクを待つ前に、クリック直下のこの瞬間にAudioContextを起動！
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+
+    // 🍏 Safari対策：非同期処理の前に、BGMの再生権限を一瞬で取得する
+    if (playbackBgm) {
+        playbackBgm.currentTime = 0;
+        playbackBgm.volume = parseFloat(bgmVolSlider.value);
+        playbackBgm.play().catch(e => console.log("Safari BGM pre-play bypass:", e));
+    }
+
+    resetDataWithoutPrompt();
     try {
         unlockMenus();
         await startRecordingStream();
@@ -1275,29 +1291,32 @@ recBtn.addEventListener('click', async () => {
         isRecordingPaused = false;
         recordedChunks = [];
         
-        mediaRecorder = new MediaRecorder(recordDestination.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 });
+        let audioMimeType = 'audio/webm;codecs=opus';
+        if (!MediaRecorder.isTypeSupported(audioMimeType)) {
+            if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                audioMimeType = 'audio/mp4'; 
+            } else {
+                audioMimeType = ''; 
+            }
+        }
+
+        const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
+        mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
+
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
         
         mediaRecorder.onstop = () => {
-            audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+            audioBlob = new Blob(recordedChunks, { type: audioMimeType || 'audio/webm' });
             audioBlobUrl = URL.createObjectURL(audioBlob);
             
-            if (!playbackAudio) {
-                playbackAudio = new Audio();
-            }
-            playbackAudio.src = audioBlobUrl;
+            // 🚨【修正】Safariエラー対策：ここでは playbackAudio の作成のみ行い、
+            // createMediaElementSource などのノード接続は「再生ボタンを押した瞬間」まで絶対に行わない！
+            playbackAudio = new Audio(audioBlobUrl);
             playbackAudio.preload = "auto";
             
-            playbackAudio.onloadedmetadata = () => { 
-                seekBar.max = playbackAudio.duration; 
-                seekBar.value = 0; 
-            };
-            playbackAudio.ontimeupdate = () => { 
-                if (!isUserChangingIndex && playbackAudio.duration) {
-                    seekBar.value = playbackAudio.currentTime; 
-                }
-            };
-            playbackAudio.onended = () => { 
+            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
+            playbackAudio.addEventListener('ended', () => { 
                 playPauseImg.src = IMG_PLAY; 
                 isPlayingRecorded = false; 
                 if (animationId) cancelAnimationFrame(animationId); 
@@ -1305,42 +1324,35 @@ recBtn.addEventListener('click', async () => {
                 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
                 seekBar.value = 0; 
                 drawStaticWave(); 
-            };
-
+            });
             downloadBtn.classList.add('ready'); 
             playPauseImg.src = IMG_PLAY;
             lockMenus();
         };
 
+        // BGMのアナライザー接続（マイクストリーム取得後、安全に実行）
         if (playbackBgm) {
-            playbackBgm.currentTime = 0;
-
-            // 🍏 Safari・全ブラウザ共通対策：すでに作られている（変数に入っている）場合は二重に作成しない！
             if (!bgmMediaSource) {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
             }
             
-            // アナライザーなどの初期設定
             if (!bgmAnalyser) {
                 bgmAnalyser = audioCtx.createAnalyser();
                 bgmAnalyser.fftSize = 1024;
                 bgmAnalyser.smoothingTimeConstant = 0.75;
-            }
-            if (!bgmDataArray) {
                 bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
             }
+            
             if (!bgmGainNode) {
                 bgmGainNode = audioCtx.createGain();
             }
             
-            // 安全に再接続
             bgmMediaSource.disconnect(); 
             bgmMediaSource.connect(bgmAnalyser);
             bgmAnalyser.connect(bgmGainNode);
             bgmGainNode.connect(audioCtx.destination);
             
             syncAudioParams();
-            playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
         }
 
         mediaRecorder.start();
@@ -1384,78 +1396,57 @@ resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) { resetDataWithoutPrompt(); alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ"); }
 });
 
-playPauseBtn.addEventListener('click', async () => { 
-    if (!audioBlobUrl || !playbackAudio) { 
+playPauseBtn.addEventListener('click', () => {
+    if (!audioBlobUrl) { 
         alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); 
         return; 
     }
 
-    if (playbackAudio.paused) {
-        // 🍏 1. Safari対策：タップした瞬間に最速でオーディオ全体を再開！
-        if (audioCtx && audioCtx.state === 'suspended') {
-            await audioCtx.resume();
-        }
+    // 🍏 Safari対策：タップした直後に同期的に再開
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
 
+    if (isPlayingRecorded) {
+        // ⏸️ 一時停止処理
+        if (playbackAudio) playbackAudio.pause();
+        if (playbackBgm) playbackBgm.pause();
+        playPauseImg.src = IMG_PLAY;
+        isPlayingRecorded = false;
+    } else {
+        // ▶️ 再生処理
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
-        // 🍏 2. 余計な関数を挟まず、一直線に再生命令を出す
-        playbackAudio.play().then(() => {
-            
-            // 🍏 3. 再生が成功した直後に、オーディオ接続を安全に実行
-            if (audioCtx) {
-                // 録音音声の接続（生涯で一度だけ作成して使い回す）
-                if (!recordedSourceNode) {
-                    recordedSourceNode = audioCtx.createMediaElementSource(playbackAudio);
-                    setupAudioNodes(recordedSourceNode, false);
-                }
+        // 🍏 初回再生時のみ、録音声のWeb Audio API（エフェクト・波形用）接続を行う
+        if (playbackAudio && !recordedSourceNode) {
+            recordedSourceNode = audioCtx.createMediaElementSource(playbackAudio);
+            setupAudioNodes(recordedSourceNode, false); // スピーカーとメインアナライザーに接続
+        }
 
-                // 🍏 4. インポートしたBGMの接続処理
-                if (playbackBgm) {
-                    // BGMのソースも生涯で一度だけ作成
-                    if (!bgmSourceNode) {
-                        bgmSourceNode = audioCtx.createMediaElementSource(playbackBgm);
-                    }
+        syncAudioParams(); // 音量やEQの同期
 
-                    // 再生位置を録音音声と完全に同期
-                    playbackBgm.currentTime = playbackAudio.currentTime;
-
-                    // 分析プレイヤー（アナライザー）の準備
-                    if (!bgmAnalyser) {
-                        bgmAnalyser = audioCtx.createAnalyser();
-                        bgmAnalyser.fftSize = 1024;
-                        bgmAnalyser.smoothingTimeConstant = 0.75;
-                    }
-                    if (!bgmDataArray) {
-                        bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-                    }
-
-                    // BGMの音量調整ノードの準備
-                    if (!bgmGainNode) {
-                        bgmGainNode = audioCtx.createGain();
-                    }
-
-                    // 一度接続を安全に切り離してから、波形メーターとスピーカーへ接続
-                    bgmSourceNode.disconnect();
-                    bgmSourceNode.connect(bgmAnalyser);
-                    bgmAnalyser.connect(bgmGainNode);
-                    bgmGainNode.connect(audioCtx.destination);
-
-                    // 🔊 【ここに一本化】正しくWeb Audioに繋がった後にBGMを再生
-                    playbackBgm.play().catch(e => console.log("BGM play error:", e));
-                }
-
-                // 🍏 5. 接続完了後にエフェクトや音量の同期を実行
-                syncAudioParams();
+        // BGMを録音音声の再生位置に完全に同期させて再生
+        if (playbackBgm) { 
+            playbackBgm.currentTime = playbackAudio.currentTime; 
+            if (bgmMediaSource && bgmGainNode && bgmAnalyser) {
+                bgmMediaSource.disconnect();
+                bgmMediaSource.connect(bgmAnalyser);
+                bgmAnalyser.connect(bgmGainNode);
+                bgmGainNode.connect(audioCtx.destination);
             }
-            
-            // 🌊 6. 波形アニメーションをスタート！
-            draw();
-        }).catch(err => {
+            playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
+        } 
+
+        // 録音音声のストレート再生
+        playbackAudio.play().then(() => { 
+            draw(); // 波形アニメーション開始
+        }).catch(err => { 
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
-            console.error("Safari Play Blocked:", err);
-            alert("再生に失敗しました。もう一度再生ボタンを押してみてください！");
+            if (playbackBgm) playbackBgm.pause();
+            console.error("Playback Error:", err);
+            alert("再生に失敗しました。もう一度再生ボタンを押してみてください。");
         });
     } else {
         // ⏸️ 一時停止時の処理
