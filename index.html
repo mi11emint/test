@@ -1263,27 +1263,17 @@ recBtn.addEventListener('click', async () => {
         return;
     }
 
-    // 🍏 1. 【最優先】まず古い録音音声オブジェクトだけを停止・クリアする
-    // resetDataWithoutPrompt(true)のセルフブレーキを回避するため、ここで手動で安全にクリアします
-    if (playbackAudio) { 
-        playbackAudio.pause(); 
-        playbackAudio = null; 
-    }
-    if (audioBlobUrl) { 
-        URL.revokeObjectURL(audioBlobUrl); 
-        audioBlobUrl = null; 
-    }
+    // 🍏 1. 古い録音データを安全にクリア（BGMは消さない）
+    if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+    if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
     audioBlob = null; 
     seekBar.value = 0; 
     playPauseImg.src = IMG_PLAY; 
     downloadBtn.classList.remove('ready');
-    if (animationId) { 
-        cancelAnimationFrame(animationId); 
-        animationId = null; 
-    }
+    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
     isPlayingRecorded = false; 
 
-    // 🍏 2. ブラウザのセキュリティロック解除（クリックしたこの瞬間にAudioContextを最速起動）
+    // 🍏 2. 全ブラウザ共通：最速でオーディオシステム（audioCtx）を起動・再開
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -1291,17 +1281,23 @@ recBtn.addEventListener('click', async () => {
         await audioCtx.resume();
     }
 
-    // 🍏 3. 【超重要】マイクを待つ（awaitする）前に、BGMのWeb Audio接続と再生を完了させる！
+    // 🍏 3. 【超重要】マイクの録音先（recordDestination）をこの瞬間に最優先で作成！
+    // これをマイク取得より前に作らないと、BGMの録音経路が消滅します
+    if (!recordDestination) {
+        recordDestination = audioCtx.createMediaStreamDestination();
+    }
+
+    // 🍏 4. BGMがインポートされている場合、録音機とスピーカーに確実に「同時配線」して再生！
     if (playbackBgm) {
         playbackBgm.currentTime = 0;
         playbackBgm.volume = parseFloat(bgmVolSlider.value);
 
-        // メディアソースノードが生涯で一度も作られていなければ作成
+        // BGMの音源ノード作成（生涯に一度だけ）
         if (!bgmMediaSource) {
             bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
         }
         
-        // アナライザー（BGMの波形表示用）の作成
+        // BGMの波形を見るためのアナライザー
         if (!bgmAnalyser) {
             bgmAnalyser = audioCtx.createAnalyser();
             bgmAnalyser.fftSize = 1024;
@@ -1309,35 +1305,38 @@ recBtn.addEventListener('click', async () => {
             bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
         }
         
-        // BGM用の音量ノードの作成
+        // BGMの音量ツマミ
         if (!bgmGainNode) {
             bgmGainNode = audioCtx.createGain();
         }
         
-        // 安全に再接続（スピーカー：audioCtx.destination に合流させる）
+        // 🛠️ BGMの正しい配線（切断して繋ぎ直す）
         bgmMediaSource.disconnect(); 
         bgmMediaSource.connect(bgmAnalyser);
         bgmAnalyser.connect(bgmGainNode);
-        bgmGainNode.connect(audioCtx.destination);
         
-        // スライダーの音量を即座に反映
+        // 【分岐点】BGMの音を①自分のスピーカー と ②録音機（Destination）の両方に分岐して流す！
+        bgmGainNode.connect(audioCtx.destination); // 自分の耳に聞こえるライン
+        bgmGainNode.connect(recordDestination);     // 録音データに書き込まれるライン
+        
         bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
 
-        // 🔊 準備完了！マイクの非同期処理を待つ前に、ここで確実に再生をスタート！
-        playbackBgm.play().catch(e => console.log("BGM Play Error on Click:", e));
+        // 🔊 Safariのブロックを回避するため、非同期処理（マイク許可）を待つ前に今すぐ再生
+        playbackBgm.play().catch(e => console.log("BGM Click Play:", e));
     }
 
-    // 🍏 4. メニューをロックしてマイクの起動（非同期処理）へ入る
+    // 🍏 5. メニューをロックしてマイクを起動（非同期処理へ）
     try {
         unlockMenus();
         
-        // マイクストリームを取得して、マイク用のEQやアナライザーに繋ぐ関数
+        // マイクストリーム（streamやマイク用analyser、gainNode等）を準備する関数
         await startRecordingStream();
         
         isRecording = true; 
         isRecordingPaused = false;
         recordedChunks = [];
         
+        // 機種ごとの音声形式（MimeType）の選定
         let audioMimeType = 'audio/webm;codecs=opus';
         if (!MediaRecorder.isTypeSupported(audioMimeType)) {
             if (MediaRecorder.isTypeSupported('audio/mp4')) {
@@ -1348,6 +1347,8 @@ recBtn.addEventListener('click', async () => {
         }
 
         const recorderOptions = audioMimeType ? { mimeType: audioMimeType, audioBitsPerSecond: 320000 } : { audioBitsPerSecond: 320000 };
+        
+        // 🚨【重要修正】上で作った recordDestination.stream を確実に録音機にセット
         mediaRecorder = new MediaRecorder(recordDestination.stream, recorderOptions);
 
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
@@ -1375,7 +1376,7 @@ recBtn.addEventListener('click', async () => {
             lockMenus();
         };
 
-        // MediaRecorderによる実際の録音開始と、描画ループ（BGM波形＋マイク波形）を開始
+        // 録音機（MediaRecorder）をスタートし、波形アニメーションを開始
         mediaRecorder.start();
         draw();
         
