@@ -709,6 +709,7 @@ let playbackBgm = null;
 let bgmGainNode = null;
 let bgmMediaSource = null;
 let bgmAnalyser = null;
+let bgmTopic = null;
 let bgmDataArray = null;
 
 // ==========================================
@@ -1024,7 +1025,7 @@ function stopRecording() {
 if (!isRecording) return; 
 isRecording = false;
 isRecordingPaused = false; 
-pauseBtnImg.src = IMG_PAUSE; // 初期画像（二本線）に戻す
+pauseBtnImg.src = IMG_PAUSE; 
 
 if (playbackBgm) {
     playbackBgm.pause();
@@ -1074,7 +1075,6 @@ function resetDataWithoutPrompt(keepBgm = false) {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
 
 if (!keepBgm) {
-    // keepBgmがfalse（デフォルト）の時だけBGMを完全に削除する
     if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; } 
     if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
     bgmBlob = null;
@@ -1083,12 +1083,9 @@ if (!keepBgm) {
     bgmImportBtn.innerText = "IMPORT\nBGM\n♬";
     bgmInput.value = ""; 
 } else {
-    // BGMをキープするときは、一旦停止して再生位置を先頭に戻すだけにする
     if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
 }
 
-// ノイズキャンセルボタンをデフォルト（OFF）に戻す
-// （※注意：録音中にキープしたい場合はここも!keepBgmの枠内に入れるか、そのままにしてください）
 if (!keepBgm) {
     isNoiseCancelOn = false;
     noiseCancelBtn.classList.remove('active');
@@ -1107,12 +1104,10 @@ isRecording = false;
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE; 
 
-// BGMノード系を完全にリセットさせないため、キープ時は条件を変更
 if (!keepBgm) {
     audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; bgmGainNode = null; source = null; analyser = null; dataArray = null; 
     bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
 } else {
-    // 録音の音声をクリアするための初期化
     eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
 }
 
@@ -1268,7 +1263,6 @@ recBtn.addEventListener('click', async () => {
         return;
     }
 
-    // 🍏 Safari最速対策：awaitでマイクを待つ前に、クリック直下のこの瞬間にAudioContextを起動！
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -1276,7 +1270,6 @@ recBtn.addEventListener('click', async () => {
         await audioCtx.resume();
     }
 
-    // 🍏 Safari対策：非同期処理の前に、BGMの再生権限を一瞬で取得する
     if (playbackBgm) {
         playbackBgm.currentTime = 0;
         playbackBgm.volume = parseFloat(bgmVolSlider.value);
@@ -1309,8 +1302,6 @@ recBtn.addEventListener('click', async () => {
             audioBlob = new Blob(recordedChunks, { type: audioMimeType || 'audio/webm' });
             audioBlobUrl = URL.createObjectURL(audioBlob);
             
-            // 🚨【修正】Safariエラー対策：ここでは playbackAudio の作成のみ行い、
-            // createMediaElementSource などのノード接続は「再生ボタンを押した瞬間」まで絶対に行わない！
             playbackAudio = new Audio(audioBlobUrl);
             playbackAudio.preload = "auto";
             
@@ -1330,7 +1321,6 @@ recBtn.addEventListener('click', async () => {
             lockMenus();
         };
 
-        // BGMのアナライザー接続（マイクストリーム取得後、安全に実行）
         if (playbackBgm) {
             if (!bgmMediaSource) {
                 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
@@ -1371,20 +1361,17 @@ recBtn.addEventListener('click', async () => {
     }
 });
 
-// ⏸️ 録音一時停止ボタンのクリックイベント
 pauseBtn.addEventListener('click', () => {
     if (!isRecording) return; 
     
     if (!isRecordingPaused) {
-        // 一時停止する
         isRecordingPaused = true;
-        pauseBtnImg.src = IMG_PLAY; // 一時停止中は「再開（三角）」マークにする
+        pauseBtnImg.src = IMG_PLAY; 
         if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
         if (playbackBgm) playbackBgm.pause();
     } else {
-        // 再開する
         isRecordingPaused = false;
-        pauseBtnImg.src = IMG_PAUSE; // 再開したら「二本線」マークに戻す
+        pauseBtnImg.src = IMG_PAUSE; 
         if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
         if (playbackBgm) playbackBgm.play().catch(e => {});
     }
@@ -1402,31 +1389,26 @@ playPauseBtn.addEventListener('click', () => {
         return; 
     }
 
-    // 🍏 Safari対策：タップした直後に同期的に再開
     if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
 
     if (isPlayingRecorded) {
-        // ⏸️ 一時停止処理
         if (playbackAudio) playbackAudio.pause();
         if (playbackBgm) playbackBgm.pause();
         playPauseImg.src = IMG_PLAY;
         isPlayingRecorded = false;
     } else {
-        // ▶️ 再生処理
         isPlayingRecorded = true;
         playPauseImg.src = IMG_PAUSE;
 
-        // 🍏 初回再生時のみ、録音声のWeb Audio API（エフェクト・波形用）接続を行う
         if (playbackAudio && !recordedSourceNode) {
             recordedSourceNode = audioCtx.createMediaElementSource(playbackAudio);
-            setupAudioNodes(recordedSourceNode, false); // スピーカーとメインアナライザーに接続
+            setupAudioNodes(recordedSourceNode, false); 
         }
 
-        syncAudioParams(); // 音量やEQの同期
+        syncAudioParams(); 
 
-        // BGMを録音音声の再生位置に完全に同期させて再生
         if (playbackBgm) { 
             playbackBgm.currentTime = playbackAudio.currentTime; 
             if (bgmMediaSource && bgmGainNode && bgmAnalyser) {
@@ -1438,9 +1420,8 @@ playPauseBtn.addEventListener('click', () => {
             playbackBgm.play().catch(e => console.log("BGM play error:", e)); 
         } 
 
-        // 録音音声のストレート再生
         playbackAudio.play().then(() => { 
-            draw(); // 波形アニメーション開始
+            draw(); 
         }).catch(err => { 
             isPlayingRecorded = false;
             playPauseImg.src = IMG_PLAY;
@@ -1448,12 +1429,6 @@ playPauseBtn.addEventListener('click', () => {
             console.error("Playback Error:", err);
             alert("再生に失敗しました。もう一度再生ボタンを押してみてください。");
         });
-    } else {
-        // ⏸️ 一時停止時の処理
-        playbackAudio.pause();
-        if (playbackBgm) playbackBgm.pause();
-        playPauseImg.src = IMG_PLAY;
-        isPlayingRecorded = false;
     }
 });
 
@@ -1520,19 +1495,18 @@ if (bgmBlob) {
 }
 
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-// 動画の形式もiPhone対応に自動判別
 let videoMimeType = 'video/webm;codecs=vp9,opus';
 let extension = 'webm';
 
 if (!MediaRecorder.isTypeSupported(videoMimeType)) {
     if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a')) {
-        videoMimeType = 'video/mp4;codecs=avc1,mp4a'; // iPhone用
+        videoMimeType = 'video/mp4;codecs=avc1,mp4a'; 
         extension = 'mp4';
     } else if (MediaRecorder.isTypeSupported('video/mp4')) {
         videoMimeType = 'video/mp4';
         extension = 'mp4';
     } else {
-        videoMimeType = ''; // デフォルト
+        videoMimeType = ''; 
         extension = 'mp4';
     }
 }
@@ -1612,7 +1586,7 @@ initMonthlyColors();
 initStandardColors();
 setupPaletteEvents();
 unlockMenus();
-drawStaticWave();nois
+drawStaticWave();
 
 </script>
 </body>
