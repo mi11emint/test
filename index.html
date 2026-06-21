@@ -503,7 +503,7 @@ max-width: 50px;
 <div class="volume-row-zone">
 <div class="volume-label">BGM</div>
 <div class="volume-slider-container">
-<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
+<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1">
 </div>
 </div>
 
@@ -1004,7 +1004,7 @@ async function startRecordingStream() {
     // 5. 【重要】マイクの音を録音先へ接続
     gainNode.connect(recordDestination);
 
-    // 6. 【ここを追加】BGMがロード済みなら、録音先へも接続する
+// 6. 【ここを追加】BGMがロード済みなら、録音先へも接続する
     if (bgmMediaSource) {
         // BGMがスピーカーにも流れるようにしつつ、録音先にも分岐させる
         bgmGainNode.connect(recordDestination);
