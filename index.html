@@ -493,20 +493,6 @@ max-width: 50px;
 <div id="timer" class="timer-display">02:00</div>
 </div>
 
-<div class="volume-row-zone">
-<div class="volume-label">Vol</div>
-<div class="volume-slider-container">
-<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
-</div>
-</div>
-
-<div class="volume-row-zone">
-<div class="volume-label">BGM</div>
-<div class="volume-slider-container">
-<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
-</div>
-</div>
-
 <div class="top-icons">
 <span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
 <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
@@ -520,9 +506,29 @@ max-width: 50px;
 <img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" id="playPauseImg" class="btn-img" alt="再生">
 </span>
 <div class="seekbar-container">
-<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="100" step="0.1">
+<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="120" step="0.1">
 </div>
 </div>
+<div class="volume-row-zone">
+<div class="volume-label">Vol</div>
+<div class="volume-slider-container">
+<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
+</div>
+</div>
+
+<div class="volume-row-zone">
+<div class="volume-label">BGM<br>vol</div>
+<div class="volume-slider-container">
+<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
+</div>
+</div>
+<div class="volume-row-zone">
+  <div class="volume-label">BGM<br>start</div>
+  <div class="volume-slider-container">
+    <input type="range" id="bgmStartSlider" class="audio-slider" min="-5" max="5" step="0.1" value="0">
+  </div>
+</div>
+
 
 <div class="compact-eq-container">
 <div class="eq-main-label">EQ</div>
@@ -665,6 +671,15 @@ const audioResetBtn = document.getElementById('audioResetBtn');
 const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
+
+const bgmStartSlider = document.getElementById('bgmStartSlider');
+let bgmStartTime = 0; // スライダーの秒数を保存する変数
+
+bgmStartSlider.addEventListener('input', () => {
+    bgmStartTime = parseFloat(bgmStartSlider.value);
+});
+
+
 
 // ========================================
 // 3. アプリケーションの状態管理変数
@@ -1025,7 +1040,7 @@ pauseBtnImg.src = IMG_PAUSE; // 初期画像（二本線）に戻す
 
 if (playbackBgm) {
 playbackBgm.pause();
-playbackBgm.currentTime = 0;
+playbackBgm.currentTime = bgmStartTime;
 }
 
 if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
@@ -1214,6 +1229,11 @@ syncAudioParams();
 audioResetBtn.addEventListener('click', () => {
 volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
 syncAudioParams();
+// ★BGM開始位置を0にリセットするコード
+    if (bgmStartSlider) {
+        bgmStartSlider.value = 0; // スライダーのツマミを0に戻す
+        bgmStartTime = 0;         // 記憶している開始秒数を0に戻す
+    }
 });
 
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
@@ -1372,6 +1392,11 @@ stopBtn.addEventListener('click', () => { stopRecording(); });
 resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) {
 resetDataWithoutPrompt(false); // ★ falseを指定してBGMもリセットする
+// ★BGM開始位置を0にリセットする
+    if (bgmStartSlider) {
+        bgmStartSlider.value = 0; // スライダーのツマミを0に戻す
+        bgmStartTime = 0;         // 記憶している開始秒数を0に戻す
+    }
 alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
 }
 });
@@ -1550,7 +1575,10 @@ alert("録音データを自動リセットしました。新しく録音でき�
 isMovieRendering = true;
 movieRecorder.start();
 bufferSource.start(0);
-if (rBgmSource) rBgmSource.start(0);
+if (rBgmSource) {
+    // 指定された秒数（bgmStartTime）からBGMをスタートさせる
+    rBgmSource.start(0, bgmStartTime); 
+}
 
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
 
