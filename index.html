@@ -1276,9 +1276,15 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
 
 mediaRecorder.onstop = () => {
-// 実際に録音された形式を自動取得してBlobを作ります
-const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+// 【修正】Safariが形式の報告をサボる対策として、設定した options.mimeType を優先します
+const actualMimeType = mediaRecorder.mimeType || options.mimeType || 'audio/mp4';
 audioBlob = new Blob(recordedChunks, { type: actualMimeType });
+
+// ★★★ ここが消えてしまっていました！復活させます ★★★
+audioBlobUrl = URL.createObjectURL(audioBlob);
+playbackAudio = new Audio(audioBlobUrl);
+playbackAudio.preload = "auto";
+// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
 const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
 setupAudioNodes(playbackSource, false);
@@ -1497,28 +1503,50 @@ const movieChunks = [];
 
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
 movieRecorder.onstop = () => {
-// 実際に生成された形式（Safariならmp4）を取得し、拡張子を自動で判別します
-const actualMimeType = movieRecorder.mimeType || 'video/webm';
+// 【修正】Safari対策：設定した videoOptions.mimeType を優先して拡張子を決めます
+const actualMimeType = movieRecorder.mimeType || videoOptions.mimeType || 'video/mp4';
 const isMp4 = actualMimeType.includes('mp4');
 const ext = isMp4 ? 'mp4' : 'webm';
 
 const finalBlob = new Blob(movieChunks, { type: actualMimeType });
 const finalVideoUrl = URL.createObjectURL(finalBlob);
+const fileName = `voice-wave-${Date.now()}.${ext}`;
+
 const a = document.createElement('a');
 a.href = finalVideoUrl;
-a.download = `voice-wave-${Date.now()}.${ext}`;
+a.download = fileName;
 
+// パソコン・Android用に「ファイル」としてダウンロードさせる命令（消さずに残します）
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
 isMovieRendering = false;
-const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
 
+// ★ iPhoneのカメラロール保存用（シェアメニュー）をシンプルな形で追加 ★
+const videoFile = new File([finalBlob], fileName, { type: actualMimeType });
+if (navigator.share && navigator.canShare && navigator.canShare({ files: [videoFile] })) {
+// iPhoneなどの場合
+const finishGame = confirm("動画が完成しました！\n「OK」を押すとカメラロールに保存するメニューが開きます。\n\n※ミニゲームを終了しますか？");
 if (finishGame) {
+navigator.share({
+files: [videoFile],
+title: 'Voice Wave Movie',
+text: '作成した動画の保存'
+}).catch(e => console.log("保存キャンセル:", e));
+
 hideOverlayAndCleanup();
 alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
 }
+} else {
+// パソコンやAndroidなどの場合（元の動き）
+const finishGameFallback = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
+if (finishGameFallback) {
+hideOverlayAndCleanup();
+alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
+}
+}
 };
+
 isMovieRendering = true;
 movieRecorder.start();
 bufferSource.start(0);
