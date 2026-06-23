@@ -475,7 +475,7 @@ max-width: 50px;
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作って保存できます</p>
 <p>歌みたや音声投稿をもっと気軽に自由に！</p>
-<p>使い方、ルール、仕様の詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p>使い方、ルール、仕様の詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a>ご一読下さい</p>
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
 
@@ -1306,7 +1306,7 @@ drawStaticWave();
 });
 downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
 syncAudioParams();
-lockMenus();
+unlockMenus();
 };
 
 if (playbackBgm) {
@@ -1423,6 +1423,12 @@ draw();
 playbackAudio.pause();
 if (playbackBgm) playbackBgm.pause();
 playPauseImg.src = IMG_PLAY;
+
+// ★ 一時停止したときに「再生中フラグ」をオフにして、画面を最新状態に更新する
+isPlayingRecorded = false;
+triggerUIRefresh();
+document.body.offsetHeight;
+
 }
 });
 
