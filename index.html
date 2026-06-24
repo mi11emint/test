@@ -1153,27 +1153,34 @@ resetDataWithoutPrompt();
 }
 
 function draw() {
-if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
-animationId = requestAnimationFrame(draw);
+    // ★アニメーションの開始・停止を管理
+    if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
+    animationId = requestAnimationFrame(draw);
 
-if (isRecording && isRecordingPaused) {
-if (dataArray) dataArray.fill(0);
-if (bgmDataArray) bgmDataArray.fill(0);
-} else {
-if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
-if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+    // ★録音の一時停止中に波形をペタンコ（0）にするための大切なコード（残します！）
+    if (isRecording && isRecordingPaused) {
+        if (dataArray) dataArray.fill(0);
+        if (bgmDataArray) bgmDataArray.fill(0);
+    } else {
+        if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+        if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+    }
+
+    // キャンバスをクリア
+    clearCanvas(ctx, canvas.width, canvas.height);
+
+    // 🎵 背面にBGMの波形を描画
+    if (bgmDataArray) {
+        drawWaveLogic(ctx, canvas, bgmDataArray, 0.7);
+    }
+
+    // 🎙️ 前面にマイクの波形を描画
+    if (dataArray) {
+        drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
+    }
 }
 
-clearCanvas(ctx, canvas.width, canvas.height);
 
-if (bgmDataArray) {
-drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
-}
-
-if (dataArray) {
-drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
-}
-}
 
 // ========================================
 // 5. イベントリスナーの登録
