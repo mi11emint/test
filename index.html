@@ -524,16 +524,16 @@ max-width: 50px;
 </div>
 
 <div class="volume-row-zone">
-  <div class="volume-label">BGM<br>start</div>
-  <div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-    <button type="button" id="bgmStartMinusBtn" class="control-btn" 
-            style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">◀</button>
-    
-    <span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
-    
-<button type="button" id="bgmStartPlusBtn" class="control-btn" 
-            style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">▶</button>
-  </div>
+<div class="volume-label">BGM<br>start</div>
+<div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+<button type="button" id="bgmStartMinusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">◀</button>
+
+<span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
+
+<button type="button" id="bgmStartPlusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">▶</button>
+</div>
 </div>
 
 
@@ -680,26 +680,30 @@ const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
 
-// 309行目付近：画面の要素を読み込む
+
 const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
 const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
 const bgmStartDisplay = document.getElementById('bgmStartDisplay');
 
-let bgmStartTime = 0; // BGMの開始位置（秒）を記憶する変数
+let bgmStartTime = 0;
 
-// 【◀ ボタン】を押したとき：開始を 0.1秒 早くする（サビに近づく）
+// 【◀ ボタン】開始を早くする（秒数を増やす）
+if (bgmStartMinusBtn) {
 bgmStartMinusBtn.addEventListener('click', () => {
-    bgmStartTime = parseFloat((bgmStartTime + 0.1).toFixed(1)); // 計算のズレを防ぐおまじない
-    bgmStartDisplay.textContent = bgmStartTime + " sec";
+bgmStartTime = parseFloat((bgmStartTime + 0.1).toFixed(1));
+if (bgmStartDisplay) bgmStartDisplay.textContent = bgmStartTime + " sec";
 });
+}
 
-// 【▶ ボタン】を押したとき：開始を 0.1秒 遅らせる（ただし今回は録音時0秒スタートなので最小値は0にします）
+// 【▶ ボタン】開始を遅らせる（秒数を減らす・最小0）
+if (bgmStartPlusBtn) {
 bgmStartPlusBtn.addEventListener('click', () => {
-    if (bgmStartTime > 0) {
-        bgmStartTime = parseFloat((bgmStartTime - 0.1).toFixed(1));
-        bgmStartDisplay.textContent = bgmStartTime + " sec";
-    }
+if (bgmStartTime > 0) {
+bgmStartTime = parseFloat((bgmStartTime - 0.1).toFixed(1));
+if (bgmStartDisplay) bgmStartDisplay.textContent = bgmStartTime + " sec";
+}
 });
+}
 
 // ========================================
 // 3. アプリケーションの状態管理変数
@@ -1102,35 +1106,35 @@ menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuCol
 document.getElementById('menuTouka').classList.remove('locked');
 }
 
-// 修正後：引数 keepBgm を追加（デフォルトは false：BGMも含めて全部消す）
-function resetDataWithoutPrompt(keepBgm = false) {
+function resetDataWithoutPrompt() {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
 if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
+audioBlob = null;
+seekBar.value = 0;
+playPauseImg.src = IMG_PLAY;
+downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false;
-isRecording = false; isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
+isRecording = false;
+isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE;
+audioCtx = null;
+eqLow = null;
+eqMid = null;
+eqHigh = null;
+ncFilter = null;
+gainNode = null;
+source = null;
+analyser = null;
+dataArray = null;
 
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
-gainNode = null; source = null; analyser = null; dataArray = null;
-
-if (!keepBgm) {
-// やり直しボタンが押された時（BGMも消す）
-if (playbackBgm) { playbackBgm.pause(); playbackBgm = null; }
-if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
-bgmBlob = null; bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
-bgmImportBtn.classList.remove('loaded');
-bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
-bgmInput.value = "";
-} else {
-// 録音開始時（BGMは残す）
-if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+unlockMenus();
+drawStaticWave();
 }
 
-unlockMenus(); drawStaticWave();
-}
+
+
+
 
 function hideOverlayAndCleanup() {
 document.getElementById('renderOverlay').style.display = 'none';
@@ -1247,13 +1251,50 @@ syncAudioParams();
 });
 
 audioResetBtn.addEventListener('click', () => {
-volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
-syncAudioParams();
-// 変数と、画面の表示を両方 0.0秒 に戻します
+// 1. 各種ボリューム・イコライザーを初期値に戻す
+volSlider.value = 1.0;
+bgmVolSlider.value = 0.5;
+eqLowSlider.value = -7;
+eqMidSlider.value = 3;
+eqHighSlider.value = -4;
+if (typeof syncAudioParams === 'function') syncAudioParams();
+
+// 2. BGMの開始時間（データと表示）を0に戻す
 bgmStartTime = 0;
+const bgmStartDisplay = document.getElementById('bgmStartDisplay');
 if (bgmStartDisplay) {
-    bgmStartDisplay.textContent = "0.0 秒";
+bgmStartDisplay.textContent = "0.0 sec";
 }
+
+// 3. BGMのデータとボタン表示をここで「直接」初期化する！
+if (playbackBgm) {
+playbackBgm.pause();
+playbackBgm.src = "";
+playbackBgm.load();
+}
+bgmBlob = null;
+bgmBlobUrl = null;
+bgmAudioBuffer = null;
+bgmGainNode = null;
+bgmMediaSource = null;
+bgmAnalyser = null;
+bgmDataArray = null;
+
+// ボタンの見た目や文字を最初に戻す
+const bgmImportBtn = document.getElementById('bgmImportBtn');
+if (bgmImportBtn) {
+bgmImportBtn.classList.remove('loaded');
+bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
+}
+const bgmInput = document.getElementById('bgmInput');
+if (bgmInput) bgmInput.value = "";
+
+const bgmFileNameDisplay = document.getElementById('bgmFileName');
+if (bgmFileNameDisplay) {
+bgmFileNameDisplay.textContent = "選択されていません";
+}
+
+alert("オーディオ設定とBGMデータをすべて初期化しました。");
 });
 
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
@@ -1320,11 +1361,11 @@ mediaRecorder.onstop = () => {
 const actualMimeType = mediaRecorder.mimeType || options.mimeType || 'audio/mp4';
 audioBlob = new Blob(recordedChunks, { type: actualMimeType });
 
-// ★★★ ここが消えてしまっていました！復活させます ★★★
+
 audioBlobUrl = URL.createObjectURL(audioBlob);
 playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
-// ★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
 
 const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
 setupAudioNodes(playbackSource, false);
@@ -1411,13 +1452,10 @@ stopBtn.addEventListener('click', () => { stopRecording(); });
 
 resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) {
-resetDataWithoutPrompt(false); // ★ falseを指定してBGMもリセットする
-// 変数と、画面の表示を両方 0.0秒 に戻します
-bgmStartTime = 0;
-if (bgmStartDisplay) {
-    bgmStartDisplay.textContent = "0.0 秒";
-}
-alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
+// 録音データだけをクリア（BGMは無傷で残ります）
+resetDataWithoutPrompt();
+
+alert("録音をリセットしました。BGM設定はそのままで、新しく録音し直せます^.ˬ.^ฅⳊ");
 }
 });
 
@@ -1481,7 +1519,7 @@ seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
-if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
+if (!confirm("動画の保存を開始します^.ˬ.^ฅⳊ　よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
 // 【Safari対策】await（非同期通信）が発生する「前」にAudioContextを作っておく
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 document.getElementById('renderOverlay').style.display = 'flex';
@@ -1596,8 +1634,8 @@ isMovieRendering = true;
 movieRecorder.start();
 bufferSource.start(0);
 if (rBgmSource) {
-    // 指定された秒数（bgmStartTime）からBGMをスタートさせる
-    rBgmSource.start(0, bgmStartTime); 
+// 指定された秒数（bgmStartTime）からBGMをスタートさせる
+rBgmSource.start(0, bgmStartTime);
 }
 
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
