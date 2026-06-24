@@ -1044,9 +1044,7 @@ async function startRecordingStream() {
     gainNode.connect(recordDestination);
     dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    // ==========================================
-    // 🎵【追加】BGMを音の解析システムに安全に接続する処理
-    // ==========================================
+    // BGMを音の解析システムに安全に接続する処理
     if (typeof bgmBlobUrl !== 'undefined' && bgmBlobUrl) {
         if (playbackBgm) playbackBgm.pause();
         
@@ -1059,12 +1057,13 @@ async function startRecordingStream() {
         bgmSourceNode = audioCtx.createMediaElementSource(playbackBgm);
         bgmAnalyser = audioCtx.createAnalyser();
         
-        // ✨ マイクのサイズ（1024）と合わせることで、波形の細かさが綺麗に揃います
+        //マイクのサイズ（1024）と合わせることで、波形の細かさが綺麗に揃います
         bgmAnalyser.fftSize = 1024; 
         bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
         
         bgmSourceNode.connect(bgmAnalyser);
-        bgmAnalyser.connect(audioCtx.destination); // 📢 スピーカーから音が出るように接続
+        bgmAnalyser.connect(audioCtx.destination); 
+        // スピーカーから音が出るように接続
     }
 }
 
@@ -1091,7 +1090,7 @@ async function restartRecordingStream() {
         newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
         gainNode.connect(analyser); gainNode.connect(recordDestination);
         
-        // 🎙️【プチ改善】マイクの解析器（analyser）が新しくなったので、波形用配列も新しく紐付け直す
+        // マイクの解析器（analyser）が新しくなったので、波形用配列も新しく紐付け直す
         dataArray = new Uint8Array(analyser.frequencyBinCount);
         
         syncAudioParams();
@@ -1102,7 +1101,8 @@ function stopRecording() {
 if (!isRecording) return;
 isRecording = false;
 isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; // 初期画像（二本線）に戻す
+pauseBtnImg.src = IMG_PAUSE; 
+// 初期画像（二本線）に戻す
 
 if (playbackBgm) {
 playbackBgm.pause();
