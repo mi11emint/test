@@ -1353,16 +1353,9 @@ isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
 
-// --- 🎵 ここからがBGMのスタート処理です！ ---
+
 if (playbackBgm && bgmAudioBuffer) {
 playbackBgm.volume = parseFloat(bgmVolSlider.value);
-
-if (!bgmMediaSource) {
-bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
-bgmMediaSource.connect(bgmAnalyser);
-bgmAnalyser.connect(bgmGainNode);
-bgmGainNode.connect(audioCtx.destination);
-}
 
 if (bgmStartTime >= 0) {
 // 【◀ 途中から始めるモード】
@@ -1372,7 +1365,6 @@ playbackBgm.currentTime = safeStartTime;
 playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
 } else {
 // 【▶ 遅らせて始めるモード】
-// 一旦巻き戻して、指定された秒数（マイナスをプラスに反転）が経ってから再生スタートする
 playbackBgm.currentTime = 0;
 const delayMs = Math.abs(bgmStartTime) * 1000;
 setTimeout(() => {
@@ -1383,7 +1375,7 @@ playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
 }, delayMs);
 }
 }
-// --- 🎵 ここまで ---
+
 
 // 【Safari対策】録音MIMEタイプの最適化（Safariならaudio/mp4を使用）
 let options = { audioBitsPerSecond: 320000 };
@@ -1398,23 +1390,16 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
 
 mediaRecorder.onstop = () => {
-// 【修正】Safariが形式の報告をサボる対策として、設定した options.mimeType を優先します
 const actualMimeType = mediaRecorder.mimeType || options.mimeType || 'audio/mp4';
 audioBlob = new Blob(recordedChunks, { type: actualMimeType });
-
-
 audioBlobUrl = URL.createObjectURL(audioBlob);
 playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
-
-
 const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
 setupAudioNodes(playbackSource, false);
-
 if (playbackBgm) {
 syncAudioParams();
 }
-
 playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
 playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
 playbackAudio.addEventListener('ended', () => {
@@ -1426,38 +1411,25 @@ if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
 seekBar.value = 0;
 drawStaticWave();
 });
-downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
+downloadBtn.classList.add('ready');
+playPauseImg.src = IMG_PLAY;
 syncAudioParams();
 lockMenus();
 };
 
-if (playbackBgm) {
-playbackBgm.currentTime = bgmStartTime;;
 
-if (!bgmMediaSource) {
-bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
-}
+mediaRecorder.start(10);
+recordBtn.style.display = 'none';
+pauseBtn.style.display = 'inline-block';
+stopBtn.style.display = 'inline-block';
+lockMenus();
 
-bgmAnalyser = audioCtx.createAnalyser();
-bgmAnalyser.fftSize = 1024;
-bgmAnalyser.smoothingTimeConstant = 0.75;
-bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-
-bgmGainNode = audioCtx.createGain();
-
-bgmMediaSource.disconnect();
-bgmMediaSource.connect(bgmAnalyser);
-bgmAnalyser.connect(bgmGainNode);
-bgmGainNode.connect(audioCtx.destination);
-
-syncAudioParams();
-playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
-}
-
-mediaRecorder.start();
 draw();
+recBtn.classList.add('recording');
+timerDisplay.style.display = 'block';
+timeLeft = 120;
+updateTimerText();
 
-recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
 timerInterval = setInterval(() => {
 if (!isRecordingPaused) {
 timeLeft--;
@@ -1465,8 +1437,12 @@ updateTimerText();
 if (timeLeft <= 0) stopRecording();
 }
 }, 1000);
+
 } catch (err) {
+console.error("録音開始エラー:", err);
 alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
+unlockMenus();
+isRecording = false;
 }
 });
 
