@@ -1338,7 +1338,7 @@ recBtn.addEventListener('click', async () => {
             isRecordingPaused = false;
             pauseBtnImg.src = IMG_PAUSE; // 動いているときは二本線マークにする
             if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-            if (playbackBgm && bgmAudioBuffer) playbackBgm.play().catch(e => {});
+            if (playbackBgm) playbackBgm.play().catch(e => {});
         }
         return;
     }
@@ -1397,14 +1397,13 @@ recBtn.addEventListener('click', async () => {
             downloadBtn.classList.add('ready'); 
             playPauseImg.src = IMG_PLAY;
             syncAudioParams();
-            unlockMenus();
+            lockMenus(); //録音完了後にロック
         };
 
         // 🎙️ マイク録音とタイマーの開始（不要なボタン非表示処理をきれいに削除！）
         mediaRecorder.start(10);
         pauseBtn.style.display = 'inline-block';
         stopBtn.style.display = 'inline-block';
-        lockMenus();
 
         draw();
         recBtn.classList.add('recording'); 
@@ -1420,8 +1419,8 @@ recBtn.addEventListener('click', async () => {
             }
         }, 1000);
 
-        // --- 🎵 安全なBGMスタート処理 ---
-        if (playbackBgm && bgmAudioBuffer) {
+// --- 🎵 安全なBGMスタート処理 ---
+        if (playbackBgm) {
             playbackBgm.volume = parseFloat(bgmVolSlider.value);
 
             if (bgmStartTime >= 0) {
@@ -1655,7 +1654,7 @@ movieRecorder.start();
 bufferSource.start(0);
 if (rBgmSource) {
 // ★安全装置：もし設定した秒数が、BGMの実際の長さ（duration）を超えていたら、最後の瞬間に合わせてフリーズを防ぐ
-const safeStartTime = Math.min(bgmStartTime, bgmAudioBuffer.duration - 0.1);
+const safeStartTime = Math.min(bgmStartTime, bgmBuffer.duration - 0.1);
 
 // 安全な秒数からBGMをスタートさせる
 rBgmSource.start(0, safeStartTime);
