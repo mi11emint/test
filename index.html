@@ -522,10 +522,17 @@ max-width: 50px;
 <input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
 </div>
 </div>
+
 <div class="volume-row-zone">
   <div class="volume-label">BGM<br>start</div>
-  <div class="volume-slider-container">
-    <input type="range" id="bgmStartSlider" class="audio-slider" min="-5" max="5" step="0.1" value="0">
+  <div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+    <button type="button" id="bgmStartMinusBtn" class="control-btn" 
+            style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">◀</button>
+    
+    <span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
+    
+<button type="button" id="bgmStartPlusBtn" class="control-btn" 
+            style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">▶</button>
   </div>
 </div>
 
@@ -673,14 +680,26 @@ const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
 
-const bgmStartSlider = document.getElementById('bgmStartSlider');
-let bgmStartTime = 0; // スライダーの秒数を保存する変数
+// 309行目付近：画面の要素を読み込む
+const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
+const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
+const bgmStartDisplay = document.getElementById('bgmStartDisplay');
 
-bgmStartSlider.addEventListener('input', () => {
-    bgmStartTime = parseFloat(bgmStartSlider.value);
+let bgmStartTime = 0; // BGMの開始位置（秒）を記憶する変数
+
+// 【◀ ボタン】を押したとき：開始を 0.1秒 早くする（サビに近づく）
+bgmStartMinusBtn.addEventListener('click', () => {
+    bgmStartTime = parseFloat((bgmStartTime + 0.1).toFixed(1)); // 計算のズレを防ぐおまじない
+    bgmStartDisplay.textContent = bgmStartTime + " sec";
 });
 
-
+// 【▶ ボタン】を押したとき：開始を 0.1秒 遅らせる（ただし今回は録音時0秒スタートなので最小値は0にします）
+bgmStartPlusBtn.addEventListener('click', () => {
+    if (bgmStartTime > 0) {
+        bgmStartTime = parseFloat((bgmStartTime - 0.1).toFixed(1));
+        bgmStartDisplay.textContent = bgmStartTime + " sec";
+    }
+});
 
 // ========================================
 // 3. アプリケーションの状態管理変数
@@ -1230,11 +1249,11 @@ syncAudioParams();
 audioResetBtn.addEventListener('click', () => {
 volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
 syncAudioParams();
-// ★BGM開始位置を0にリセットするコード
-    if (bgmStartSlider) {
-        bgmStartSlider.value = 0; // スライダーのツマミを0に戻す
-        bgmStartTime = 0;         // 記憶している開始秒数を0に戻す
-    }
+// 変数と、画面の表示を両方 0.0秒 に戻します
+bgmStartTime = 0;
+if (bgmStartDisplay) {
+    bgmStartDisplay.textContent = "0.0 秒";
+}
 });
 
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
@@ -1393,11 +1412,11 @@ stopBtn.addEventListener('click', () => { stopRecording(); });
 resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) {
 resetDataWithoutPrompt(false); // ★ falseを指定してBGMもリセットする
-// ★BGM開始位置を0にリセットする
-    if (bgmStartSlider) {
-        bgmStartSlider.value = 0; // スライダーのツマミを0に戻す
-        bgmStartTime = 0;         // 記憶している開始秒数を0に戻す
-    }
+// 変数と、画面の表示を両方 0.0秒 に戻します
+bgmStartTime = 0;
+if (bgmStartDisplay) {
+    bgmStartDisplay.textContent = "0.0 秒";
+}
 alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
 }
 });
