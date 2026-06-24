@@ -1348,42 +1348,21 @@ resetDataWithoutPrompt();
 
 try {
 unlockMenus();
-// 🎙️ マイクのストリームを開始する
+
+// 🎙️ 【最優先】ブラウザの拒絶を防ぐため、ボタンを押した直後にマイクを即座に起動！
 await startRecordingStream();
 
 isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
 
-// --- 🎵 BGMのスタート処理（BGMがあるときだけ安全に動かします） ---
-if (playbackBgm && bgmAudioBuffer) {
-playbackBgm.volume = parseFloat(bgmVolSlider.value);
-
-if (bgmStartTime >= 0) {
-// 【◀ 途中から始めるモード】
-const safeStartTime = Math.min(bgmStartTime, playbackBgm.duration - 0.1);
-playbackBgm.currentTime = safeStartTime;
-playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
-} else {
-// 【▶ 遅らせて始めるモード】
-playbackBgm.currentTime = 0;
-const delayMs = Math.abs(bgmStartTime) * 1000;
-setTimeout(() => {
-if (isRecording && !isRecordingPaused && playbackBgm) {
-playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
-}
-}, delayMs);
-}
-}
-// --- 🎵 BGM処理ここまで ---
-
-// 【Safari対策】録音MIMEタイプの最適化（正しい形式に修正しました！）
+// 【Safari対策】録音MIMEタイプの最適化（正しい形式）
 let options = { audioBitsPerSecond: 320000 };
 if (typeof MediaRecorder.isTypeSupported === 'function') {
 if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
 options.mimeType = 'audio/webm;codecs=opus';
 } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-options.mimeType = 'audio/mp4'; // 👈 'black/mp4' から正しい形式に修正！
+options.mimeType = 'audio/mp4';
 }
 }
 
@@ -1421,7 +1400,7 @@ syncAudioParams();
 unlockMenus();
 };
 
-// 録音・タイマーの開始処理
+// 🎙️ マイク録音とタイマーの開始（ここを確定させてからBGMを処理します）
 mediaRecorder.start(10);
 recordBtn.style.display = 'none';
 pauseBtn.style.display = 'inline-block';
@@ -1442,6 +1421,29 @@ if (timeLeft <= 0) stopRecording();
 }
 }, 1000);
 
+// --- 🎵 マイク起動に大成功した「後」に、満を持してBGMをスタートさせる！ ---
+if (playbackBgm && bgmAudioBuffer) {
+playbackBgm.volume = parseFloat(bgmVolSlider.value);
+
+if (bgmStartTime >= 0) {
+// 【◀ 途中から始めるモード】
+const safeStartTime = Math.min(bgmStartTime, playbackBgm.duration - 0.1);
+playbackBgm.currentTime = safeStartTime;
+playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
+} else {
+// 【▶ 遅らせて始めるモード】
+playbackBgm.currentTime = 0;
+const delayMs = Math.abs(bgmStartTime) * 1000;
+setTimeout(() => {
+// 途中で録音停止ボタンが押されていなければ安全に再生スタート
+if (isRecording && !isRecordingPaused && playbackBgm) {
+playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
+}
+}, delayMs);
+}
+}
+// --- 🎵 BGM処理ここまで ---
+
 } catch (err) {
 console.error("録音開始エラー:", err);
 alert("マイクの起動に失敗しました꙳☄︎\n端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
@@ -1449,6 +1451,7 @@ unlockMenus();
 isRecording = false;
 }
 });
+
 
 // ⏸️ 録音一時停止ボタンのクリックイベント
 pauseBtn.addEventListener('click', () => {
