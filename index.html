@@ -493,6 +493,33 @@ max-width: 50px;
 <div id="timer" class="timer-display">02:00</div>
 </div>
 
+<div class="volume-row-zone">
+<div class="volume-label">Vol</div>
+<div class="volume-slider-container">
+<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
+</div>
+</div>
+
+<div class="volume-row-zone">
+<div class="volume-label">BGM</div>
+<div class="volume-slider-container">
+<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
+</div>
+</div>
+
+<div class="volume-row-zone">
+<div class="volume-label">BGM<br>start</div>
+<div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+<button type="button" id="bgmStartMinusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">◀</button>
+
+<span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
+
+<button type="button" id="bgmStartPlusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">▶</button>
+</div>
+</div>
+
 <div class="top-icons">
 <span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
 <span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
@@ -506,36 +533,9 @@ max-width: 50px;
 <img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" id="playPauseImg" class="btn-img" alt="再生">
 </span>
 <div class="seekbar-container">
-<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="120" step="0.1">
+<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="100" step="0.1">
 </div>
 </div>
-<div class="volume-row-zone">
-<div class="volume-label">Vol</div>
-<div class="volume-slider-container">
-<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
-</div>
-</div>
-
-<div class="volume-row-zone">
-<div class="volume-label">BGM<br>vol</div>
-<div class="volume-slider-container">
-<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
-</div>
-</div>
-
-<div class="volume-row-zone">
-<div class="volume-label">BGM<br>start</div>
-<div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-<button type="button" id="bgmStartMinusBtn" class="control-btn"
-style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">◀</button>
-
-<span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
-
-<button type="button" id="bgmStartPlusBtn" class="control-btn"
-style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent;">▶</button>
-</div>
-</div>
-
 
 <div class="compact-eq-container">
 <div class="eq-main-label">EQ</div>
@@ -628,8 +628,7 @@ patterns: [
 
 const STANDARD_PALETTES = [
 ["#fff0f5", "#faf0e6"], ["#dfe9f3", "#ffffff"], ["#fff1eb", "#ace0f9"], ["#fddb92", "#d1fdff"],
-["#bc8f8f", "#ffe4e1"],["#eebbcb", "#cee4ae"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
-["#FFF6B7", "#F6416C"],["#a6c0fe", "#f68084"],["#4682b4", "#f0f8ff"],["#ffee00", "#ffaa00"],
+["#bc8f8f", "#ffe4e1"], ["#a6c0fe", "#f68084"], ["#f0fff0", "#40e0d0"], ["#ff4e50", "#f9d423"],
 ["#800080", "#f08080"], ["#f107a3", "#7b2ff7"], ["#00ffff", "#00008b"], ["#16a085", "#f4d03f"],
 ["#dc143c", "#8b0000"], ["#4b0082", "#6495ed"], ["#243949", "#517fa4"], ["#8b5a2b", "#2e8b57"],
 ["#dbd0e6", "#250d00"], ["#191970", "#fffacd"], ["#a8caba", "#5d4157"], ["#eeeeee", "#111111"]
@@ -680,44 +679,10 @@ const bgmImportBtn = document.getElementById('bgmImportBtn');
 const bgmInput = document.getElementById('bgmInput');
 const toukaSlider = document.getElementById('toukaSlider');
 
-
+// BGMタイミング調整用DOM
 const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
 const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
 const bgmStartDisplay = document.getElementById('bgmStartDisplay');
-
-let bgmStartTime = 0;
-
-// 【◀ ボタン】曲の途中から始める（秒数をプラスに進める）
-if (bgmStartMinusBtn) {
-bgmStartMinusBtn.addEventListener('click', () => {
-bgmStartTime = parseFloat((bgmStartTime + 0.1).toFixed(1));
-if (bgmStartDisplay) {
-if (bgmStartTime > 0) {
-bgmStartDisplay.textContent = "- " + bgmStartTime + " sec";
-} else if (bgmStartTime < 0) {
-bgmStartDisplay.textContent = "- " + Math.abs(bgmStartTime) + " sec";
-} else {
-bgmStartDisplay.textContent = "0.0 sec";
-}
-}
-});
-}
-
-// 【▶ ボタン】曲を遅らせて始める（秒数をマイナスに減らす）
-if (bgmStartPlusBtn) {
-bgmStartPlusBtn.addEventListener('click', () => {
-bgmStartTime = parseFloat((bgmStartTime - 0.1).toFixed(1));
-if (bgmStartDisplay) {
-if (bgmStartTime > 0) {
-bgmStartDisplay.textContent = "+ " + bgmStartTime + " sec";
-} else if (bgmStartTime < 0) {
-bgmStartDisplay.textContent = "+ " + Math.abs(bgmStartTime) + " sec";
-} else {
-bgmStartDisplay.textContent = "0.0 sec";
-}
-}
-});
-}
 
 // ========================================
 // 3. アプリケーションの状態管理変数
@@ -760,6 +725,12 @@ let bgmGainNode = null;
 let bgmMediaSource = null;
 let bgmAnalyser = null;
 let bgmDataArray = null;
+
+// BGM再生制御タイミング管理
+let bgmStartOffset = 0.0; // マイナス値なら途中(サビ等)から開始、プラス値なら遅延開始
+let bgmDelayTimer = null; 
+let bgmDelayRemaining = 0; 
+let bgmDelayLastStartTime = 0;
 
 // ========================================
 // 4. 関数の定義
@@ -1029,84 +1000,58 @@ targetCtx.restore();
 }
 
 async function startRecordingStream() {
-    stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-            echoCancellation: isNoiseCancelOn,
-            noiseSuppression: isNoiseCancelOn,
-            autoGainControl: false
-        }
-    });
-
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    source = audioCtx.createMediaStreamSource(stream);
-    setupAudioNodes(source, true);
-    recordDestination = audioCtx.createMediaStreamDestination();
-    gainNode.connect(recordDestination);
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    // BGMを音の解析システムに安全に接続する処理
-    if (typeof bgmBlobUrl !== 'undefined' && bgmBlobUrl) {
-        if (playbackBgm) playbackBgm.pause();
-        
-        // 毎回新しく作り直すことで、ブラウザのエラーとマイク起動失敗を防ぎます
-        playbackBgm = new Audio(bgmBlobUrl);
-        playbackBgm.loop = true;
-        playbackBgm.volume = parseFloat(bgmVolSlider.value);
-
-        // BGMの音をキャッチして波形にするための接続
-        bgmSourceNode = audioCtx.createMediaElementSource(playbackBgm);
-        bgmAnalyser = audioCtx.createAnalyser();
-        
-        //マイクのサイズ（1024）と合わせることで、波形の細かさが綺麗に揃います
-        bgmAnalyser.fftSize = 1024; 
-        bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-        
-        bgmSourceNode.connect(bgmAnalyser);
-        bgmAnalyser.connect(audioCtx.destination); 
-        // スピーカーから音が出るように接続
-    }
+stream = await navigator.mediaDevices.getUserMedia({
+audio: {
+echoCancellation: isNoiseCancelOn,
+noiseSuppression: isNoiseCancelOn,
+autoGainControl: false
+}
+});
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+source = audioCtx.createMediaStreamSource(stream);
+setupAudioNodes(source, true);
+recordDestination = audioCtx.createMediaStreamDestination();
+gainNode.connect(recordDestination);
+dataArray = new Uint8Array(analyser.frequencyBinCount);
 }
 
 async function restartRecordingStream() {
-    if (!isRecording || !mediaRecorder) return;
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: isNoiseCancelOn,
-                noiseSuppression: isNoiseCancelOn,
-                autoGainControl: false
-            }
-        });
-        const newSource = audioCtx.createMediaStreamSource(stream);
-        eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-        eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-        eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-        ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-        gainNode = audioCtx.createGain();
+if (!isRecording || !mediaRecorder) return;
+if (stream) stream.getTracks().forEach(track => track.stop());
+try {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: {
+echoCancellation: isNoiseCancelOn,
+noiseSuppression: isNoiseCancelOn,
+autoGainControl: false
+}
+});
+const newSource = audioCtx.createMediaStreamSource(stream);
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
 
-        analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
 
-        newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-        gainNode.connect(analyser); gainNode.connect(recordDestination);
-        
-        // マイクの解析器（analyser）が新しくなったので、波形用配列も新しく紐付け直す
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        
-        syncAudioParams();
-    } catch (err) { console.error(err); }
+newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser); gainNode.connect(recordDestination);
+syncAudioParams();
+} catch (err) { console.error(err); }
 }
 
 function stopRecording() {
 if (!isRecording) return;
 isRecording = false;
 isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; 
-// 初期画像（二本線）に戻す
+pauseBtnImg.src = IMG_PAUSE; // 初期画像（二本線）に戻す
+
+if (bgmDelayTimer) { clearTimeout(bgmDelayTimer); bgmDelayTimer = null; }
 
 if (playbackBgm) {
 playbackBgm.pause();
-playbackBgm.currentTime = bgmStartTime;
+playbackBgm.currentTime = 0;
 }
 
 if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
@@ -1148,30 +1093,33 @@ menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuCol
 document.getElementById('menuTouka').classList.remove('locked');
 }
 
-function resetDataWithoutPrompt() {
+function resetDataWithoutPrompt(keepBgm = false) {
 if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
 if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
-audioBlob = null;
-seekBar.value = 0;
-playPauseImg.src = IMG_PLAY;
-downloadBtn.classList.remove('ready');
+audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
 isPlayingRecorded = false;
-isRecording = false;
-isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE;
-audioCtx = null;
-eqLow = null;
-eqMid = null;
-eqHigh = null;
-ncFilter = null;
-gainNode = null;
-source = null;
-analyser = null;
-dataArray = null;
+isRecording = false; isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
 
-unlockMenus();
-drawStaticWave();
+if (bgmDelayTimer) { clearTimeout(bgmDelayTimer); bgmDelayTimer = null; }
+
+audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
+gainNode = null; source = null; analyser = null; dataArray = null;
+
+if (!keepBgm) {
+if (playbackBgm) { playbackBgm.pause(); playbackBgm = null; }
+if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
+bgmBlob = null; bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+bgmImportBtn.classList.remove('loaded');
+bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
+bgmInput.value = "";
+} else {
+if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
+bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+}
+
+unlockMenus(); drawStaticWave();
 }
 
 function hideOverlayAndCleanup() {
@@ -1180,35 +1128,65 @@ document.getElementById('miniGameIframe').src = 'about:blank';
 resetDataWithoutPrompt();
 }
 
-function draw() {
-    // ★アニメーションの開始・停止を管理
-    if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
-    animationId = requestAnimationFrame(draw);
-
-    // ★録音の一時停止中に波形をペタンコ（0）にするための大切なコード（残します！）
-    if (isRecording && isRecordingPaused) {
-        if (dataArray) dataArray.fill(0);
-        if (bgmDataArray) bgmDataArray.fill(0);
-    } else {
-        if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
-        if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
-    }
-
-    // キャンバスをクリア
-    clearCanvas(ctx, canvas.width, canvas.height);
-
-    // 🎵 背面にBGMの波形を描画
-    if (bgmDataArray) {
-        drawWaveLogic(ctx, canvas, bgmDataArray, 0.7);
-    }
-
-    // 🎙️ 前面にマイクの波形を描画
-    if (dataArray) {
-        drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
-    }
+// 録音完了後の再生確認用：設定されたOffsetを考慮した正しいBGM再生目標時間を返す
+function getExpectedBgmTime(audioTime) {
+if (bgmStartOffset < 0) {
+return audioTime + Math.abs(bgmStartOffset);
+} else if (bgmStartOffset > 0) {
+if (audioTime < bgmStartOffset) return 0;
+return audioTime - bgmStartOffset;
+}
+return audioTime;
 }
 
+// 録音中のBGM遅延開始用コールバック
+function bgmDelayCallback() {
+if (isRecording && !isRecordingPaused && playbackBgm) {
+playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
+}
+bgmDelayTimer = null;
+}
 
+function draw() {
+if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
+animationId = requestAnimationFrame(draw);
+
+// 🔊 録音完了後の確認再生中のBGM状態と位置を自動同期制御
+if (isPlayingRecorded && playbackAudio && playbackBgm) {
+const targetBgmTime = getExpectedBgmTime(playbackAudio.currentTime);
+if (bgmStartOffset > 0 && playbackAudio.currentTime < bgmStartOffset) {
+if (!playbackBgm.paused) playbackBgm.pause();
+playbackBgm.currentTime = 0;
+} else {
+if (playbackAudio.paused) {
+if (!playbackBgm.paused) playbackBgm.pause();
+} else {
+if (playbackBgm.paused) playbackBgm.play().catch(e => {});
+if (Math.abs(playbackBgm.currentTime - targetBgmTime) > 0.2) {
+playbackBgm.currentTime = targetBgmTime;
+}
+}
+}
+}
+
+if (isRecording && isRecordingPaused) {
+if (dataArray) dataArray.fill(0);
+if (bgmDataArray) bgmDataArray.fill(0);
+} else {
+if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+}
+
+clearCanvas(ctx, canvas.width, canvas.height);
+
+if (bgmDataArray) {
+drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
+}
+
+if (dataArray) {
+drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
+}
+}
 
 // ========================================
 // 5. イベントリスナーの登録
@@ -1275,6 +1253,25 @@ triggerUIRefresh();
 volSlider.addEventListener('input', syncAudioParams);
 bgmVolSlider.addEventListener('input', syncAudioParams);
 
+// BGM開始タイミング調整ボタンの処理
+bgmStartMinusBtn.addEventListener('click', () => {
+bgmStartOffset -= 0.5; // 0.5秒単位で調整
+updateBgmStartDisplay();
+});
+
+bgmStartPlusBtn.addEventListener('click', () => {
+bgmStartOffset += 0.5; // 0.5秒単位で調整
+updateBgmStartDisplay();
+});
+
+function updateBgmStartDisplay() {
+if (bgmStartOffset > 0) {
+bgmStartDisplay.innerText = `+${bgmStartOffset.toFixed(1)} sec`;
+} else {
+bgmStartDisplay.innerText = `${bgmStartOffset.toFixed(1)} sec`;
+}
+}
+
 eqLowSlider.addEventListener('input', syncAudioParams);
 eqMidSlider.addEventListener('input', syncAudioParams);
 eqHighSlider.addEventListener('input', syncAudioParams);
@@ -1296,215 +1293,148 @@ syncAudioParams();
 });
 
 audioResetBtn.addEventListener('click', () => {
-// 1. 各種ボリューム・イコライザーを初期値に戻す
-volSlider.value = 1.0;
-bgmVolSlider.value = 0.5;
-eqLowSlider.value = -7;
-eqMidSlider.value = 3;
-eqHighSlider.value = -4;
-if (typeof syncAudioParams === 'function') syncAudioParams();
-
-// 2. BGMの開始時間（データと表示）を0に戻す
-bgmStartTime = 0;
-const bgmStartDisplay = document.getElementById('bgmStartDisplay');
-if (bgmStartDisplay) {
-bgmStartDisplay.textContent = "0.0 sec";
-}
-
-// 3. BGMのデータとボタン表示をここで「直接」初期化する！
-if (playbackBgm) {
-playbackBgm.pause();
-playbackBgm.src = "";
-playbackBgm.load();
-}
-bgmBlob = null;
-bgmBlobUrl = null;
-bgmAudioBuffer = null;
-bgmGainNode = null;
-bgmMediaSource = null;
-bgmAnalyser = null;
-bgmDataArray = null;
-
-// ボタンの見た目や文字を最初に戻す
-const bgmImportBtn = document.getElementById('bgmImportBtn');
-if (bgmImportBtn) {
-bgmImportBtn.classList.remove('loaded');
-bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
-}
-const bgmInput = document.getElementById('bgmInput');
-if (bgmInput) bgmInput.value = "";
-
-const bgmFileNameDisplay = document.getElementById('bgmFileName');
-if (bgmFileNameDisplay) {
-bgmFileNameDisplay.textContent = "選択されていません";
-}
-
-alert("オーディオ設定とBGMデータをすべて初期化しました。");
+volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
+bgmStartOffset = 0.0; updateBgmStartDisplay();
+syncAudioParams();
 });
 
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
-// --- ファイルが選ばれた時の処理 ---
 bgmInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        // 古いBGMがあれば停止
-        if (playbackBgm) playbackBgm.pause();
-
-        bgmBlob = file;
-        bgmBlobUrl = URL.createObjectURL(file);
-        
-        // 🎬【重要】動画保存用のデータ（bgmBuffer）も同時に裏側で読み込む
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            try {
-                const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
-                bgmBuffer = await tempCtx.decodeAudioData(event.target.result);
-                tempCtx.close();
-                console.log("動画用BGMの読み込みが完了しました");
-            } catch (err) {
-                console.error("BGMのデコードに失敗しました:", err);
-            }
-        };
-        reader.readAsArrayBuffer(file);
-
-        // ボタンの見た目を「ロード完了」に変更
-        bgmImportBtn.classList.add('loaded');
-        bgmImportBtn.innerHTML = "BGM<br>LOADED<br>♬";
+const file = e.target.files[0];
+if (file) {
+if (bgmBlobUrl) URL.revokeObjectURL(bgmBlobUrl);
+bgmBlob = file;
+bgmBlobUrl = URL.createObjectURL(bgmBlob);
+playbackBgm = new Audio(bgmBlobUrl);
+playbackBgm.preload = "auto";
+bgmImportBtn.classList.add('loaded');
+bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
 alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
-    }
-});
-
-// --- 🎵 BGM音量スライダーを動かした時の処理 ---
-bgmVolSlider.addEventListener('input', () => {
-    if (playbackBgm) {
-        playbackBgm.volume = parseFloat(bgmVolSlider.value);
-    }
+}
 });
 
 // ========================================
 // 6. 録音コントロール系の処理
 // ========================================
 recBtn.addEventListener('click', async () => {
-    // 【Safari対策】タップ直後にAudioContextを作成・再開する
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-    }
-    if (isRecording) {
-        if (isRecordingPaused) {
-            isRecordingPaused = false;
-            pauseBtnImg.src = IMG_PAUSE; // 動いているときは二本線マークにする
-            if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-            if (playbackBgm) playbackBgm.play().catch(e => {});
-        }
-        return;
-    }
-    
-    // 不要な初期化をシンプルに
-    resetDataWithoutPrompt();
-    
-    try {
-        unlockMenus();
-        
-        // 🎙️ 【最優先】ブラウザの拒絶を防ぐため、ボタンを押した直後にマイクを即座に起動！
-        await startRecordingStream();
-        
-        isRecording = true;
-        isRecordingPaused = false;
-        recordedChunks = [];
-        
-        // 【Safari対策】録音MIMEタイプの最適化
-        let options = { audioBitsPerSecond: 320000 };
-        if (typeof MediaRecorder.isTypeSupported === 'function') {
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                options.mimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                options.mimeType = 'audio/mp4';
-            }
-        }
-        
-        mediaRecorder = new MediaRecorder(recordDestination.stream, options);
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        
-        mediaRecorder.onstop = () => {
-            const actualMimeType = mediaRecorder.mimeType || options.mimeType || 'audio/mp4';
-            audioBlob = new Blob(recordedChunks, { type: actualMimeType });
-            audioBlobUrl = URL.createObjectURL(audioBlob);
-            playbackAudio = new Audio(audioBlobUrl);
-            playbackAudio.preload = "auto";
-            const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
-            setupAudioNodes(playbackSource, false);
-            
-            if (playbackBgm && bgmAudioBuffer) {
-                syncAudioParams();
-            }
-            
-            playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
-            playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
-            playbackAudio.addEventListener('ended', () => {
-                playPauseImg.src = IMG_PLAY;
-                isPlayingRecorded = false;
-                if (animationId) cancelAnimationFrame(animationId);
-                playbackAudio.currentTime = 0;
-                if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-                seekBar.value = 0;
-                drawStaticWave();
-            });
-            
-            downloadBtn.classList.add('ready'); 
-            playPauseImg.src = IMG_PLAY;
-            syncAudioParams();
-            lockMenus(); //録音完了後にロック
-        };
+if (!audioCtx) {
+audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+if (audioCtx.state === 'suspended') {
+await audioCtx.resume();
+}
 
-        // 🎙️ マイク録音とタイマーの開始（不要なボタン非表示処理をきれいに削除！）
-        mediaRecorder.start(10);
-        pauseBtn.style.display = 'inline-block';
-        stopBtn.style.display = 'inline-block';
+if (isRecording) {
+if (isRecordingPaused) {
+isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE;
+if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+if (playbackBgm) {
+if (bgmStartOffset > 0 && playbackBgm.currentTime === 0 && bgmDelayRemaining > 0) {
+bgmDelayLastStartTime = performance.now();
+bgmDelayTimer = setTimeout(bgmDelayCallback, bgmDelayRemaining);
+} else {
+playbackBgm.play().catch(e => {});
+}
+}
+}
+return;
+}
 
-        draw();
-        recBtn.classList.add('recording'); 
-        timerDisplay.style.display = 'block'; 
-        timeLeft = 120; 
-        updateTimerText();
+resetDataWithoutPrompt(true);
 
-        timerInterval = setInterval(() => {
-            if (!isRecordingPaused) {
-                timeLeft--;
-                updateTimerText();
-                if (timeLeft <= 0) stopRecording();
-            }
-        }, 1000);
+try {
+unlockMenus();
+await startRecordingStream();
+isRecording = true;
+isRecordingPaused = false;
+recordedChunks = [];
 
-// --- 🎵 安全なBGMスタート処理 ---
-        if (playbackBgm) {
-            playbackBgm.volume = parseFloat(bgmVolSlider.value);
+let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 };
+if (typeof MediaRecorder.isTypeSupported === 'function' && !MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+options = { audioBitsPerSecond: 320000 };
+}
+mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 
-            if (bgmStartTime >= 0) {
-                // 【◀ 途中から始めるモード】
-                const safeStartTime = Math.min(bgmStartTime, playbackBgm.duration - 0.1);
-                playbackBgm.currentTime = safeStartTime; 
-                playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
-            } else {
-                // 【▶ 遅らせて始めるモード】
-                playbackBgm.currentTime = 0;
-                const delayMs = Math.abs(bgmStartTime) * 1000;
-                setTimeout(() => {
-                    if (isRecording && !isRecordingPaused && playbackBgm) {
-                        playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
-                    }
-                }, delayMs);
-            }
-        }
+mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
 
-    } catch (err) {
-        console.error("録音開始エラー:", err);
-        alert("マイクの起動に失敗しました꙳☄︎\n端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
-        unlockMenus();
-        isRecording = false;
-    }
+mediaRecorder.onstop = () => {
+audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+audioBlobUrl = URL.createObjectURL(audioBlob);
+playbackAudio = new Audio(audioBlobUrl);
+playbackAudio.preload = "auto";
+
+const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+setupAudioNodes(playbackSource, false);
+
+if (playbackBgm) {
+syncAudioParams();
+}
+
+playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
+playbackAudio.addEventListener('ended', () => {
+playPauseImg.src = IMG_PLAY;
+isPlayingRecorded = false;
+if (animationId) cancelAnimationFrame(animationId);
+playbackAudio.currentTime = 0;
+if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
+seekBar.value = 0;
+drawStaticWave();
+});
+downloadBtn.classList.add('ready'); playPauseImg.src = IMG_PLAY;
+syncAudioParams();
+lockMenus();
+};
+
+if (playbackBgm) {
+if (!bgmMediaSource) {
+bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+}
+
+bgmAnalyser = audioCtx.createAnalyser();
+bgmAnalyser.fftSize = 1024;
+bgmAnalyser.smoothingTimeConstant = 0.75;
+bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+
+bgmGainNode = audioCtx.createGain();
+
+bgmMediaSource.disconnect();
+bgmMediaSource.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+
+syncAudioParams();
+
+// 🚀 指定された補正位置・遅延時間に応じてBGM再生開始
+if (bgmStartOffset < 0) {
+playbackBgm.currentTime = Math.abs(bgmStartOffset);
+playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
+} else if (bgmStartOffset > 0) {
+playbackBgm.currentTime = 0;
+bgmDelayRemaining = bgmStartOffset * 1000;
+bgmDelayLastStartTime = performance.now();
+bgmDelayTimer = setTimeout(bgmDelayCallback, bgmDelayRemaining);
+} else {
+playbackBgm.currentTime = 0;
+playbackBgm.play().catch(err => console.log("BGM自動再生エラー:", err));
+}
+}
+
+mediaRecorder.start();
+draw();
+
+recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
+timerInterval = setInterval(() => {
+if (!isRecordingPaused) {
+timeLeft--;
+updateTimerText();
+if (timeLeft <= 0) stopRecording();
+}
+}, 1000);
+} catch (err) {
+alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
+}
 });
 
 // ⏸️ 録音一時停止ボタンのクリックイベント
@@ -1512,17 +1442,28 @@ pauseBtn.addEventListener('click', () => {
 if (!isRecording) return;
 
 if (!isRecordingPaused) {
-// 一時停止する
 isRecordingPaused = true;
-pauseBtnImg.src = IMG_PLAY; // 一時停止中は「再開（三角）」マークにする
+pauseBtnImg.src = IMG_PLAY; 
 if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
 if (playbackBgm) playbackBgm.pause();
+
+if (bgmDelayTimer) {
+clearTimeout(bgmDelayTimer);
+bgmDelayTimer = null;
+bgmDelayRemaining -= (performance.now() - bgmDelayLastStartTime);
+}
 } else {
-// 再開する
 isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; // 再開したら「二本線」マークに戻す
+pauseBtnImg.src = IMG_PAUSE; 
 if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-if (playbackBgm) playbackBgm.play().catch(e => {});
+if (playbackBgm) {
+if (bgmStartOffset > 0 && playbackBgm.currentTime === 0 && bgmDelayRemaining > 0) {
+bgmDelayLastStartTime = performance.now();
+bgmDelayTimer = setTimeout(bgmDelayCallback, bgmDelayRemaining);
+} else {
+playbackBgm.play().catch(e => {});
+}
+}
 }
 });
 
@@ -1530,28 +1471,14 @@ stopBtn.addEventListener('click', () => { stopRecording(); });
 
 resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) {
-// 録音データだけをクリア（BGMは無傷で残ります）
-resetDataWithoutPrompt();
-// 🎵 BGMをストップして最初に戻す
-    if (playbackBgm) {
-        playbackBgm.pause();
-        playbackBgm.currentTime = bgmStartTime;
-    }
-
-    // 🎙️ 使っていたマイクを完全にオフにして解放する（次回のマイク起動エラー対策）
-    if (window.currentStream) {
-        window.currentStream.getTracks().forEach(track => track.stop());
-        window.currentStream = null;
-    }
-
-alert("録音をリセットしました。BGM設定はそのままで、新しく録音し直せます^.ˬ.^ฅⳊ");
+resetDataWithoutPrompt(false); 
+alert("リセットしました。デザインを選び直して新しく録音できます^.ˬ.^ฅⳊ");
 }
 });
 
 playPauseBtn.addEventListener('click', async () => {
 if (!audioBlobUrl || !playbackAudio) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
 
-// 【Safari対策】タップ直後に再開
 if (!audioCtx) {
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
@@ -1567,9 +1494,8 @@ isPlayingRecorded = true;
 playPauseImg.src = IMG_PAUSE;
 
 if (playbackBgm) {
-if (Math.abs(playbackBgm.currentTime - playbackAudio.currentTime) > 0.1) {
-playbackBgm.currentTime = playbackAudio.currentTime;
-}
+const expectedTime = getExpectedBgmTime(playbackAudio.currentTime);
+playbackBgm.currentTime = expectedTime;
 
 if (!bgmAnalyser) {
 bgmAnalyser = audioCtx.createAnalyser();
@@ -1587,7 +1513,11 @@ bgmAnalyser.connect(bgmGainNode);
 bgmGainNode.connect(audioCtx.destination);
 }
 
-playbackBgm.play();
+if (bgmStartOffset > 0 && playbackAudio.currentTime < bgmStartOffset) {
+playbackBgm.pause();
+} else {
+playbackBgm.play().catch(e => {});
+}
 }
 draw();
 }).catch(err => { alert("再生に失敗しました"); });
@@ -1602,14 +1532,20 @@ seekBar.addEventListener('input', () => {
 if (!playbackAudio) return;
 isUserChangingIndex = true;
 playbackAudio.currentTime = seekBar.value;
-if (playbackBgm) playbackBgm.currentTime = seekBar.value;
+if (playbackBgm) {
+const targetBgmTime = getExpectedBgmTime(seekBar.value);
+playbackBgm.currentTime = targetBgmTime;
+if (bgmStartOffset > 0 && seekBar.value < bgmStartOffset) {
+playbackBgm.pause();
+}
+}
 });
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
-if (!confirm("動画の保存を開始します^.ˬ.^ฅⳊ　よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
-// 【Safari対策】await（非同期通信）が発生する「前」にAudioContextを作っておく
+if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
+
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 document.getElementById('renderOverlay').style.display = 'flex';
 document.getElementById('miniGameIframe').src = 'mini-game.html';
@@ -1661,73 +1597,42 @@ rBgmGain.connect(renderDest);
 }
 
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-// 【Safari対策】動画MIMEタイプの最適化（Safariならvideo/mp4を使用）
-let videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
-if (typeof MediaRecorder.isTypeSupported === 'function') {
-if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
-videoOptions.mimeType = 'video/webm;codecs=vp9,opus';
-} else if (MediaRecorder.isTypeSupported('video/mp4')) {
-videoOptions.mimeType = 'video/mp4';
-}
+let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
+if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) {
+videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
 }
 const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
 const movieChunks = [];
 
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
 movieRecorder.onstop = () => {
-// 【修正】Safari対策：設定した videoOptions.mimeType を優先して拡張子を決めます
-const actualMimeType = movieRecorder.mimeType || videoOptions.mimeType || 'video/mp4';
-const isMp4 = actualMimeType.includes('mp4');
-const ext = isMp4 ? 'mp4' : 'webm';
-
-const finalBlob = new Blob(movieChunks, { type: actualMimeType });
+const finalBlob = new Blob(movieChunks, { type: 'video/webm' });
 const finalVideoUrl = URL.createObjectURL(finalBlob);
-const fileName = `voice-wave-${Date.now()}.${ext}`;
-
-const a = document.createElement('a');
-a.href = finalVideoUrl;
-a.download = fileName;
-
-// パソコン・Android用に「ファイル」としてダウンロードさせる命令（消さずに残します）
+const a = document.createElement('a'); a.href = finalVideoUrl; a.download = `voice-wave-${Date.now()}.webm`;
 document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
 downloadBtn.style.pointerEvents = 'auto';
 isMovieRendering = false;
+const finishGame = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
 
-// ★ iPhoneのカメラロール保存用（シェアメニュー）をシンプルな形で追加 ★
-const videoFile = new File([finalBlob], fileName, { type: actualMimeType });
-if (navigator.share && navigator.canShare && navigator.canShare({ files: [videoFile] })) {
-// iPhoneなどの場合
-const finishGame = confirm("動画が完成しました！\n「OK」を押すとカメラロールに保存するメニューが開きます。\n\n※ミニゲームを終了しますか？");
 if (finishGame) {
-navigator.share({
-files: [videoFile],
-title: 'Voice Wave Movie',
-text: '作成した動画の保存'
-}).catch(e => console.log("保存キャンセル:", e));
-
 hideOverlayAndCleanup();
 alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
-}
-} else {
-// パソコンやAndroidなどの場合（元の動き）
-const finishGameFallback = confirm("お待たせしました。動画の保存完了です！\n\nミニゲームを終わりますか？\n（「キャンセル」を押すと最後まで遊べます）");
-if (finishGameFallback) {
-hideOverlayAndCleanup();
-alert("録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
-}
 }
 };
-
 isMovieRendering = true;
 movieRecorder.start();
 bufferSource.start(0);
-if (rBgmSource) {
-// ★安全装置：もし設定した秒数が、BGMの実際の長さ（duration）を超えていたら、最後の瞬間に合わせてフリーズを防ぐ
-const safeStartTime = Math.min(bgmStartTime, bgmBuffer.duration - 0.1);
 
-// 安全な秒数からBGMをスタートさせる
-rBgmSource.start(0, safeStartTime);
+// 🎬 保存用動画出力ストリームへも指定のタイミング設定を正確に反映
+if (rBgmSource) {
+if (bgmStartOffset < 0) {
+rBgmSource.start(0, Math.abs(bgmStartOffset)); // 途中から開始
+} else if (bgmStartOffset > 0) {
+rBgmSource.start(renderAudioCtx.currentTime + bgmStartOffset); // 遅延開始
+} else {
+rBgmSource.start(0);
+}
 }
 
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
@@ -1760,12 +1665,11 @@ renderFrame();
 window.addEventListener('message', (event) => {
 if (event.data === 'MINIGAME_FINISHED') {
 if (isMovieRendering) {
-// 先にアラートを出してフリーズを防ぎます
-alert("動画を一所懸命に書き出し中です。完了の通知が出るまで、もう一回遊べる丼！");
 const gameIframe = document.getElementById('miniGameIframe');
 if (gameIframe) {
 gameIframe.src = 'mini-game.html';
 }
+alert("動画を一所懸命に保存中です。完了の通知が出るまで、もう一回遊べる丼！");
 } else {
 hideOverlayAndCleanup();
 alert("ミニゲーム終了お疲れ様でした！\n録音データを自動リセットしました。新しく録音できます^.ˬ.^ฅⳊ");
