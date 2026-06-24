@@ -1333,7 +1333,6 @@ audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (audioCtx.state === 'suspended') {
 await audioCtx.resume();
 }
-
 if (isRecording) {
 if (isRecordingPaused) {
 isRecordingPaused = false;
@@ -1344,22 +1343,24 @@ if (playbackBgm) playbackBgm.play().catch(e => {});
 return;
 }
 
+// 録音データだけを安全に初期化
 resetDataWithoutPrompt();
 
 try {
 unlockMenus();
+// 🎙️ マイクのストリームを開始する
 await startRecordingStream();
+
 isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
 
-
+// --- 🎵 BGMのスタート処理 ---
 if (playbackBgm && bgmAudioBuffer) {
 playbackBgm.volume = parseFloat(bgmVolSlider.value);
 
 if (bgmStartTime >= 0) {
 // 【◀ 途中から始めるモード】
-// 安全装置：曲の長さを超えないように調整
 const safeStartTime = Math.min(bgmStartTime, playbackBgm.duration - 0.1);
 playbackBgm.currentTime = safeStartTime;
 playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
@@ -1368,24 +1369,24 @@ playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
 playbackBgm.currentTime = 0;
 const delayMs = Math.abs(bgmStartTime) * 1000;
 setTimeout(() => {
-// 途中で録音停止ボタンが押されていなければ再生する安全装置
 if (isRecording && !isRecordingPaused && playbackBgm) {
 playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
 }
 }, delayMs);
 }
 }
+// --- 🎵 BGM処理ここまで ---
 
-
-// 【Safari対策】録音MIMEタイプの最適化（Safariならaudio/mp4を使用）
+// 【Safari対策】録音MIMEタイプの最適化
 let options = { audioBitsPerSecond: 320000 };
 if (typeof MediaRecorder.isTypeSupported === 'function') {
 if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
 options.mimeType = 'audio/webm;codecs=opus';
 } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-options.mimeType = 'audio/mp4';
+options.mimeType = 'black/mp4'; // Safari対策
 }
 }
+
 mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
 
@@ -1397,9 +1398,11 @@ playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
 const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
 setupAudioNodes(playbackSource, false);
+
 if (playbackBgm) {
 syncAudioParams();
 }
+
 playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
 playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
 playbackAudio.addEventListener('ended', () => {
@@ -1411,13 +1414,14 @@ if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
 seekBar.value = 0;
 drawStaticWave();
 });
+
 downloadBtn.classList.add('ready');
 playPauseImg.src = IMG_PLAY;
 syncAudioParams();
-lockMenus();
+unlockMenus();
 };
 
-
+// 録音・タイマーの開始処理
 mediaRecorder.start(10);
 recordBtn.style.display = 'none';
 pauseBtn.style.display = 'inline-block';
@@ -1440,7 +1444,7 @@ if (timeLeft <= 0) stopRecording();
 
 } catch (err) {
 console.error("録音開始エラー:", err);
-alert("マイクの起動に失敗しました꙳☄︎\n 端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
+alert("マイクの起動に失敗しました꙳☄︎\n端末やウェブサイトでのマイク権限設定をご確認ください^.ˬ.^ฅⳊ: " + err);
 unlockMenus();
 isRecording = false;
 }
