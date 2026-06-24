@@ -1338,7 +1338,7 @@ if (isRecordingPaused) {
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE; // 動いているときは二本線マークにする
 if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-if (playbackBgm) playbackBgm.play().catch(e => {});
+if (playbackBgm && bgmAudioBuffer) playbackBgm.play().catch(e => {});
 }
 return;
 }
@@ -1355,7 +1355,7 @@ isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
 
-// --- 🎵 BGMのスタート処理 ---
+// --- 🎵 BGMのスタート処理（BGMがあるときだけ安全に動かします） ---
 if (playbackBgm && bgmAudioBuffer) {
 playbackBgm.volume = parseFloat(bgmVolSlider.value);
 
@@ -1377,13 +1377,13 @@ playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
 }
 // --- 🎵 BGM処理ここまで ---
 
-// 【Safari対策】録音MIMEタイプの最適化
+// 【Safari対策】録音MIMEタイプの最適化（正しい形式に修正しました！）
 let options = { audioBitsPerSecond: 320000 };
 if (typeof MediaRecorder.isTypeSupported === 'function') {
 if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
 options.mimeType = 'audio/webm;codecs=opus';
 } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-options.mimeType = 'black/mp4'; // Safari対策
+options.mimeType = 'audio/mp4'; // 👈 'black/mp4' から正しい形式に修正！
 }
 }
 
@@ -1399,7 +1399,7 @@ playbackAudio.preload = "auto";
 const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
 setupAudioNodes(playbackSource, false);
 
-if (playbackBgm) {
+if (playbackBgm && bgmAudioBuffer) {
 syncAudioParams();
 }
 
