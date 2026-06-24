@@ -1029,45 +1029,73 @@ targetCtx.restore();
 }
 
 async function startRecordingStream() {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: {
-echoCancellation: isNoiseCancelOn,
-noiseSuppression: isNoiseCancelOn,
-autoGainControl: false
-}
-});
-audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-source = audioCtx.createMediaStreamSource(stream);
-setupAudioNodes(source, true);
-recordDestination = audioCtx.createMediaStreamDestination();
-gainNode.connect(recordDestination);
-dataArray = new Uint8Array(analyser.frequencyBinCount);
+    stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+            echoCancellation: isNoiseCancelOn,
+            noiseSuppression: isNoiseCancelOn,
+            autoGainControl: false
+        }
+    });
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    source = audioCtx.createMediaStreamSource(stream);
+    setupAudioNodes(source, true);
+    recordDestination = audioCtx.createMediaStreamDestination();
+    gainNode.connect(recordDestination);
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    // ==========================================
+    // 🎵【追加】BGMを音の解析システムに安全に接続する処理
+    // ==========================================
+    if (typeof bgmBlobUrl !== 'undefined' && bgmBlobUrl) {
+        if (playbackBgm) playbackBgm.pause();
+        
+        // 毎回新しく作り直すことで、ブラウザのエラーとマイク起動失敗を防ぎます
+        playbackBgm = new Audio(bgmBlobUrl);
+        playbackBgm.loop = true;
+        playbackBgm.volume = parseFloat(bgmVolSlider.value);
+
+        // BGMの音をキャッチして波形にするための接続
+        bgmSourceNode = audioCtx.createMediaElementSource(playbackBgm);
+        bgmAnalyser = audioCtx.createAnalyser();
+        
+        // ✨ マイクのサイズ（1024）と合わせることで、波形の細かさが綺麗に揃います
+        bgmAnalyser.fftSize = 1024; 
+        bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+        
+        bgmSourceNode.connect(bgmAnalyser);
+        bgmAnalyser.connect(audioCtx.destination); // 📢 スピーカーから音が出るように接続
+    }
 }
 
 async function restartRecordingStream() {
-if (!isRecording || !mediaRecorder) return;
-if (stream) stream.getTracks().forEach(track => track.stop());
-try {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: {
-echoCancellation: isNoiseCancelOn,
-noiseSuppression: isNoiseCancelOn,
-autoGainControl: false
-}
-});
-const newSource = audioCtx.createMediaStreamSource(stream);
-eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-gainNode = audioCtx.createGain();
+    if (!isRecording || !mediaRecorder) return;
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: isNoiseCancelOn,
+                noiseSuppression: isNoiseCancelOn,
+                autoGainControl: false
+            }
+        });
+        const newSource = audioCtx.createMediaStreamSource(stream);
+        eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+        eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+        eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+        ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+        gainNode = audioCtx.createGain();
 
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
 
-newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-gainNode.connect(analyser); gainNode.connect(recordDestination);
-syncAudioParams();
-} catch (err) { console.error(err); }
+        newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+        gainNode.connect(analyser); gainNode.connect(recordDestination);
+        
+        // 🎙️【プチ改善】マイクの解析器（analyser）が新しくなったので、波形用配列も新しく紐付け直す
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        syncAudioParams();
+    } catch (err) { console.error(err); }
 }
 
 function stopRecording() {
@@ -1315,18 +1343,42 @@ alert("オーディオ設定とBGMデータをすべて初期化しました。"
 });
 
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
+// --- ファイルが選ばれた時の処理 ---
 bgmInput.addEventListener('change', (e) => {
-const file = e.target.files[0];
-if (file) {
-if (bgmBlobUrl) URL.revokeObjectURL(bgmBlobUrl);
-bgmBlob = file;
-bgmBlobUrl = URL.createObjectURL(bgmBlob);
-playbackBgm = new Audio(bgmBlobUrl);
-playbackBgm.preload = "auto";
-bgmImportBtn.classList.add('loaded');
-bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
+    const file = e.target.files[0];
+    if (file) {
+        // 古いBGMがあれば停止
+        if (playbackBgm) playbackBgm.pause();
+
+        bgmBlob = file;
+        bgmBlobUrl = URL.createObjectURL(file);
+        
+        // 🎬【重要】動画保存用のデータ（bgmBuffer）も同時に裏側で読み込む
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+                bgmBuffer = await tempCtx.decodeAudioData(event.target.result);
+                tempCtx.close();
+                console.log("動画用BGMの読み込みが完了しました");
+            } catch (err) {
+                console.error("BGMのデコードに失敗しました:", err);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+
+        // ボタンの見た目を「ロード完了」に変更
+        bgmImportBtn.classList.add('loaded');
+        bgmImportBtn.innerHTML = "BGM<br>LOADED<br>♬";
 alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
-}
+    }
+});
+
+// --- 🎵 BGM音量スライダーを動かした時の処理 ---
+bgmVolSlider.addEventListener('input', () => {
+    if (playbackBgm) {
+        playbackBgm.volume = parseFloat(bgmVolSlider.value);
+    }
 });
 
 // ========================================
@@ -1480,6 +1532,17 @@ resetBtn.addEventListener('click', () => {
 if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\n現在の状態をクリアして、最初からやりなおしますか？")) {
 // 録音データだけをクリア（BGMは無傷で残ります）
 resetDataWithoutPrompt();
+// 🎵 BGMをストップして最初に戻す
+    if (playbackBgm) {
+        playbackBgm.pause();
+        playbackBgm.currentTime = bgmStartTime;
+    }
+
+    // 🎙️ 使っていたマイクを完全にオフにして解放する（次回のマイク起動エラー対策）
+    if (window.currentStream) {
+        window.currentStream.getTracks().forEach(track => track.stop());
+        window.currentStream = null;
+    }
 
 alert("録音をリセットしました。BGM設定はそのままで、新しく録音し直せます^.ˬ.^ฅⳊ");
 }
