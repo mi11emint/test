@@ -687,20 +687,34 @@ const bgmStartDisplay = document.getElementById('bgmStartDisplay');
 
 let bgmStartTime = 0;
 
-// 【◀ ボタン】開始を早くする（秒数を増やす）
+// 【◀ ボタン】曲の途中から始める（秒数をプラスに進める）
 if (bgmStartMinusBtn) {
 bgmStartMinusBtn.addEventListener('click', () => {
 bgmStartTime = parseFloat((bgmStartTime + 0.1).toFixed(1));
-if (bgmStartDisplay) bgmStartDisplay.textContent = bgmStartTime + " sec";
+if (bgmStartDisplay) {
+if (bgmStartTime > 0) {
+bgmStartDisplay.textContent = "- " + bgmStartTime + " sec";
+} else if (bgmStartTime < 0) {
+bgmStartDisplay.textContent = "- " + Math.abs(bgmStartTime) + " sec";
+} else {
+bgmStartDisplay.textContent = "0.0 sec";
+}
+}
 });
 }
 
-// 【▶ ボタン】開始を遅らせる（秒数を減らす・最小0）
+// 【▶ ボタン】曲を遅らせて始める（秒数をマイナスに減らす）
 if (bgmStartPlusBtn) {
 bgmStartPlusBtn.addEventListener('click', () => {
-if (bgmStartTime > 0) {
 bgmStartTime = parseFloat((bgmStartTime - 0.1).toFixed(1));
-if (bgmStartDisplay) bgmStartDisplay.textContent = bgmStartTime + " sec";
+if (bgmStartDisplay) {
+if (bgmStartTime > 0) {
+bgmStartDisplay.textContent = "+ " + bgmStartTime + " sec";
+} else if (bgmStartTime < 0) {
+bgmStartDisplay.textContent = "+ " + Math.abs(bgmStartTime) + " sec";
+} else {
+bgmStartDisplay.textContent = "0.0 sec";
+}
 }
 });
 }
@@ -1132,10 +1146,6 @@ unlockMenus();
 drawStaticWave();
 }
 
-
-
-
-
 function hideOverlayAndCleanup() {
 document.getElementById('renderOverlay').style.display = 'none';
 document.getElementById('miniGameIframe').src = 'about:blank';
@@ -1334,8 +1344,7 @@ if (playbackBgm) playbackBgm.play().catch(e => {});
 return;
 }
 
-// ★ trueを指定して、BGM（インポート済みのデータ）をリセットから保護する
-resetDataWithoutPrompt(true);
+resetDataWithoutPrompt();
 
 try {
 unlockMenus();
@@ -1343,6 +1352,38 @@ await startRecordingStream();
 isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
+
+// --- 🎵 ここからがBGMのスタート処理です！ ---
+if (playbackBgm && bgmAudioBuffer) {
+playbackBgm.volume = parseFloat(bgmVolSlider.value);
+
+if (!bgmMediaSource) {
+bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+bgmMediaSource.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+}
+
+if (bgmStartTime >= 0) {
+// 【◀ 途中から始めるモード】
+// 安全装置：曲の長さを超えないように調整
+const safeStartTime = Math.min(bgmStartTime, playbackBgm.duration - 0.1);
+playbackBgm.currentTime = safeStartTime;
+playbackBgm.play().catch(e => console.error("BGM再生エラー:", e));
+} else {
+// 【▶ 遅らせて始めるモード】
+// 一旦巻き戻して、指定された秒数（マイナスをプラスに反転）が経ってから再生スタートする
+playbackBgm.currentTime = 0;
+const delayMs = Math.abs(bgmStartTime) * 1000;
+setTimeout(() => {
+// 途中で録音停止ボタンが押されていなければ再生する安全装置
+if (isRecording && !isRecordingPaused && playbackBgm) {
+playbackBgm.play().catch(e => console.error("BGM遅延再生エラー:", e));
+}
+}, delayMs);
+}
+}
+// --- 🎵 ここまで ---
 
 // 【Safari対策】録音MIMEタイプの最適化（Safariならaudio/mp4を使用）
 let options = { audioBitsPerSecond: 320000 };
@@ -1391,7 +1432,7 @@ lockMenus();
 };
 
 if (playbackBgm) {
-playbackBgm.currentTime = 0;
+playbackBgm.currentTime = bgmStartTime;;
 
 if (!bgmMediaSource) {
 bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
@@ -1634,8 +1675,11 @@ isMovieRendering = true;
 movieRecorder.start();
 bufferSource.start(0);
 if (rBgmSource) {
-// 指定された秒数（bgmStartTime）からBGMをスタートさせる
-rBgmSource.start(0, bgmStartTime);
+// ★安全装置：もし設定した秒数が、BGMの実際の長さ（duration）を超えていたら、最後の瞬間に合わせてフリーズを防ぐ
+const safeStartTime = Math.min(bgmStartTime, bgmAudioBuffer.duration - 0.1);
+
+// 安全な秒数からBGMをスタートさせる
+rBgmSource.start(0, safeStartTime);
 }
 
 const startTime = performance.now(); const duration = audioBuffer.duration * 1000;
