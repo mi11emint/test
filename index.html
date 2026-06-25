@@ -1303,48 +1303,50 @@ const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
 const movieChunks = [];
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
 movieRecorder.onstop = () => {
-// 1. iPhone (iOS / iPadOS) かどうかを判定
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const fileExtension = isIOS ? 'mov' : 'webm';
+    const mimeType = isIOS ? 'video/quicktime' : 'video/webm';
 
-const fileExtension = isIOS ? 'mov' : 'webm';
-const mimeType = isIOS ? 'video/quicktime' : 'video/webm';
+    const finalBlob = new Blob(movieChunks, { type: mimeType });
+    const finalVideoUrl = URL.createObjectURL(finalBlob);
+    const fileName = `voice-wave-${Date.now()}.${fileExtension}`;
+    
+    // Android/PCは自動ダウンロード
+    if (!isIOS) {
+        const a = document.createElement('a'); a.href = finalVideoUrl; a.download = fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    
+    // ポップアップの表示処理
+    const videoPopup = document.getElementById('videoPopup');
+    const popupVideo = document.getElementById('popupVideo');
+    const downloadFileBtn = document.getElementById('downloadFileBtn');
+    const closePopupBtn = document.getElementById('closePopupBtn');
+    
+    popupVideo.src = finalVideoUrl;
+    videoPopup.style.display = 'flex';
+    
+    downloadBtn.style.pointerEvents = 'auto'; 
+    isMovieRendering = false;
 
-const finalBlob = new Blob(movieChunks, { type: mimeType });
-const finalVideoUrl = URL.createObjectURL(finalBlob);
-
-// 2. パソコンやAndroidの場合は、今まで通り自動ダウンロードを試みる
-if (!isIOS) {
-const a = document.createElement('a');
-a.href = finalVideoUrl;
-a.download = `voice-wave-${Date.now()}.${fileExtension}`;
-document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
-
-// 3. 🎥 ポップアップに動画をセットして画面に表示する
-const videoPopup = document.getElementById('videoPopup');
-const popupVideo = document.getElementById('popupVideo');
-const closePopupBtn = document.getElementById('closePopupBtn');
-
-popupVideo.src = finalVideoUrl; // 生成された動画をプレイヤーにセット
-videoPopup.style.display = 'flex'; // ポップアップを表示（隠していたのを開く）
-
-// 元のボタンのロックを解除
-downloadBtn.style.pointerEvents = 'auto';
-isMovieRendering = false;
-
-// 4. ポップアップの「閉じる」ボタンが押された時の処理
-closePopupBtn.onclick = () => {
-videoPopup.style.display = 'none'; // ポップアップを閉じる
-popupVideo.src = ''; // メモリ解放のために動画をクリア
-
-// ミニゲーム終了の確認
-const finishGame = confirm("ミニゲームを終わりますか？");
-if (finishGame) {
-hideOverlayAndCleanup();
-alert("録音データを自動リセットしました^.ˬ.^ฅ");
-}
-};
+    // 💡 「動画を保存する」ボタンが押された時の処理
+    downloadFileBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = finalVideoUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click(); // ユーザーのタップをきっかけに実行するのでSafariでも通る
+        document.body.removeChild(a);
+    };
+    
+    closePopupBtn.onclick = () => {
+        videoPopup.style.display = 'none';
+        popupVideo.src = '';
+        const finishGame = confirm("ミニゲームを終わりますか？");
+        if (finishGame) { hideOverlayAndCleanup(); alert("録音データを自動リセットしました^.ˬ.^ฅ"); }
+    };
 };
 
 isMovieRendering = true; movieRecorder.start(); bufferSource.start(0);
@@ -1388,18 +1390,20 @@ setupPaletteEvents();
 unlockMenus();
 drawStaticWave();
 </script>
-
 <div id="videoPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; padding: 20px;">
-<div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
-<p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;">動画が完成しました！</p>
-<p style="color: #111b35; font-size: 13px; margin-bottom: 15px; background: #fff; padding: 5px; border-radius: 5px; font-family: sans-serif;">
-⚠️ iPhone（Safari）の方は下の動画を<strong>長押し</strong>して<strong>「写真に保存」</strong>をタップしてください^.ˬ.^ฅⳊ
-</p>
-
-<video id="popupVideo" controls playsinline style="width: 100%; max-height: 250px; border-radius: 8px; background: #000; margin-bottom: 15px; -webkit-user-select: auto !important; user-select: auto !important; pointer-events: auto !important;"></video>
-
-<button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
-</div>
+    <div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
+        <p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;"> 動画が完成しました！</p>
+        
+        <p style="color: #333; font-size: 13px; margin-bottom: 15px; background: #fff; padding: 8px; border-radius: 5px; font-family: sans-serif; font-weight: bold;">
+            iPhoneの方は下の「動画を保存する」ボタンを押し、確認画面で「ダウンロード」をタップしてください。
+        </p>
+        
+        <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
+        
+        <button id="downloadFileBtn" style="background: #111b35; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">SAVE</button>
+        
+        <button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
+    </div>
 </div>
 
 </body>
