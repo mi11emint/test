@@ -416,8 +416,10 @@ opacity: 0.6;
 transition: opacity 0.2s;
 }
 .color-option.active, .style-option.active { opacity: 1; }
-.pointer { visibility: hidden; margin-right: 4px; }
-.color-option.active .pointer, .style-option.active .pointer { visibility: visible; }
+
+/* 🌌 Safariパッチ: visibilityからレイアウト再計算が走るdisplayに変更して再描画を強制 */
+.pointer { display: none; margin-right: 4px; }
+.color-option.active .pointer, .style-option.active .pointer { display: inline; }
 
 .setting-section.locked {
 opacity: 0.3 !important;
@@ -729,8 +731,8 @@ let bgmDataArray = null;
 
 // BGM再生制御タイミング管理
 let bgmStartOffset = 0.0; // マイナス値なら途中(サビ等)から開始、プラス値なら遅延開始
-let bgmDelayTimer = null; 
-let bgmDelayRemaining = 0; 
+let bgmDelayTimer = null;
+let bgmDelayRemaining = 0;
 let bgmDelayLastStartTime = 0;
 
 // ========================================
@@ -1098,7 +1100,12 @@ document.getElementById('menuTouka').classList.remove('locked');
 }
 
 function resetDataWithoutPrompt(keepBgm = false) {
-if (playbackAudio) { playbackAudio.pause(); playbackAudio = null; }
+if (playbackAudio) { 
+playbackAudio.pause(); 
+// 🌌 Safariパッチ: 古い要素をDOMツリーから完全に除去してメモリ解放
+if (playbackAudio.parentNode) playbackAudio.parentNode.removeChild(playbackAudio);
+playbackAudio = null; 
+}
 if (audioBlobUrl) { URL.revokeObjectURL(audioBlobUrl); audioBlobUrl = null; }
 audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
@@ -1114,7 +1121,11 @@ eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
 gainNode = null; source = null; analyser = null; dataArray = null;
 
 if (!keepBgm) {
-if (playbackBgm) { playbackBgm.pause(); playbackBgm = null; }
+if (playbackBgm) { 
+playbackBgm.pause(); 
+if (playbackBgm.parentNode) playbackBgm.parentNode.removeChild(playbackBgm);
+playbackBgm = null; 
+}
 if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
 bgmBlob = null; bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
 bgmImportBtn.classList.remove('loaded');
@@ -1260,7 +1271,7 @@ triggerUIRefresh();
 volSlider.addEventListener('input', syncAudioParams);
 bgmVolSlider.addEventListener('input', syncAudioParams);
 
-// BGM開始タイミング調整ボタンの処理
+// BGM開始タイミング調整ボタン of 処理
 bgmStartMinusBtn.addEventListener('click', () => {
 bgmStartOffset -= 0.1; //秒単位で調整
 updateBgmStartDisplay();
@@ -1306,7 +1317,11 @@ bgmStartOffset = 0.0; updateBgmStartDisplay();
 syncAudioParams();
 
 // 🆕 追加：BGMの完全な削除とインポートボタンを未読み込み状態に戻す
-if (playbackBgm) { playbackBgm.pause(); playbackBgm = null; }
+if (playbackBgm) { 
+playbackBgm.pause(); 
+if (playbackBgm.parentNode) playbackBgm.parentNode.removeChild(playbackBgm);
+playbackBgm = null; 
+}
 if (bgmBlobUrl) { URL.revokeObjectURL(bgmBlobUrl); bgmBlobUrl = null; }
 bgmBlob = null; bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
 bgmImportBtn.classList.remove('loaded');
@@ -1320,11 +1335,18 @@ bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
 bgmInput.addEventListener('change', (e) => {
 const file = e.target.files[0];
 if (file) {
+if (playbackBgm && playbackBgm.parentNode) {
+playbackBgm.parentNode.removeChild(playbackBgm);
+}
 if (bgmBlobUrl) URL.revokeObjectURL(bgmBlobUrl);
 bgmBlob = file;
 bgmBlobUrl = URL.createObjectURL(bgmBlob);
 playbackBgm = new Audio(bgmBlobUrl);
 playbackBgm.preload = "auto";
+// 🌌 Safariパッチ: 画面の裏（DOMツリー）に結合することで、SafariでもAnalyserから波形データを抽出可能にする
+playbackBgm.style.display = 'none';
+document.body.appendChild(playbackBgm);
+
 bgmImportBtn.classList.add('loaded');
 bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
 alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
@@ -1377,10 +1399,17 @@ mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
 
 mediaRecorder.onstop = () => {
+if (playbackAudio && playbackAudio.parentNode) {
+playbackAudio.parentNode.removeChild(playbackAudio);
+}
 audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
 audioBlobUrl = URL.createObjectURL(audioBlob);
 playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
+
+// 🌌 Safariパッチ: 画面の裏（DOMツリー）に結合
+playbackAudio.style.display = 'none';
+document.body.appendChild(playbackAudio);
 
 // 🌌 Safariパッチ: ここではまだ接続せず、フラグのみ用意する
 playbackAudio.dataset.sourceConnected = "false";
@@ -1389,13 +1418,13 @@ if (playbackBgm) {
 syncAudioParams();
 }
 
-playbackAudio.addEventListener('loadedmetadata', () => { 
+playbackAudio.addEventListener('loadedmetadata', () => {
 if (playbackAudio.duration && isFinite(playbackAudio.duration)) {
-seekBar.max = playbackAudio.duration; 
+seekBar.max = playbackAudio.duration;
 } else {
 seekBar.max = 120;
 }
-seekBar.value = 0; 
+seekBar.value = 0;
 });
 playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
 playbackAudio.addEventListener('ended', () => {
@@ -1420,6 +1449,7 @@ bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
 bgmAnalyser = audioCtx.createAnalyser();
 bgmAnalyser.fftSize = 1024;
 bgmAnalyser.smoothingTimeConstant = 0.75;
+bgmTemplate = new Uint8Array(bgmAnalyser.frequencyBinCount);
 bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
 
 bgmGainNode = audioCtx.createGain();
@@ -1468,7 +1498,7 @@ if (!isRecording) return;
 
 if (!isRecordingPaused) {
 isRecordingPaused = true;
-pauseBtnImg.src = IMG_PLAY; 
+pauseBtnImg.src = IMG_PLAY;
 if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
 if (playbackBgm) playbackBgm.pause();
 
@@ -1479,7 +1509,7 @@ bgmDelayRemaining -= (performance.now() - bgmDelayLastStartTime);
 }
 } else {
 isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE; 
+pauseBtnImg.src = IMG_PAUSE;
 if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
 if (playbackBgm) {
 if (bgmStartOffset > 0 && playbackBgm.currentTime === 0 && bgmDelayRemaining > 0) {
@@ -1584,6 +1614,10 @@ if (!audioBlob) { alert("保存する録音データがありません^.ˬ.^ฅ�
 if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
 
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// 🌌 Safariパッチ: 録画用のAudioContextを明示的に開始させて、Safari特有のフリーズ・無描写を回避
+if (renderAudioCtx.state === 'suspended') {
+await renderAudioCtx.resume();
+}
 document.getElementById('renderOverlay').style.display = 'flex';
 document.getElementById('miniGameIframe').src = 'mini-game.html';
 downloadBtn.style.pointerEvents = 'none';
