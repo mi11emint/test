@@ -1267,7 +1267,7 @@ seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 // 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
-if (!confirm("動画の保存を開始します。よろしいですか？\n(処理中は画面を開いたままお待ちください)")) return;
+if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
 document.getElementById('renderOverlay').style.display = 'flex';
@@ -1383,7 +1383,7 @@ if (event.data === 'MINIGAME_FINISHED') {
 if (isMovieRendering) {
 const gameIframe = document.getElementById('miniGameIframe');
 if (gameIframe) gameIframe.src = 'mini-game.html';
-alert("動画を一所懸命に保存中です。もう一回遊べる丼！");
+alert("動画を一所懸命に書き出し中です。もう一回遊べる丼！");
 } else { hideOverlayAndCleanup(); }
 }
 });
