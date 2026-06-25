@@ -1319,7 +1319,6 @@ movieRecorder.onstop = () => {
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
     }
     
-    // ポップアップの表示処理
     const videoPopup = document.getElementById('videoPopup');
     const popupVideo = document.getElementById('popupVideo');
     const downloadFileBtn = document.getElementById('downloadFileBtn');
@@ -1331,21 +1330,39 @@ movieRecorder.onstop = () => {
     downloadBtn.style.pointerEvents = 'auto'; 
     isMovieRendering = false;
 
-    // 💡 「動画を保存する」ボタンが押された時の処理
-    downloadFileBtn.onclick = () => {
-    if (isIOS) {
-        // 【iPhoneの場合】確実性を重視して新しいタブで開く
-        window.open(finalVideoUrl, '_blank');
-    } else {
-        // 【AndroidやPCの場合】ボタン一発でファイルとして保存する
-        const a = document.createElement('a');
-        a.href = finalVideoUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-};
+    // 💡 ボタンが押された時の処理を「共有メニュー」を出す仕組みに変更！
+    downloadFileBtn.onclick = async () => {
+        if (isIOS) {
+            try {
+                // Blobデータを、iPhoneが共有できる「Fileオブジェクト」に変換
+                const file = new File([finalBlob], fileName, { type: mimeType });
+                
+                // iPhoneの共有機能が使えるかチェック
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    //iPhone標準の共有メニューを強制的に引き出す！
+                    await navigator.share({
+                        files: [file],
+                        title: '動画の保存',
+                        text: '作成した動画を保存します'
+                    });
+                } else {
+                    alert("このブラウザは動画の共有保存に対応していません。Safariで開き直してください。");
+                }
+            } catch (error) {
+                console.error("共有エラー:", error);
+                // 万が一エラーが出た時のバックアップとして別窓を開く
+                window.open(finalVideoUrl, '_blank');
+            }
+        } else {
+            // AndroidやPCの場合は今まで通り一発保存
+            const a = document.createElement('a');
+            a.href = finalVideoUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
     
     closePopupBtn.onclick = () => {
         videoPopup.style.display = 'none';
