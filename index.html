@@ -468,23 +468,6 @@ margin-top: 5px;
 #toukaSlider {
 max-width: 50px;
 }
-
-/* 📱 【追加】iPhone Safari等の幅が狭いスマホで横並びが被るのを防ぐレスポンシブ設定 */
-@media (max-width: 440px) {
-.main-container {
-flex-direction: column;
-align-items: center;
-}
-.side-panel {
-flex: none;
-width: 100%;
-padding: 15px 4px 10px 4px;
-}
-.palette-grid {
-max-width: 100%;
-grid-template-columns: repeat(6, 1fr);
-}
-}
 </style>
 </head>
 <body>
@@ -802,7 +785,25 @@ drawStaticWave();
 
 function syncAudioParams() {
 if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
-if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
+
+// 🔊 BGM音量のリアルタイム同期（Safari録音後のルーティング外れ対策パッチ）
+const bgmVol = parseFloat(bgmVolSlider.value);
+if (audioBlob) {
+// 【録音完了後の確認再生・調整モード】
+// Safari等でマイク切断によりWebAudioグラフが外れて直鳴りした場合の保険として、
+// Audio要素自体のvolumeプロパティを直接スライダーに連動させます（上限1.0に丸める）
+if (playbackBgm) {
+playbackBgm.volume = Math.min(1.0, bgmVol);
+}
+// 重複（掛け合わせ）による音量低下を防ぐため、確認再生中はノード側のゲインを1.0固定にします
+if (bgmGainNode) bgmGainNode.gain.value = 1.0;
+} else {
+// 【録音前、または録音中のモード】
+// 録音中（イヤホンモニター等）は従来通りWebAudioノード側で正確に音量を制御します
+if (bgmGainNode) bgmGainNode.gain.value = bgmVol;
+if (playbackBgm) playbackBgm.volume = 1.0;
+}
+
 if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
 if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
 if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
@@ -1017,50 +1018,6 @@ targetCtx.restore();
 }
 }
 
-/* 🛠️ 【追加】BGM用のオーディオノード群を破綻させず一元管理・安全接続する関数 */
-function setupBgmNodes() {
-if (!audioCtx || !playbackBgm) return;
-
-if (!bgmMediaSource) {
-bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
-}
-if (!bgmAnalyser) {
-bgmAnalyser = audioCtx.createAnalyser();
-bgmAnalyser.fftSize = 1024;
-bgmAnalyser.smoothingTimeConstant = 0.75;
-}
-if (!bgmDataArray) {
-bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-}
-if (!bgmGainNode) {
-bgmGainNode = audioCtx.createGain();
-}
-
-bgmMediaSource.disconnect();
-bgmMediaSource.connect(bgmAnalyser);
-bgmAnalyser.connect(bgmGainNode);
-bgmGainNode.connect(audioCtx.destination);
-
-syncAudioParams();
-}
-
-function setupAudioNodes(audioSource, isMuteSpeaker) {
-if (!audioCtx || !audioSource) return;
-eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-gainNode = audioCtx.createGain();
-
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-dataArray = new Uint8Array(analyser.frequencyBinCount); // 🛠️ 【修正】配列の再生成・追従漏れを補正
-
-audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-gainNode.connect(analyser);
-if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
-syncAudioParams();
-}
-
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: {
@@ -1127,6 +1084,22 @@ timerDisplay.style.display = 'none';
 drawStaticWave();
 }
 
+function setupAudioNodes(audioSource, isMuteSpeaker) {
+if (!audioCtx || !audioSource) return;
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+
+audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser);
+if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
+syncAudioParams();
+}
+
 function updateTimerText() {
 const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
 timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -1153,6 +1126,8 @@ pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
 
 if (bgmDelayTimer) { clearTimeout(bgmDelayTimer); bgmDelayTimer = null; }
 
+// 🌌 Safariパッチ: 紐付いた使い回しBGMの破損を防ぐためaudioCtx基盤は使い回す
+// audioCtx = null;
 eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
 gainNode = null; source = null; analyser = null; dataArray = null;
 
@@ -1165,7 +1140,8 @@ bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
 bgmInput.value = "";
 } else {
 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-// 🛠️ 【修正】BGM関連ノードをnullクリアするのを廃止し、音量・波形制御関係を完全に保護維持する
+// 🌌 Safariパッチ: 既存 of BGMノードの破棄を防ぐ
+bgmGainNode = null; /* bgmMediaSource = null; */ bgmAnalyser = null; bgmDataArray = null;
 }
 
 unlockMenus(); drawStaticWave();
@@ -1367,15 +1343,6 @@ bgmBlob = file;
 bgmBlobUrl = URL.createObjectURL(bgmBlob);
 playbackBgm = new Audio(bgmBlobUrl);
 playbackBgm.preload = "auto";
-
-/* 🛠️ 【追加】Safariのセキュリティ・省電力バグ対策：不可視化した状態でDOMに置く */
-playbackBgm.style.position = 'absolute';
-playbackBgm.style.width = '0';
-playbackBgm.style.height = '0';
-playbackBgm.style.opacity = '0';
-playbackBgm.style.pointerEvents = 'none';
-document.body.appendChild(playbackBgm);
-
 bgmImportBtn.classList.add('loaded');
 bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
 alert("BGMを読み込みました^.ˬ.^ฅ\n録音中のイヤホンモニター、録音後の確認、動画保存時のすべてで波形が出ます。");
@@ -1433,14 +1400,6 @@ audioBlobUrl = URL.createObjectURL(audioBlob);
 playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
 
-/* 🛠️ 【追加】Safari対策：生成された確認用音声を不可視化してDOMツリーに配置 */
-playbackAudio.style.position = 'absolute';
-playbackAudio.style.width = '0';
-playbackAudio.style.height = '0';
-playbackAudio.style.opacity = '0';
-playbackAudio.style.pointerEvents = 'none';
-document.body.appendChild(playbackAudio);
-
 // 🌌 Safariパッチ: ここではまだ接続せず、フラグのみ用意する
 playbackAudio.dataset.sourceConnected = "false";
 
@@ -1472,7 +1431,23 @@ lockMenus();
 };
 
 if (playbackBgm) {
-setupBgmNodes(); // 🛠️ 【修正】安全接続関数に一元化
+if (!bgmMediaSource) {
+bgmMediaSource = audioCtx.createMediaElementSource(playbackBgm);
+}
+
+bgmAnalyser = audioCtx.createAnalyser();
+bgmAnalyser.fftSize = 1024;
+bgmAnalyser.smoothingTimeConstant = 0.75;
+bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+
+bgmGainNode = audioCtx.createGain();
+
+bgmMediaSource.disconnect();
+bgmMediaSource.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+
+syncAudioParams();
 
 // 🚀 指定された補正位置・遅延時間に応じてBGM再生開始
 if (bgmStartOffset < 0) {
@@ -1577,7 +1552,21 @@ if (playbackBgm) {
 const expectedTime = getExpectedBgmTime(playbackAudio.currentTime);
 playbackBgm.currentTime = expectedTime;
 
-setupBgmNodes(); // 🛠️ 【修正】確認再生時にもBGMのゲイン・アナライザーノードを安全に再セットアップ
+if (!bgmAnalyser) {
+bgmAnalyser = audioCtx.createAnalyser();
+bgmAnalyser.fftSize = 1024;
+bgmAnalyser.smoothingTimeConstant = 0.75;
+}
+if (!bgmDataArray) {
+bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+}
+
+if (bgmMediaSource && bgmGainNode) {
+bgmMediaSource.disconnect();
+bgmMediaSource.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+}
 
 if (bgmStartOffset > 0 && playbackAudio.currentTime < bgmStartOffset) {
 playbackBgm.pause();
