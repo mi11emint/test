@@ -1333,13 +1333,19 @@ movieRecorder.onstop = () => {
 
     // 💡 「動画を保存する」ボタンが押された時の処理
     downloadFileBtn.onclick = () => {
+    if (isIOS) {
+        // 【iPhoneの場合】確実性を重視して新しいタブで開く
+        window.open(finalVideoUrl, '_blank');
+    } else {
+        // 【AndroidやPCの場合】ボタン一発でファイルとして保存する
         const a = document.createElement('a');
         a.href = finalVideoUrl;
         a.download = fileName;
         document.body.appendChild(a);
-        a.click(); // ユーザーのタップをきっかけに実行するのでSafariでも通る
+        a.click();
         document.body.removeChild(a);
-    };
+    }
+};
     
     closePopupBtn.onclick = () => {
         videoPopup.style.display = 'none';
