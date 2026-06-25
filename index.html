@@ -1008,7 +1008,9 @@ noiseSuppression: isNoiseCancelOn,
 autoGainControl: false
 }
 });
+if (!audioCtx) {
 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
 source = audioCtx.createMediaStreamSource(stream);
 setupAudioNodes(source, true);
 recordDestination = audioCtx.createMediaStreamDestination();
@@ -1106,7 +1108,9 @@ pauseBtnImg.src = IMG_PAUSE; // 二本線画像に戻す
 
 if (bgmDelayTimer) { clearTimeout(bgmDelayTimer); bgmDelayTimer = null; }
 
-audioCtx = null; eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
+// 🌌 Safariパッチ: 紐付いた使い回しBGMの破損を防ぐためaudioCtx基盤は使い回す
+// audioCtx = null;
+eqLow = null; eqMid = null; eqHigh = null; ncFilter = null;
 gainNode = null; source = null; analyser = null; dataArray = null;
 
 if (!keepBgm) {
@@ -1118,7 +1122,8 @@ bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
 bgmInput.value = "";
 } else {
 if (playbackBgm) { playbackBgm.pause(); playbackBgm.currentTime = 0; }
-bgmGainNode = null; bgmMediaSource = null; bgmAnalyser = null; bgmDataArray = null;
+// 🌌 Safariパッチ: 既存のBGMノードの破棄を防ぐ
+bgmGainNode = null; /* bgmMediaSource = null; */ bgmAnalyser = null; bgmDataArray = null;
 }
 
 unlockMenus(); drawStaticWave();
@@ -1257,12 +1262,12 @@ bgmVolSlider.addEventListener('input', syncAudioParams);
 
 // BGM開始タイミング調整ボタンの処理
 bgmStartMinusBtn.addEventListener('click', () => {
-bgmStartOffset -= 0.1; // 0.1秒単位で調整
+bgmStartOffset -= 0.1; //秒単位で調整
 updateBgmStartDisplay();
 });
 
 bgmStartPlusBtn.addEventListener('click', () => {
-bgmStartOffset += 0.1; // 0.1秒単位で調整
+bgmStartOffset += 0.1; // 秒単位で調整
 updateBgmStartDisplay();
 });
 
@@ -1377,14 +1382,21 @@ audioBlobUrl = URL.createObjectURL(audioBlob);
 playbackAudio = new Audio(audioBlobUrl);
 playbackAudio.preload = "auto";
 
-const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
-setupAudioNodes(playbackSource, false);
+// 🌌 Safariパッチ: ここではまだ接続せず、フラグのみ用意する
+playbackAudio.dataset.sourceConnected = "false";
 
 if (playbackBgm) {
 syncAudioParams();
 }
 
-playbackAudio.addEventListener('loadedmetadata', () => { seekBar.max = playbackAudio.duration; seekBar.value = 0; });
+playbackAudio.addEventListener('loadedmetadata', () => { 
+if (playbackAudio.duration && isFinite(playbackAudio.duration)) {
+seekBar.max = playbackAudio.duration; 
+} else {
+seekBar.max = 120;
+}
+seekBar.value = 0; 
+});
 playbackAudio.addEventListener('timeupdate', () => { if (!isUserChangingIndex && playbackAudio.duration) seekBar.value = playbackAudio.currentTime; });
 playbackAudio.addEventListener('ended', () => {
 playPauseImg.src = IMG_PLAY;
@@ -1500,8 +1512,19 @@ if (audioCtx.state === 'suspended') {
 await audioCtx.resume();
 }
 
+// 🌌 Safariパッチ: ユーザーのクリック直下でのみMediaElementSourceを生成・接続する
+if (playbackAudio.dataset.sourceConnected !== "true") {
+try {
+const playbackSource = audioCtx.createMediaElementSource(playbackAudio);
+setupAudioNodes(playbackSource, false);
+playbackAudio.dataset.sourceConnected = "true";
+} catch(e) {
+console.error("Safari MediaElementSource Connect Error:", e);
+}
+}
+
 if (playbackAudio.paused) {
-if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
 syncAudioParams();
 playbackAudio.play().then(() => {
 isPlayingRecorded = true;
