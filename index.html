@@ -438,7 +438,7 @@ max-width: 50px;
 <p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
 <p>声や音楽を視覚化した動画を作って保存できます</p>
 <p>歌みたや音声投稿をもっと気軽に自由に！</p>
-<p>使い方、ルール、仕様の詳細は <a href="" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p>使い方、ルール、仕様の詳細は <a href="https://note.com/mi11emint/n/n007660eab696" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
 <p class="info-attention">声が盗られるとか、そういうのはないです</p>
 </div>
 <div class="header-zone">
@@ -446,6 +446,7 @@ max-width: 50px;
 <div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
 </div>
 </div>
+
 <div class="main-container">
 <div class="left-composite-zone">
 <div class="player-panel" id="playerPanel">
@@ -1128,10 +1129,35 @@ if (isRecording) { restartRecordingStream(); }
 else if (isPlayingRecorded) { syncAudioParams(); }
 });
 audioResetBtn.addEventListener('click', () => {
-volSlider.value = 1.0; bgmVolSlider.value = 0.5; eqLowSlider.value = -7; eqMidSlider.value = 3; eqHighSlider.value = -4;
-bgmStartOffset = 0.0; updateBgmStartDisplay(); syncAudioParams();
-resetDataWithoutPrompt(false);
-alert("各種音量・EQ設定を初期化！BGMをクリアしました^.ˬ.^ฅ");
+    // 1. 再生中だった場合は一度安全に停止させる
+    stopBufferPlayback();
+
+    // 2. 音量やイコライザーなどのスライダー設定を初期化
+    volSlider.value = 1.0; 
+    bgmVolSlider.value = 0.5; 
+    eqLowSlider.value = -7; 
+    eqMidSlider.value = 3; 
+    eqHighSlider.value = -4;
+    bgmStartOffset = 0.0; 
+    updateBgmStartDisplay(); 
+    syncAudioParams();
+
+    // 3. 🔥【ここが重要】録音データには触れず、BGMデータだけをクリアする
+    playbackBgmBuffer = null;
+    bgmBlob = null; 
+    bgmGainNode = null; 
+    bgmAnalyser = null; 
+    bgmDataArray = null;
+    
+    // BGMボタンの見た目を未選択の状態に戻す
+    bgmImportBtn.classList.remove('loaded');
+    bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
+    bgmInput.value = "";
+
+    // 4. 画面の波形表示をリフレッシュする
+    drawStaticWave();
+
+    alert("各種音量・EQ設定を初期化し！BGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
 });
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
 bgmInput.addEventListener('change', async (e) => {
@@ -1416,10 +1442,14 @@ drawStaticWave();
 <div id="videoPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; padding: 20px;">
     <div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
         <p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;"> 動画が完成しました！</p>
-        
+        <p style="color: #111b35; font-size: 13px; margin-bottom: 15px; background: #fff; padding: 5px; border-radius: 5px; font-family: sans-serif;">
+        Android/PCは自動保存されます^.ˬ.^ฅⳊ<br>
+        iPhoneで保存した動画が端末で開けないことがあります<br>
+        下のiPhone SAVE Btnで<br>
+        開いた動画を画録してください</p>
         <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
         
-        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE</button>
+        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE　Btn</button>
         
         <button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
     </div>
