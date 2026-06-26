@@ -1157,7 +1157,7 @@ audioResetBtn.addEventListener('click', () => {
     // 4. 画面の波形表示をリフレッシュする
     drawStaticWave();
 
-    alert("各種音量・EQ設定を初期化し！BGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
+    alert("各種音量・EQ設定を初期化！\nBGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
 });
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
 bgmInput.addEventListener('change', async (e) => {
@@ -1170,7 +1170,7 @@ const bgmArrayBuffer = await bgmBlob.arrayBuffer();
 playbackBgmBuffer = await audioCtx.decodeAudioData(bgmArrayBuffer);
 bgmImportBtn.classList.add('loaded');
 bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
-alert("BGMの解析・読み込みに成功しました^.ˬ.^ฅ");
+alert("BGMの読み込みに成功しました^.ˬ.^ฅ");
 } catch(e) {
 console.error("BGM Decode Error:", e);
 alert("BGMの読み込みに失敗しました꙳☄︎ファイル形式をご確認ください");
@@ -1199,9 +1199,9 @@ await startRecordingStream();
 isRecording = true;
 isRecordingPaused = false;
 recordedChunks = [];
-let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 320000 };
+let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 160000 };
 if (typeof MediaRecorder.isTypeSupported === 'function' && !MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-options = { audioBitsPerSecond: 320000 };
+options = { audioBitsPerSecond: 160000 };
 }
 mediaRecorder = new MediaRecorder(recordDestination.stream, options);
 mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
@@ -1323,8 +1323,8 @@ const rBgmGain = renderAudioCtx.createGain(); rBgmGain.gain.value = parseFloat(b
 rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.connect(renderDest);
 }
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 };
-if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 320000 }; }
+let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 }; }
 const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
 const movieChunks = [];
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
