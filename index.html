@@ -528,6 +528,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
+<div id="styleChladni" class="style-option" data-style="chladni">CHLADNI</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -776,7 +777,11 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
-}
+} else if (currentWaveStyle === 'chladni') {
+    ctx.lineWidth = 1.5;
+    for (let r = 30; r < 240; r += 30) {
+        ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, r, 0, Math.PI * 2); ctx.stroke();
+    }
 }
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
@@ -881,6 +886,55 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 targetCtx.restore();
+} else if (currentWaveStyle === 'chladni') {
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.lineWidth = 2;
+
+    // 音声データ（低音〜高音）の平均的な強さを計算
+    let totalVolume = 0;
+    const sampleCount = Math.min(dataArr.length, 64);
+    for (let i = 0; i < sampleCount; i++) {
+        totalVolume += dataArr[i] || 0;
+    }
+    const avgVol = totalVolume / sampleCount;
+    const boost = getBoostedValue(avgVol); // 音のノリ具合（0.0 〜 1.0）
+
+    // クラドニ図形を構成する「格子点の細かさ」を音の高さ（主要な周波数）で揺らす
+    let maxVal = 0, maxIdx = 1;
+    for(let i=1; i<sampleCount; i++) {
+        if(dataArr[i] > maxVal) { maxVal = dataArr[i]; maxIdx = i; }
+    }
+    
+    // パラメータ（N, M）を音の強弱とピッチで変化させる
+    const n = 2 + (maxIdx % 4) + boost * 2;
+    const m = 3 + (maxIdx % 3) + boost * 3;
+    const step = 8; // グリッドの間隔（数字を小さくすると高密度になりますが重くなります）
+
+    targetCtx.beginPath();
+    for (let x = 40; x < targetCanvas.width - 40; x += step) {
+        for (let y = 40; y < targetCanvas.height - 40; y += step) {
+            // 中心からの正規化座標 (-1.0 〜 1.0)
+            const nx = (x - centerX) / (targetCanvas.width / 2);
+            const ny = (y - centerY) / (targetCanvas.height / 2);
+
+            // クラドニのシミュレーション数式（定常波の干渉）
+            // cos(nπx)cos(mπy) - cos(mπx)cos(nπy)
+            const chladniVal = Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * ny) - 
+                               Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * ny);
+
+            // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
+            if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
+                // 音の強さに合わせてドットの大きさを変える
+                const dotSize = 1 + boost * 3;
+                targetCtx.rect(x, y, dotSize, dotSize);
+            }
+        }
+    }
+    targetCtx.fillStyle = gradient;
+    targetCtx.fill();
+    targetCtx.restore();
+}
 }
 }
 async function startRecordingStream() {
