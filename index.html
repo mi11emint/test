@@ -528,6 +528,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
+<div id="styleRain" class="style-option" data-style="rain">RAIN</div>
 <div id="styleChladni" class="style-option" data-style="chladni">CHLADNI</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
@@ -777,6 +778,58 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+
+} else if (currentWaveStyle === 'rain') {
+    const lineCount = 25;
+    const spacing = canvas.width / (lineCount + 1);
+    ctx.save();
+    ctx.lineWidth = 2;
+    for (let i = 1; i <= lineCount; i++) {
+        const x = i * spacing;
+        const y = 30 + (i % 3) * 15; // 高さを少し互い違いにする
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + 15); // 長さ15pxの線
+        ctx.stroke();
+    }
+    ctx.restore();
+
+targetCtx.fillStyle = gradient;
+    targetCtx.fill();
+    targetCtx.restore();
+} else if (currentWaveStyle === 'rain') {
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.lineWidth = 2; // 雨の線の太さ
+
+    // 画面の横幅を細かく分割（45本の雨のルート）
+    const rainCount = 45;
+    const spacing = targetCanvas.width / rainCount;
+
+    for (let i = 0; i < rainCount; i++) {
+        // 周波数データからこのルートに対応する音の強さを取得
+        const mapRatio = i / rainCount;
+        const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+        const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+
+        // 音が一定以上の強さのとき、またはランダム確率で雨を降らせる
+        if (boosted > 0.05 || Math.random() < 0.15) {
+            const x = i * spacing + (spacing / 2);
+            
+            // 音の強さに応じて、上からの降下位置（Y座標）や雨の長さをランダムに変化させる
+            // 音が大きくなるほど、下まで長い雨が激しく突き抜けます
+            const topY = Math.random() * (targetCanvas.height * 0.4); 
+            const rainLength = 10 + (boosted * 280) + (Math.random() * 20);
+            const bottomY = topY + rainLength;
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(x, topY);
+            targetCtx.lineTo(x, bottomY);
+            targetCtx.stroke();
+        }
+    }
+    targetCtx.restore();
+
 } else if (currentWaveStyle === 'chladni') {
     const spacing = 20; // 砂の間隔（ピクセル）。小さくするとより細かく、大きくすると粗くなります
     const dotSize = 2.5; // 砂の粒の大きさ
