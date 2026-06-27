@@ -939,13 +939,12 @@ targetCtx.restore();
             // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
             if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
                 // 音の強さに合わせてドットの大きさを変える
-                const dotSize = 1 + boost * 3;
+                const dotSize = (1 + boost * 3) * 2;
                 targetCtx.rect(x, y, dotSize, dotSize);
             }
         }
     }
     targetCtx.fillStyle = gradient;
-    targetCtx.globalCompositeOperation = 'lighter';
     targetCtx.fill();
     targetCtx.restore();
     }
