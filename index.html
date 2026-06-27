@@ -781,7 +781,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // うっすら見える半透明の白
     
     const spacing = 15; // 砂の間隔（ピクセル）。小さくするとより細かく、大きくすると粗くなります
-    const dotSize = 2; // 砂の粒の大きさ
+    const dotSize = 3; // 砂の粒の大きさ
     
     // 画面全体を格子状に走査して点を打つ
     for (let x = spacing; x < canvas.width; x += spacing) {
@@ -898,6 +898,7 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 targetCtx.restore();
+// drawWaveLogic() の一番最後、関数が閉じる（ } ）の直前に追加してください
 } else if (currentWaveStyle === 'chladni') {
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
@@ -938,17 +939,18 @@ targetCtx.restore();
             // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
             if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
                 // 音の強さに合わせてドットの大きさを変える
-                const dotSize = (1 + boost * 3) * 1.5;
+                const dotSize = 1 + boost * 3;
                 targetCtx.rect(x, y, dotSize, dotSize);
             }
         }
     }
-    targetCtx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // 白の半透明（重なると明るくなる）
-targetCtx.globalCompositeOperation = 'lighter';
-targetCtx.fill();
+    targetCtx.fillStyle = gradient;
+    targetCtx.globalCompositeOperation = 'lighter';
+    targetCtx.fill();
     targetCtx.restore();
+    }
 }
-}
+
 async function startRecordingStream() {
 stream = await navigator.mediaDevices.getUserMedia({
 audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
