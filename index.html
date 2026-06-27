@@ -1358,6 +1358,7 @@ seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
 // 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
+stopBufferPlayback();
 if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
 const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
@@ -1510,7 +1511,7 @@ drawStaticWave();
         <p style="color: #fff; font-size: 12px; margin-bottom: 15px; background: #111b35; padding: 5px; border-radius: 5px; font-family: sans-serif;">
         Android/PCは自動保存されます^.ˬ.^ฅⳊ<br><br>
         iPhoneの方は下のiPhone SAVE Btnで<br>
-        開いた動画を画録保存することをオススメします</p>
+        開いた動画の【画録】がオススメ！</p>
         <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
         
         <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE　Btn</button>
