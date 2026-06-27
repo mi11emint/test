@@ -778,9 +778,20 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'chladni') {
-    ctx.lineWidth = 1.5;
-    for (let r = 30; r < 240; r += 30) {
-        ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // うっすら見える半透明の白
+    
+    const spacing = 15; // 砂の間隔（ピクセル）。小さくするとより細かく、大きくすると粗くなります
+    const dotSize = 2; // 砂の粒の大きさ
+    
+    // 画面全体を格子状に走査して点を打つ
+    for (let x = spacing; x < canvas.width; x += spacing) {
+        for (let y = spacing; y < canvas.height; y += spacing) {
+            ctx.fillRect(x, y, dotSize, dotSize);
+// ランダム感を出す場合の rect の書き方（ループの中身）
+const offsetX = (Math.random() - 0.5) * 6; // 左右に最大3pxズラす
+const offsetY = (Math.random() - 0.5) * 6; // 上下に最大3pxズラす
+ctx.fillRect(x + offsetX, y + offsetY, dotSize, dotSize);
+        }
     }
 }
 }
@@ -927,13 +938,14 @@ targetCtx.restore();
             // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
             if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
                 // 音の強さに合わせてドットの大きさを変える
-                const dotSize = 1 + boost * 3;
+                const dotSize = (1 + boost * 3) * 1.5;
                 targetCtx.rect(x, y, dotSize, dotSize);
             }
         }
     }
-    targetCtx.fillStyle = gradient;
-    targetCtx.fill();
+    targetCtx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // 白の半透明（重なると明るくなる）
+targetCtx.globalCompositeOperation = 'lighter';
+targetCtx.fill();
     targetCtx.restore();
 }
 }
