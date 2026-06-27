@@ -950,6 +950,39 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 targetCtx.restore();
 
+} else if (currentWaveStyle === 'rain') {
+    targetCtx.save();
+    targetCtx.globalAlpha = opacity;
+    targetCtx.lineWidth = 2; // 雨の線の太さ
+
+    // 画面の横幅を細かく分割（45本の雨のルート）
+    const rainCount = 45;
+    const spacing = targetCanvas.width / rainCount;
+
+    for (let i = 0; i < rainCount; i++) {
+        // 周波数データからこのルートに対応する音の強さを取得
+        const mapRatio = i / rainCount;
+        const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+        const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+
+        // 音が一定以上の強さのとき、またはランダム確率で雨を降らせる
+        if (boosted > 0.05 || Math.random() < 0.15) {
+            const x = i * spacing + (spacing / 2);
+            
+            // 音の強さに応じて、上からの降下位置（Y座標）や雨の長さをランダムに変化させる
+            // 音が大きくなるほど、下まで長い雨が激しく突き抜けます
+            const topY = Math.random() * (targetCanvas.height * 0.4); 
+            const rainLength = 10 + (boosted * 280) + (Math.random() * 20);
+            const bottomY = topY + rainLength;
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(x, topY);
+            targetCtx.lineTo(x, bottomY);
+            targetCtx.stroke();
+        }
+    }
+    targetCtx.restore();
+
 } else if (currentWaveStyle === 'chladni') {
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
