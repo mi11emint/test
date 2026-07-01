@@ -906,7 +906,7 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 }else if (currentWaveStyle === 'ripple') {
-    // 🌊 斜め見下ろし型 水面波紋（音量・音程連動）
+    //水面波紋（音量・音程連動）
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
     
@@ -951,26 +951,32 @@ targetCtx.restore();
         // 基本の半径（外側に行くほど広がる）
         const baseRadius = progress * (targetCanvas.width * 0.6);
 
-        // ーーー ここから提示いただいたコード ーーー
+      
         targetCtx.beginPath();
 
-        const points = 60;
+                const points = 60;
         for (let j = 0; j <= points; j++) {
             const angle = (j / points) * Math.PI * 2;
             
             const dataIdx = startIdx + Math.floor((j % (points / 2)) / (points / 2) * dataRange);
             const freqValue = getBoostedValue(dataArr[dataIdx] || 0);
-            const waveOffset = Math.sin(angle * 6 * pitchFactor - time * 5) * (boostedVol * 25) * (1.0 - progress);
             
+            // 1. 横方向（平面）の基本の揺れ
+            const waveOffset = Math.sin(angle * 6 * pitchFactor - time * 5) * (boostedVol * 25) * (1.0 - progress);
             const r = baseRadius + waveOffset;
             
+            // 2. 楕円としての基本位置を計算
             const x = centerX + Math.cos(angle) * r;
-            const y = centerY + Math.sin(angle) * r * 0.45; 
+            let y = centerY + Math.sin(angle) * r * 0.45; 
+
+            // Math.sin の値がプラスの時（波の山）に、大きく上に跳ね上がります
+            const verticalSplash = Math.max(0, Math.sin(angle * 6 * pitchFactor - time * 5)) * (boostedVol * 40) * (1.0 - progress);
+            y -= verticalSplash; // Y座標をマイナスして上に引き上げる
 
             if (j === 0) targetCtx.moveTo(x, y);
             else targetCtx.lineTo(x, y);
         }
-        
+
         // 外側に行くほど面を薄く（半透明に）する
         targetCtx.globalAlpha = (1.0 - progress) * opacity * 0.3; 
         targetCtx.fillStyle = gradient;
