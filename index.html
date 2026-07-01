@@ -902,8 +902,6 @@ const x = 40 + i * spacing + (spacing - barWidth) / 2;
 targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
-targetCtx.restore();
-
 } else if (currentWaveStyle === 'ripple') {
     // 🌌 3D Audio Ripple Grid（音が中心から立体的に外側へ伝播する減衰ウェーブ）
     targetCtx.save();
@@ -919,7 +917,7 @@ targetCtx.restore();
 
     // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
     const historyLength = 55;
-    if (!window._audioHistory3D || !isRecording && !isPlayingRecorded && (dataArr[startIdx] === 0 || !dataArr.some(v => v > 0))) {
+    if (!window._audioHistory3D || (!isRecording && !isPlayingRecorded && (!dataArr || dataArr[startIdx] === 0 || !dataArr.some(v => v > 0)))) {
         window._audioHistory3D = Array(historyLength).fill(0).map(() => ({ low: 0, high: 0, volume: 0 }));
     }
 
@@ -929,19 +927,21 @@ targetCtx.restore();
     let totalSum = 0;
     const len = endIdx - startIdx;
 
-    for (let i = startIdx; i < endIdx; i++) {
-        const val = (dataArr[i] || 0) / 255;
-        totalSum += val;
-        if (i < startIdx + len * 0.2) {
-            lowSum += val;  // 低音
-        } else if (i > startIdx + len * 0.5) {
-            highSum += val; // 高音
+    if (dataArr && len > 0) {
+        for (let i = startIdx; i < endIdx; i++) {
+            const val = (dataArr[i] || 0) / 255;
+            totalSum += val;
+            if (i < startIdx + len * 0.2) {
+                lowSum += val;  // 低音
+            } else if (i > startIdx + len * 0.5) {
+                highSum += val; // 高音
+            }
         }
     }
 
-    const volume = totalSum / len;
-    const low = lowSum / (len * 0.2);
-    const high = highSum / (len * 0.5);
+    const volume = len > 0 ? totalSum / len : 0;
+    const low = len > 0 ? lowSum / (len * 0.2) : 0;
+    const high = len > 0 ? highSum / (len * 0.5) : 0;
 
     const isAudioActive = (isRecording || isPlayingRecorded) && volume > 0.01;
 
@@ -957,12 +957,18 @@ targetCtx.restore();
 
     // グラデーションの作成（ウェーブカラーを適用）
     const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-    gradient.addColorStop(0, currentWaveColors[0]);
-    gradient.addColorStop(1, currentWaveColors[1]);
-    targetCtx.strokeStyle = gradient;
-    targetCtx.lineWidth = 1.2;
+    // 配列が存在し、カラーが含まれているか安全にチェック
+    const color0 = (currentWaveColors && currentWaveColors[0]) ? currentWaveColors[0] : '#00b4ff';
+    const color1 = (currentWaveColors && currentWaveColors[1]) ? currentWaveColors[1] : '#ff007f';
+    gradient.addColorStop(0, color0);
+    gradient.addColorStop(1, color1);
+    
+    // 現在設定されている不透明度(opacity)を考慮して全体のアルファのベースを適用
+    const baseOpacity = typeof opacity !== 'undefined' ? opacity : 1.0;
 
     // 縦方向の網の目を描画
+    targetCtx.strokeStyle = gradient;
+    targetCtx.lineWidth = 1.2;
     for (let r = 0; r < ROWS; r++) {
         targetCtx.beginPath();
         for (let c = 0; c < COLS; c++) {
@@ -998,7 +1004,7 @@ targetCtx.restore();
         }
         // 外側（手前と奥）に行くほど不透明度を下げて綺麗に馴染ませる
         const edgeAlpha = Math.sin((r / ROWS) * Math.PI);
-        targetCtx.globalAlpha = edgeAlpha * opacity * 0.5;
+        targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.5;
         targetCtx.stroke();
     }
 
@@ -1028,13 +1034,12 @@ targetCtx.restore();
             else targetCtx.lineTo(x3d, y3d);
         }
         const edgeAlpha = Math.sin((c / COLS) * Math.PI);
-        targetCtx.globalAlpha = edgeAlpha * opacity * 0.5;
+        targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.5;
         targetCtx.stroke();
     }
 
     targetCtx.restore();
 }
-
 }
 
 async function startRecordingStream() {
