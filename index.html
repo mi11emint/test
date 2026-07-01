@@ -1,187 +1,1639 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Audio Ripple Visualizer</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #050510;
-            font-family: sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            display: block;
-            cursor: pointer;
-        }
-        #ui {
-            position: absolute;
-            color: white;
-            text-align: center;
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-        }
-        h1 { margin: 0 0 10px 0; font-size: 20px; letter-spacing: 2px; }
-        p { margin: 0; font-size: 14px; color: #aaa; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Wave Movie Maker</title>
+<style>
+@font-face {
+font-family: 'Cinecaption';
+src: url('https://dl.dropboxusercontent.com/scl/fi/gbyay8c3as3f0l2e2q2un/cinecaption_2.28.woff2?rlkey=pgaofit9g6699gsww2m3p9l7b&raw=1') format('woff2');
+font-display: swap;
+}
+* {
+box-sizing: border-box;
+margin: 0;
+padding: 0;
+}
+body {
+background: radial-gradient(circle at center, #0a1128 0%, #000411 100%);
+color: #ffffff;
+font-family: 'Cinecaption', 'Courier New', sans-serif;
+display: flex;
+flex-direction: column;
+align-items: center;
+min-height: 100vh;
+padding: 20px 5px;
+overflow-y: auto;
+overflow-x: hidden;
+}
+/* --- 🌌 宇宙の背景エフェクト --- */
+body::before, body::after {
+content: "";
+position: fixed;
+top: 0; left: 0; right: 0; bottom: 0;
+z-index: -1;
+pointer-events: none;
+}
+body::before {
+background-image:
+radial-gradient(1.5px 1.5px at 20% 30%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(2px 2px at 40% 70%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(1.5px 1.5px at 60% 20%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(2px 2px at 15% 85%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(1.5px 1.5px at 85% 15%, #ffffff, rgba(0,0,0,0));
+background-size: 350px 350px;
+animation: twinkleCSS 4s infinite alternate ease-in-out;
+}
+body::after {
+background-image:
+radial-gradient(1.5px 1.5px at 80% 50%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(2px 2px at 30% 80%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(1.5px 1.5px at 10% 40%, #ffffff, rgba(0,0,0,0)),
+radial-gradient(1.5px 1.5px at 90% 90%, #ffffff, rgba(0,0,0,0));
+background-size: 250px 250px;
+animation: twinkleCSS 3s infinite alternate-reverse ease-in-out;
+}
+@keyframes twinkleCSS {
+0% { opacity: 0.1; }
+100% { opacity: 1; }
+}
+.info-text-area {
+width: 100%;
+max-width: 420px;
+text-align: left;
+font-size: 0.70rem;
+line-height: 1.6;
+letter-spacing: 1px;
+opacity: 0.8;
+margin-bottom: 12px;
+padding: 0 12px;
+}
+.info-attention {
+margin-top: 10px;
+margin-bottom: 10px;
+opacity: 0.7;
+}
+.info-brand {
+margin-top: 10px;
+letter-spacing: 2px;
+text-align: right;
+}
+.header-zone {
+text-align: center;
+width: 100%;
+margin-bottom: 10px;
+}
+.title {
+font-size: 1.1rem;
+letter-spacing: 2px;
+margin-bottom: 5px;
+}
+.decoration-line {
+font-size: 0.65rem;
+opacity: 0.7;
+white-space: nowrap;
+line-height: 1.5;
+}
+.main-container {
+display: flex;
+width: 100%;
+max-width: 420px;
+background-color: transparent;
+align-items: stretch;
+justify-content: center;
+margin: 10px 0 15px 0;
+}
+.left-composite-zone {
+flex: 1.1;
+display: flex;
+flex-direction: column;
+justify-content: flex-start;
+}
+.player-panel {
+width: 100%;
+background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg');
+background-color: white;
+padding: 12px;
+display: flex;
+flex-direction: column;
+align-items: center;
+background-size: cover;
+background-position: center;
+}
+.canvas-container {
+width: 100%;
+aspect-ratio: 1 / 1;
+background-color: #000000;
+border-radius: 30px;
+overflow: hidden;
+display: flex;
+align-items: center;
+justify-content: center;
+position: relative;
+}
+.canvas-container.theme-white {
+background-color: #ffffff;
+}
+canvas {
+width: 100%;
+height: 100%;
+display: block;
+}
+.timer-display {
+position: absolute;
+top: 15px;
+right: 15px;
+font-size: 0.9rem;
+color: #ff4488;
+display: none;
+z-index: 10;
+}
+.volume-row-zone {
+width: 100%;
+display: flex;
+align-items: center;
+margin-top: 10px;
+margin-bottom: 2px;
+padding: 0 4px;
+gap: 10px;
+}
+.volume-label {
+font-size: 0.75rem;
+color: #777777;
+width: 38px;
+flex-shrink: 0;
+letter-spacing: 1px;
+font-weight: bold;
+}
+.volume-slider-container {
+flex: 1;
+display: flex;
+align-items: center;
+}
+.top-icons {
+display: flex;
+justify-content: space-around;
+align-items: center;
+width: 100%;
+margin-top: 18px;
+margin-bottom: 6px;
+}
+.top-icons span {
+cursor: pointer;
+transition: transform 0.1s;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+width: 23.75px;
+height: 23.75px;
+}
+.top-icons span:active { transform: scale(0.8); }
+.btn-img {
+width: 100%;
+height: 100%;
+object-fit: contain;
+pointer-events: none;
+}
+.control-bar-zone {
+width: 100%;
+display: flex;
+align-items: center;
+margin: 10px 0 8px 0;
+gap: 10px;
+}
+.mini-play-btn {
+width: 30.8px;
+height: 30.8px;
+cursor: pointer;
+transition: transform 0.1s;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+}
+.mini-play-btn:active { transform: scale(0.8); }
+.seekbar-container {
+flex: 1;
+display: flex;
+align-items: center;
+}
+.seekbar {
+width: 100%;
+accent-color: #777777;
+cursor: pointer;
+}
+.compact-eq-container {
+width: 100%;
+background: rgba(0, 0, 0, 0.07);
+padding: 10px 12px;
+border-radius: 6px;
+margin-top: 4px;
+display: flex;
+gap: 12px;
+}
+.eq-main-label {
+font-size: 0.85rem;
+color: #777777;
+width: 28px;
+flex-shrink: 0;
+display: flex;
+align-items: top;
+margin-top: 2px;
+letter-spacing: 1px;
+font-weight: bold;
+}
+.eq-rows-wrapper {
+flex: 1;
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+.eq-item-row {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.eq-sub-label {
+font-size: 0.6rem;
+color: #777777;
+width: 36px;
+flex-shrink: 0;
+text-align: left;
+font-weight: bold;
+}
+.audio-slider {
+-webkit-appearance: none;
+appearance: none;
+flex: 1;
+background: #cccccc;
+height: 4px;
+border-radius: 2px;
+cursor: pointer;
+outline: none;
+}
+.audio-slider::-webkit-slider-thumb {
+-webkit-appearance: none;
+appearance: none;
+width: 10px;
+height: 10px;
+border-radius: 50%;
+background: #777777;
+cursor: pointer;
+}
+.audio-slider::-moz-range-thumb {
+width: 10px;
+height: 10px;
+border-radius: 50%;
+background: #777777;
+cursor: pointer;
+border: none;
+}
+.square-btn-zone {
+display: flex;
+justify-content: space-between;
+width: 100%;
+margin-top: 12px;
+padding: 0 2px;
+}
+.noise-cancel-btn, .audio-reset-btn, .bgm-import-btn {
+width: 72px;
+height: 72px;
+background: transparent;
+color: #777777;
+border: 1px solid rgba(119, 119, 119, 0.4);
+font-family: 'Cinecaption', 'Courier New', sans-serif;
+font-size: 0.7rem;
+line-height: 1.3;
+letter-spacing: 0.5px;
+text-align: center;
+cursor: pointer;
+transition: all 0.2s ease;
+border-radius: 8px;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+}
+.noise-cancel-btn.active {
+color: #ffffff;
+background: rgba(119, 119, 119, 0.4);
+border-color: #ffffff;
+}
+.audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
+.bgm-import-btn.loaded {
+color: #44bbff;
+border-color: rgba(68, 187, 255, 0.6);
+background: rgba(68, 187, 255, 0.05);
+}
+.bgm-import-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
+.bgm-import-btn.loaded:hover { color: #66ccff; border-color: rgba(68, 187, 255, 0.9); }
+.noise-cancel-btn:active, .audio-reset-btn:active, .bgm-import-btn:active {
+transform: scale(0.95);
+}
+.bottom-info-zone {
+width: 100%;
+max-width: 420px;
+padding: 5px 12px 20px 12px;
+text-align: left;
+}
+.bottom-notice-text {
+font-size: 0.58rem;
+line-height: 1.6;
+letter-spacing: 0.5px;
+opacity: 0.6;
+}
+.side-panel {
+flex: 0.9;
+padding: 2px 0px 10px 12px;
+display: flex;
+flex-direction: column;
+font-size: 0.75rem;
+letter-spacing: 1px;
+justify-content: flex-start;
+overflow-y: auto;
+scrollbar-width: none;
+}
+.side-panel::-webkit-scrollbar { display: none; }
+.setting-section {
+margin-bottom: 15px;
+flex-shrink: 0;
+transition: opacity 0.3s;
+}
+.setting-title {
+margin-bottom: 8px;
+font-size: 0.75rem;
+border-bottom: 1px solid rgba(255,255,255,0.2);
+padding-bottom: 3px;
+}
+.color-option, .style-option {
+margin-bottom: 8px;
+cursor: pointer;
+display: flex;
+align-items: center;
+opacity: 0.6;
+transition: opacity 0.2s;
+position: relative;
+padding-left: 16px;
+transform: translateZ(0);
+will-change: transform;
+}
+.color-option.active, .style-option.active { opacity: 1; }
+.color-option::before, .style-option::before {
+content: "▶";
+position: absolute;
+left: 0;
+display: none;
+}
+.color-option.active::before, .style-option.active::before {
+display: inline !important;
+}
+.setting-section.locked {
+opacity: 0.3 !important;
+pointer-events: none !important;
+cursor: not-allowed !important;
+}
+.palette-grid {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 5px;
+max-width: 110px;
+}
+.palette-circle {
+width: 22px;
+height: 22px;
+border-radius: 50%;
+cursor: pointer;
+ border: none; 
+    background-clip: padding-box; 
+transition: transform 0.2s;
+}
+.palette-circle.selected {
+box-shadow: inset 0 0 0 2px #ffffff; 
+transform: scale(1.1);
+}
+
+.hidden-file-input {
+position: absolute;
+width: 0;
+height: 0;
+opacity: 0;
+overflow: hidden;
+pointer-events: none;
+}
+.touka-slider-zone {
+display: flex;
+align-items: center;
+gap: 10px;
+margin-top: 5px;
+}
+#toukaSlider {
+max-width: 50px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
 </head>
 <body>
+<div class="info-text-area">
+<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">@mi11emint</a><br></p><br>
+<p>声や音楽を視覚化した動画を作って保存できます</p>
+<p>歌みたや音声投稿をもっと気軽に自由に！</p>
+<p>使い方、ルール、仕様の詳細は <a href="https://note.com/mi11emint/n/n007660eab696" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
+<p class="info-attention">声が盗られるとか、そういうのはないです</p>
+</div>
+<div class="header-zone">
+<div class="title">2min VOICE & MUSIC WAVE MOVIE</div>
+<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
+</div>
+</div>
 
-    <div id="ui">
-        <h1>AUDIO RIPPLE 3D</h1>
-        <p>画面をクリックしてマイク音声を許可してください</p>
+<div class="main-container">
+<div class="left-composite-zone">
+<div class="player-panel" id="playerPanel">
+<div id="canvasBg" class="canvas-container">
+<canvas id="waveCanvas" width="600" height="600"></canvas>
+<div id="timer" class="timer-display">02:00</div>
+</div>
+<div class="top-icons">
+<span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
+<span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
+<span id="stopBtn" title="録音停止"><img src="https://img1.mitemin.net/aq/o0/hcbj1ot13v3khand2j5c6jbf3yan_ywe_3c_3c_g9i.png" class="btn-img" alt="停止"></span>
+<span id="pauseBtn" title="録音一時停止"><img src="https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png" id="pauseBtnImg" class="btn-img" alt="一時停止"></span>
+<span id="recBtn" title="録音開始"><img src="https://img1.mitemin.net/3b/lr/2ql3dcgbdt6s9skvmfdso1m8621_ema_3c_3c_jwr.png" class="btn-img" alt="録音"></span>
+</div>
+<div class="control-bar-zone">
+<span id="playPauseBtn" class="mini-play-btn" title="再生">
+<img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" id="playPauseImg" class="btn-img" alt="再生">
+</span>
+<div class="seekbar-container">
+<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="100" step="0.1">
+</div>
+</div>
+<div class="volume-row-zone">
+<div class="volume-label">Vol</div>
+<div class="volume-slider-container">
+<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
+</div>
+</div>
+<div class="volume-row-zone">
+<div class="volume-label">BGM<br>vol</div>
+<div class="volume-slider-container">
+<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
+</div>
+</div>
+<div class="volume-row-zone">
+<div class="volume-label">BGM<br>start</div>
+<div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+<button type="button" id="bgmStartMinusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">◀</button>
+<span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
+<button type="button" id="bgmStartPlusBtn" class="control-btn"
+style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">▶</button>
+</div>
+</div>
+<div class="compact-eq-container">
+<div class="eq-main-label">EQ</div>
+<div class="eq-rows-wrapper">
+<div class="eq-item-row">
+<div class="eq-sub-label">LOW</div>
+<input type="range" id="eqLowSlider" class="audio-slider" min="-12" max="12" step="1" value="-7">
+</div>
+<div class="eq-item-row">
+<div class="eq-sub-label">MID</div>
+<input type="range" id="eqMidSlider" class="audio-slider" min="-12" max="12" step="1" value="3">
+</div>
+<div class="eq-item-row">
+<div class="eq-sub-label">HIGH</div>
+<input type="range" id="eqHighSlider" class="audio-slider" min="-12" max="12" step="1" value="-4">
+</div>
+</div>
+</div>
+<div class="square-btn-zone">
+<button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL<br>✂</button>
+<button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO<br>↺</button>
+<button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM<br>♬</button>
+</div>
+</div>
+</div>
+<div class="side-panel">
+<div class="setting-section" id="menuBg">
+<div class="setting-title">BACK COLOR</div>
+<div id="btnBlack" class="color-option active">BLACK</div>
+<div id="btnWhite" class="color-option">WHITE</div>
+<div id="btnPicture" class="color-option">PICTURE</div>
+</div>
+<div class="setting-section" id="menuStyle">
+<div class="setting-title">WAVE STYLE</div>
+<div id="styleCorona" class="style-option active" data-style="corona">CORONA</div>
+<div id="styleStar" class="style-option" data-style="star">STAR</div>
+<div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
+<div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
+<div id="styleRipple" class="style-option" data-style="ripple">RIPPLE</div>
+</div>
+<div class="setting-section" id="menuColor" style="margin-bottom: 0;">
+<div class="setting-title">WAVE COLOR</div>
+<div class="palette-grid" id="standardGrid"></div>
+</div>
+
+<div class="setting-section" id="menuCustomPalette" style="margin-top: 15px;">
+    <div class="setting-title">YOUR PALETTE</div>
+
+    <div style="display: flex; align-items: center; gap: 2px; font-size: 1.0rem; color: rgba(255,255,255,0.7); user-select: none; margin-bottom: 12px;">
+        <!-- 左：完成形のグラデーション丸 -->
+        <div id="customPreviewCircle" class="palette-circle" style="background: linear-gradient(135deg, #fff0f5, #faf0e6); margin: 0; cursor: pointer;"></div>
+        <span>=</span>
+        <!-- 右1：1色目の丸（選択中なら枠線がつく） -->
+        <div id="customPickLabel1" class="palette-circle selected" style="background: #fff0f5; margin: 0; cursor: pointer;"></div>
+        <span>×</span>
+        <!-- 右2：2色目の丸 -->
+        <div id="customPickLabel2" class="palette-circle" style="background: #faf0e6; margin: 0; cursor: pointer;"></div>
     </div>
-    <canvas id="visualizer"></canvas>
 
-    <script>
-        const canvas = document.getElementById('visualizer');
-        const ctx = canvas.getContext('2d');
-        const ui = document.getElementById('ui');
+    <!--  ここにGoogle風のカラーピッカーが自動生成されます -->
+    <div id="picker" style="display: flex; justify-content: center; margin-top: 8px;">
+      
+    </div>
+</div>
 
-        // キャンバスサイズ設定
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+<div class="touka-slider-zone" id="menuTouka">
+<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>png</div>
+<input type="range" id="toukaSlider" class="audio-slider" min="0" max="100" value="0">
+</div>
+</div>
+</div>
+<div class="bottom-info-zone">
+<div class="bottom-notice-text">
+製作者はユーザーに発生したバグや不具合、動画作成失敗、
+<br>
+その他不利益があった場合の一切の責任を負いかねます。
+<br>2026.06.25
+</div>
+</div>
+<div id="renderOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 6vh; backdrop-filter: blur(5px);">
+<h2 style="color: #ff4488; margin-bottom: 5px; font-size: 1.2rem; letter-spacing: 2px; flex-shrink: 0;">MOVIE SAVING...</h2>
+<p style="margin-bottom: 15px; font-size: 0.75rem; opacity: 0.9; text-align: center; flex-shrink: 0;">⚠️ このタブを開いたままお待ちください<br>（別タブを開くとエラーになることがあります）</p>
+<iframe id="miniGameIframe" src="" style="width: 100%; max-width: 500px; flex: 1; border: none; background: transparent; margin-bottom: 4vh;"></iframe>
+</div>
+<input type="file" id="pictureInput" class="hidden-file-input" accept="image/*">
+<input type="file" id="bgmInput" class="hidden-file-input" accept="audio/*">
+<script>
+// ========================================
+// 1. 定数・設定データの定義
+// ========================================
+
+const STANDARD_PALETTES = [
+["#fff0f5", "#faf0e6"],//花朝露
+["#fddb92", "#d1fdff"],//菜花
+["#fff1eb", "#ace0f9"],//早朝
+["#FFF6B7", "#F6416C"],//薔薇
+
+["#bc8f8f", "#ffe4e1"],//テディベア
+["#2a6e6b", "#FFFCDB"],//月夜
+["#f0fff0", "#40e0d0"],//ラグーン
+["#800080", "#f08080"],//口紅
+
+["#a8caba", "#5d4157"],//鳩
+["#191970", "#fffacd"],//夜明
+["#00ffff", "#00008b"],//海中
+["#f107a3", "#7b2ff7"],//ネオン
+
+
+];
+const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
+const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
+// ========================================
+// 2. DOM要素の取得
+// ========================================
+const canvas = document.getElementById('waveCanvas');
+const ctx = canvas.getContext('2d');
+const recBtn = document.getElementById('recBtn');
+const stopBtn = document.getElementById('stopBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const pauseBtnImg = document.getElementById('pauseBtnImg');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const timerDisplay = document.getElementById('timer');
+const canvasBg = document.getElementById('canvasBg');
+const btnBlack = document.getElementById('btnBlack');
+const btnWhite = document.getElementById('btnWhite');
+const btnPicture = document.getElementById('btnPicture');
+const pictureInput = document.getElementById('pictureInput');
+const styleOptions = document.querySelectorAll('.style-option');
+const menuBg = document.getElementById('menuBg');
+const menuStyle = document.getElementById('menuStyle');
+const menuColor = document.getElementById('menuColor');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const playPauseImg = document.getElementById('playPauseImg');
+const seekBar = document.getElementById('seekBar');
+const volSlider = document.getElementById('volSlider');
+const bgmVolSlider = document.getElementById('bgmVolSlider');
+const eqLowSlider = document.getElementById('eqLowSlider');
+const eqMidSlider = document.getElementById('eqMidSlider');
+const eqHighSlider = document.getElementById('eqHighSlider');
+const noiseCancelBtn = document.getElementById('noiseCancelBtn');
+const audioResetBtn = document.getElementById('audioResetBtn');
+const bgmImportBtn = document.getElementById('bgmImportBtn');
+const bgmInput = document.getElementById('bgmInput');
+const toukaSlider = document.getElementById('toukaSlider');
+const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
+const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
+const bgmStartDisplay = document.getElementById('bgmStartDisplay');
+// ========================================
+// 3. アプリケーションの状態管理変数
+// ========================================
+let audioCtx = null;
+let analyser = null;
+let source = null;
+let dataArray = null;
+let stream = null;
+let animationId = null;
+let isMovieRendering = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let audioBlob = null;
+// 🛠️ モバイル対応: 100%確実に波形を出すため、確認再生はAudioタグではなくメモリ直接方式（AudioBufferSourceNode）に一本化
+let playbackAudioBuffer = null;
+let playbackBgmBuffer = null;
+let activeAudioNode = null;
+let activeBgmNode = null;
+// 再生位置管理変数群
+let playbackStartTime = 0;
+let playbackOffset = 0;
+let isPlayingRecorded = false;
+let timerInterval = null;
+let timeLeft = 120;
+let currentBgColor = 'black';
+let currentWaveColors = ["#fff0f5", "#faf0e6"];
+let currentWaveStyle = 'corona';
+let isUserChangingIndex = false;
+let isRecording = false;
+let isRecordingPaused = false;
+let isNoiseCancelOn = false;
+let currentOpacity = 0.9;
+let bgImage = null;
+let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
+// BGM関連
+let bgmBlob = null;
+let bgmStartOffset = 0.0;
+let bgmAnalyser = null;
+let bgmDataArray = null;
+let bgmGainNode = null;
+let monitorBgmSource = null; // 録音中のモニター演奏用
+// ========================================
+// 4. 関数の定義
+// ========================================
+function initStandardColors() {
+const grid = document.getElementById('standardGrid');
+grid.innerHTML = '';
+STANDARD_PALETTES.forEach((colors, index) => {
+const circle = document.createElement('div');
+circle.className = 'palette-circle';
+if (index === 0) circle.classList.add('selected');
+circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+circle.dataset.colors = JSON.stringify(colors);
+grid.appendChild(circle);
+});
+}
+function setupPaletteEvents() {
+const allPalettes = document.querySelectorAll('.palette-circle');
+allPalettes.forEach(palette => {
+palette.addEventListener('click', () => {
+allPalettes.forEach(p => p.classList.remove('selected'));
+palette.classList.add('selected');
+currentWaveColors = JSON.parse(palette.dataset.colors);
+triggerUIRefresh();
+});
+});
+}
+function triggerUIRefresh() {
+if (!isRecording && !isPlayingRecorded) {
+drawStaticWave();
+}
+}
+function syncAudioParams() {
+if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
+if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
+if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
+if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
+if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
+if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
+}
+function clearCanvas(targetCtx, w, h) {
+if (currentBgColor === 'picture' && bgImage) {
+targetCtx.clearRect(0, 0, w, h);
+const imgW = bgImage.width;
+const imgH = bgImage.height;
+const imgRatio = imgW / imgH;
+const canvasRatio = w / h;
+let renderW, renderH;
+let renderX, renderY;
+if (imgRatio > canvasRatio) {
+renderW = w;
+renderH = w / imgRatio;
+renderX = 0;
+renderY = (h - renderH) / 2;
+} else {
+renderH = h;
+renderW = h * imgRatio;
+renderX = (w - renderW) / 2;
+renderY = 0;
+}
+targetCtx.drawImage(bgImage, renderX, renderY, renderW, renderH);
+} else {
+targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
+targetCtx.fillRect(0, 0, w, h);
+}
+}
+function getBoostedValue(rawByteValue) {
+const threshold = 25;
+if (rawByteValue < threshold) return 0;
+const normalized = (rawByteValue - threshold) / (255 - threshold);
+return Math.pow(normalized, 1.5);
+}
+function drawStaticWave() {
+clearCanvas(ctx, canvas.width, canvas.height);
+const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+gradient.addColorStop(0, currentWaveColors[0]);
+if (currentWaveColors.length > 2) {
+gradient.addColorStop(0.5, currentWaveColors[1]);
+gradient.addColorStop(1, currentWaveColors[2]);
+} else {
+gradient.addColorStop(1, currentWaveColors[1]);
+}
+ctx.fillStyle = gradient;
+ctx.strokeStyle = gradient;
+ctx.lineWidth = 4;
+ctx.lineCap = 'round';
+if (currentWaveStyle === 'corona') {
+ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
+} else if (currentWaveStyle === 'star') {
+const centerX = canvas.width / 2; const centerY = canvas.height / 2;
+const baseRadius = 140;
+for (let i = 0; i < 48; i++) {
+const angle = (i / 48) * Math.PI * 2;
+const startX = centerX + Math.cos(angle) * (baseRadius - 8);
+const startY = centerY + Math.sin(angle) * (baseRadius - 8);
+const endX = centerX + Math.cos(angle) * (baseRadius + 8);
+const endY = centerY + Math.sin(angle) * (baseRadius + 8);
+ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
+}
+} else if (currentWaveStyle === 'aurora') {
+const centerY = canvas.height / 2;
+ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
+} else if (currentWaveStyle === 'building') {
+const baseLineY = canvas.height - 80;
+ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+
+} else if (currentWaveStyle === 'ripple') {
+    // 💡 修正：プレビュー用（待機状態・やり直し後）の波紋は、色塗りを残さず細い綺麗な線(stroke)だけにクリア化！
+    ctx.save();
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 1.5;
+    const centerY = canvas.height * 0.65;
+    for (let i = 1; i <= 4; i++) {
+        ctx.beginPath();
+        ctx.globalAlpha = (1.0 - (i / 5)) * 0.3;
+        ctx.ellipse(canvas.width / 2, centerY, i * 45, i * 18, 0, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+} 
+function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
+const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
+gradient.addColorStop(0, currentWaveColors[0]);
+if (currentWaveColors.length > 2) {
+gradient.addColorStop(0.5, currentWaveColors[1]);
+gradient.addColorStop(1, currentWaveColors[2]);
+} else {
+gradient.addColorStop(1, currentWaveColors[1]);
+}
+targetCtx.strokeStyle = gradient;
+targetCtx.fillStyle = gradient;
+targetCtx.lineWidth = 4;
+targetCtx.lineCap = 'round';
+const centerX = targetCanvas.width / 2;
+const centerY = targetCanvas.height / 2;
+const startIdx = 2;
+const endIdx = 35;
+const dataRange = endIdx - startIdx;
+if (currentWaveStyle === 'corona') {
+const baseRadius = 140;
+targetCtx.save();
+targetCtx.globalAlpha = opacity;
+targetCtx.lineWidth = 2.5;
+const barCountCorona = 360;
+for (let i = 0; i < barCountCorona; i++) {
+const angle = (i / barCountCorona) * Math.PI * 2;
+const mapRatio = i / barCountCorona;
+const exactIdx = startIdx + mapRatio * dataRange;
+const idxLeft = Math.floor(exactIdx);
+const idxRight = Math.min(idxLeft + 1, endIdx);
+const fraction = exactIdx - idxLeft;
+const valueLeft = dataArr[idxLeft] || 0;
+const valueRight = dataArr[idxRight] || 0;
+const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
+const boosted = getBoostedValue(interpolatedValue);
+const waveLength = 6 + (boosted * 150);
+const startX = centerX + Math.cos(angle) * baseRadius;
+const startY = centerY + Math.sin(angle) * baseRadius;
+const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+}
+targetCtx.restore();
+} else if (currentWaveStyle === 'star') {
+const baseRadius = 138;
+const barCount = 64;
+targetCtx.save();
+targetCtx.globalAlpha = opacity;
+for (let i = 0; i < barCount; i++) {
+const angle = (i / barCount) * Math.PI * 2;
+const mapRatio = i / barCount;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const waveLength = 5 + (boosted * 150);
+const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
+const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
+const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
+const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
+targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
+}
+targetCtx.restore();
+} else if (currentWaveStyle === 'aurora') {
+const usedPoints = 32;
+const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
+const activeCenterY = targetCanvas.height / 2;
+const coords = [];
+for (let i = 0; i < usedPoints; i++) {
+const mapRatio = i / usedPoints;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const waveHeight = 3 + (boosted * 150);
+coords.push({x: 40 + i * spacing, waveHeight});
+}
+targetCtx.beginPath();
+targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
+for (let i = 1; i < usedPoints; i++) {
+const prev = coords[i - 1]; const curr = coords[i]; const cpX = (prev.x + curr.x) / 2;
+targetCtx.bezierCurveTo(cpX, activeCenterY - prev.waveHeight, cpX, activeCenterY - curr.waveHeight, curr.x, activeCenterY - curr.waveHeight);
+}
+targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
+for (let i = usedPoints - 1; i > 0; i--) {
+const curr = coords[i]; const next = coords[i - 1]; const cpX = (curr.x + next.x) / 2;
+targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY + curr.waveHeight, next.x, activeCenterY + next.waveHeight);
+}
+targetCtx.closePath();
+targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.fill(); targetCtx.restore();
+} else if (currentWaveStyle === 'building') {
+const barCount = 30;
+const spacing = (targetCanvas.width - 80) / barCount;
+const baseLineY = targetCanvas.height - 80;
+targetCtx.save(); targetCtx.lineCap = 'butt'; targetCtx.beginPath(); targetCtx.moveTo(40, baseLineY); targetCtx.lineTo(targetCanvas.width - 40, baseLineY); targetCtx.stroke(); targetCtx.restore();
+targetCtx.save(); targetCtx.globalAlpha = opacity; const barWidth = spacing * 0.7;
+for (let i = 0; i < barCount; i++) {
+const mapRatio = i / barCount;
+const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
+const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+const barHeight = boosted * 250;
+if (barHeight > 0) {
+const x = 40 + i * spacing + (spacing - barWidth) / 2;
+targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
+}
+}
+targetCtx.restore();
+
+} else if (currentWaveStyle === 'ripple') {
+    // 🌌 3D Audio Ripple Grid（音が中心から立体的に外側へ伝播する減衰ウェーブ）
+    targetCtx.save();
+    
+    // アプリの画面サイズ（600x600）に合わせた中心点とグリッド設定
+    const cx = targetCanvas.width * 0.5;
+    const cy = targetCanvas.height * 0.55;
+    const ROTATE_X = 65 * Math.PI / 180; // 3Dの傾き（俯瞰角度）
+    
+    const ROWS = 40;
+    const COLS = 40;
+    const CELL_SIZE = 14;
+
+    // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
+    const historyLength = 55;
+    if (!window._audioHistory3D || !isRecording && !isPlayingRecorded && (dataArr[startIdx] === 0 || !dataArr.some(v => v > 0))) {
+        window._audioHistory3D = Array(historyLength).fill(0).map(() => ({ low: 0, high: 0, volume: 0 }));
+    }
+
+    // 音域データの抽出
+    let lowSum = 0;
+    let highSum = 0;
+    let totalSum = 0;
+    const len = endIdx - startIdx;
+
+    for (let i = startIdx; i < endIdx; i++) {
+        const val = (dataArr[i] || 0) / 255;
+        totalSum += val;
+        if (i < startIdx + len * 0.2) {
+            lowSum += val;  // 低音
+        } else if (i > startIdx + len * 0.5) {
+            highSum += val; // 高音
         }
-        window.addEventListener('resize', resize);
-        resize();
+    }
 
-        // グリッドの設定（3D波紋の網の目）
-        const ROWS = 45;
-        const COLS = 45;
-        const CELL_SIZE = 14;
-        
-        // 3D投影用のパラメータ
-        const P_X = 0.5; // 画面中心 X
-        const P_Y = 0.55; // 画面中心 Y
-        const ROTATE_X = 60 * Math.PI / 180; // 俯瞰角度（3Dの傾き）
+    const volume = totalSum / len;
+    const low = lowSum / (len * 0.2);
+    const high = highSum / (len * 0.5);
 
-        // オーディオ設定
-        let audioCtx, analyser, dataArray, source;
-        let isInitialized = false;
+    const isAudioActive = (isRecording || isPlayingRecorded) && volume > 0.01;
 
-        // 過去の波の履歴（外側へ時間差で伝播させるため）
-        const historyLength = 60; 
-        let audioHistory = Array(historyLength).fill(0).map(() => ({
-            low: 0, high: 0, volume: 0
-        }));
+    // 毎フレーム履歴を更新（新しいデータを先頭に、古いデータを外側へ）
+    if (isAudioActive) {
+        window._audioHistory3D.pop();
+        window._audioHistory3D.unshift({ low, high, volume });
+    } else {
+        // 無音時・やり直し後は平らなデータを流して初期化
+        window._audioHistory3D.pop();
+        window._audioHistory3D.unshift({ low: 0, high: 0, volume: 0 });
+    }
 
-        // クリックでオーディオ開始（ブラウザのセキュリティ制限対策）
-        window.addEventListener('click', async () => {
-            if (isInitialized) return;
+    // グラデーションの作成（ウェーブカラーを適用）
+    const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
+    gradient.addColorStop(0, currentWaveColors[0]);
+    gradient.addColorStop(1, currentWaveColors[1]);
+    targetCtx.strokeStyle = gradient;
+    targetCtx.lineWidth = 1.2;
+
+    // 縦方向の網の目を描画
+    for (let r = 0; r < ROWS; r++) {
+        targetCtx.beginPath();
+        for (let c = 0; c < COLS; c++) {
+            // 中心を基準とした位置
+            const gx = (c - COLS / 2) * CELL_SIZE;
+            const gy = (r - ROWS / 2) * CELL_SIZE;
+            const distance = Math.sqrt(gx * gx + gy * gy);
             
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioCtx.createAnalyser();
-                analyser.fftSize = 512; // 周波数分解能
-                
-                source = audioCtx.createMediaStreamSource(stream);
-                source.connect(analyser);
-                
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-                isInitialized = true;
-                ui.style.display = 'none'; // UIを隠す
-                
-                animate();
-            } catch (err) {
-                alert('マイクのアクセスが拒否されたか、デバイスが見つかりません。');
-                console.error(err);
-            }
-        });
+            // 外側への比率（0.0＝中心、1.0＝一番外側）
+            const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
+            const normDist = Math.min(distance / maxRadius, 1);
 
-        // メインループ
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!isInitialized) return;
+            // 外側に行くほど古い時間軸のデータを参照する
+            const historyIndex = Math.floor(normDist * (historyLength - 1));
+            const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
 
-            // 周波数データの取得
-            analyser.getByteFrequencyData(dataArray);
+            // 外側へ行くほど波を小さくする（減衰処理）
+            const damping = Math.cos(normDist * Math.PI / 2);
 
-            // 音域ごとのデータ抽出と計算
-            let lowSum = 0;
-            let highSum = 0;
-            let totalSum = 0;
-            const len = dataArray.length;
+            // 1. 高音：細かくたくさん振動
+            const highWave = Math.sin(distance * 0.22) * frameData.high * 16;
+            // 2. 低音：ゆったり大きく振動
+            const lowWave = Math.sin(distance * 0.06) * frameData.low * 45;
+            // 3. 大きい音はより大きく（volume倍率）
+            const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
 
-            for (let i = 0; i < len; i++) {
-                const val = dataArray[i] / 255; // 0.0 〜 1.0 に正規化
-                totalSum += val;
-                if (i < len * 0.15) {
-                    lowSum += val; // 低音域（ベース・ドラムなど）
-                } else if (i > len * 0.5) {
-                    highSum += val; // 高音域（シンバル・高音の声など）
-                }
-            }
+            // 擬似3D投影（Y軸を圧縮し、高さの分だけ上にずらす）
+            const x3d = cx + gx;
+            const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
 
-            const volume = totalSum / len;
-            const low = lowSum / (len * 0.15);
-            const high = highSum / (len * 0.5);
-
-            // 履歴の更新（新しいデータを先頭に入れ、古いデータを1つずらす）
-            audioHistory.pop();
-            audioHistory.unshift({ low, high, volume });
-
-            // 画面クリア
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 3Dグリッドの描画
-            const cx = canvas.width * P_X;
-            const cy = canvas.height * P_Y;
-
-            for (let r = 0; r < ROWS; r++) {
-                ctx.beginPath();
-                for (let c = 0; c < COLS; c++) {
-                    // グリッドの中心からの距離を計算（中心を 0,0 とする）
-                    const gx = (c - COLS / 2) * CELL_SIZE;
-                    const gy = (r - ROWS / 2) * CELL_SIZE;
-                    const distance = Math.sqrt(gx * gx + gy * gy);
-                    
-                    // 最大半径に対する比率（0.0 = 中心, 1.0 = 外側）
-                    const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
-                    const normDist = Math.min(distance / maxRadius, 1);
-
-                    // 外側に行くほど古いデータ（時間経過）を参照するインデックス
-                    const historyIndex = Math.floor(normDist * (historyLength - 1));
-                    const frameData = audioHistory[historyIndex];
-
-                    // 外側へ行くほど波を小さくする（減衰処理）
-                    const damping = Math.cos(normDist * Math.PI / 2); 
-
-                    // 1. 高音：細かく振動（距離に対する周波数を細かくする）
-                    const highWave = Math.sin(distance * 0.2) * frameData.high * 15;
-
-                    // 2. 低音：ゆったり振動（距離に対する周波数を粗くする）
-                    const lowWave = Math.sin(distance * 0.05) * frameData.low * 40;
-
-                    // 3. 全体音量で波の大きさをベースアップ
-                    const heightBase = (highWave + lowWave) * (frameData.volume * 2.5) * damping;
-
-                    // 3D 投影（擬似3D変換マトリクス）
-                    // Y軸を圧縮（ROTATE_X）し、高さ（heightBase）の分だけ上にずらす
-                    const x3d = cx + gx;
-                    const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
-
-                    // 線の描画
-                    if (c === 0) {
-                        ctx.moveTo(x3d, y3d);
-                    } else {
-                        ctx.lineTo(x3d, y3d);
-                    }
-                }
-                
-                // 外側に行くほど薄くなるグラデーションカラー
-                const alpha = Math.max(0.1, 1 - (r / ROWS));
-                ctx.strokeStyle = `rgba(0, 180, 255, ${alpha * 0.6})`;
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
+            if (c === 0) targetCtx.moveTo(x3d, y3d);
+            else targetCtx.lineTo(x3d, y3d);
         }
-    </script>
+        // 外側（手前と奥）に行くほど不透明度を下げて綺麗に馴染ませる
+        const edgeAlpha = Math.sin((r / ROWS) * Math.PI);
+        targetCtx.globalAlpha = edgeAlpha * opacity * 0.5;
+        targetCtx.stroke();
+    }
+
+    // 横方向の網の目も重ねて描画することで、綺麗な「3Dの網（格子）」にする
+    for (let c = 0; c < COLS; c++) {
+        targetCtx.beginPath();
+        for (let r = 0; r < ROWS; r++) {
+            const gx = (c - COLS / 2) * CELL_SIZE;
+            const gy = (r - ROWS / 2) * CELL_SIZE;
+            const distance = Math.sqrt(gx * gx + gy * gy);
+            
+            const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
+            const normDist = Math.min(distance / maxRadius, 1);
+
+            const historyIndex = Math.floor(normDist * (historyLength - 1));
+            const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
+            const damping = Math.cos(normDist * Math.PI / 2);
+
+            const highWave = Math.sin(distance * 0.22) * frameData.high * 16;
+            const lowWave = Math.sin(distance * 0.06) * frameData.low * 45;
+            const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
+
+            const x3d = cx + gx;
+            const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
+
+            if (r === 0) targetCtx.moveTo(x3d, y3d);
+            else targetCtx.lineTo(x3d, y3d);
+        }
+        const edgeAlpha = Math.sin((c / COLS) * Math.PI);
+        targetCtx.globalAlpha = edgeAlpha * opacity * 0.5;
+        targetCtx.stroke();
+    }
+
+    targetCtx.restore();
+}
+
+}
+
+async function startRecordingStream() {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
+});
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+source = audioCtx.createMediaStreamSource(stream);
+setupAudioNodes(source, true);
+recordDestination = audioCtx.createMediaStreamDestination();
+gainNode.connect(recordDestination);
+dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+async function restartRecordingStream() {
+if (!isRecording || !mediaRecorder) return;
+if (stream) stream.getTracks().forEach(track => track.stop());
+try {
+stream = await navigator.mediaDevices.getUserMedia({
+audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
+});
+const newSource = audioCtx.createMediaStreamSource(stream);
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser); gainNode.connect(recordDestination);
+syncAudioParams();
+} catch (err) { console.error(err); }
+}
+function stopRecording() {
+if (!isRecording) return;
+isRecording = false;
+isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE;
+if (monitorBgmSource) { try { monitorBgmSource.stop(); } catch(e){} monitorBgmSource = null; }
+if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+if (stream) stream.getTracks().forEach(track => track.stop());
+if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+clearInterval(timerInterval);
+recBtn.classList.remove('recording');
+timerDisplay.style.display = 'none';
+drawStaticWave();
+}
+function setupAudioNodes(audioSource, isMuteSpeaker) {
+if (!audioCtx || !audioSource) return;
+eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
+eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
+eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
+ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
+gainNode = audioCtx.createGain();
+analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
+audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
+gainNode.connect(analyser);
+if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
+syncAudioParams();
+}
+function updateTimerText() {
+const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+function lockMenus() {
+menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuCustomPalette.classList.add('locked');
+document.getElementById('menuTouka').classList.add('locked');
+}
+function unlockMenus() {
+menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuCustomPalette.classList.remove('locked');
+document.getElementById('menuTouka').classList.remove('locked');
+}
+function stopBufferPlayback() {
+if (activeAudioNode) { try { activeAudioNode.stop(); } catch(e){} activeAudioNode = null; }
+if (activeBgmNode) { try { activeBgmNode.stop(); } catch(e){} activeBgmNode = null; }
+if (isPlayingRecorded) {
+playbackOffset += (audioCtx.currentTime - playbackStartTime);
+isPlayingRecorded = false;
+playPauseImg.src = IMG_PLAY;
+}
+}
+function startBufferPlayback(offset) {
+if (!playbackAudioBuffer) return;
+stopBufferPlayback();
+if (offset >= playbackAudioBuffer.duration) {
+offset = 0;
+}
+playbackOffset = offset;
+playbackStartTime = audioCtx.currentTime;
+activeAudioNode = audioCtx.createBufferSource();
+activeAudioNode.buffer = playbackAudioBuffer;
+setupAudioNodes(activeAudioNode, false);
+if (playbackBgmBuffer) {
+activeBgmNode = audioCtx.createBufferSource();
+activeBgmNode.buffer = playbackBgmBuffer;
+bgmAnalyser = audioCtx.createAnalyser();
+bgmAnalyser.fftSize = 1024;
+bgmAnalyser.smoothingTimeConstant = 0.75;
+bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+bgmGainNode = audioCtx.createGain();
+activeBgmNode.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+}
+syncAudioParams();
+activeAudioNode.start(0, offset);
+if (activeBgmNode) {
+let bgmTargetOffset = 0;
+let bgmDelayTime = 0;
+if (bgmStartOffset < 0) {
+bgmTargetOffset = offset + Math.abs(bgmStartOffset);
+} else {
+if (offset < bgmStartOffset) {
+bgmDelayTime = bgmStartOffset - offset;
+bgmTargetOffset = 0;
+} else {
+bgmTargetOffset = offset - bgmStartOffset;
+}
+}
+if (bgmTargetOffset < playbackBgmBuffer.duration) {
+if (bgmDelayTime > 0) {
+activeBgmNode.start(audioCtx.currentTime + bgmDelayTime, bgmTargetOffset);
+} else {
+activeBgmNode.start(0, bgmTargetOffset);
+}
+}
+}
+isPlayingRecorded = true;
+playPauseImg.src = IMG_PAUSE;
+draw();
+}
+function resetDataWithoutPrompt(keepBgm = false) {
+stopBufferPlayback();
+audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
+if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+isPlayingRecorded = false;
+isRecording = false; isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE;
+playbackAudioBuffer = null;
+playbackOffset = 0;
+eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
+if (!keepBgm) {
+playbackBgmBuffer = null;
+bgmBlob = null; bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
+bgmImportBtn.classList.remove('loaded');
+bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
+bgmInput.value = "";
+} else {
+bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
+}
+unlockMenus(); drawStaticWave();
+}
+function hideOverlayAndCleanup() {
+document.getElementById('renderOverlay').style.display = 'none';
+document.getElementById('miniGameIframe').src = 'about:blank';
+resetDataWithoutPrompt();
+}
+function draw() {
+if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
+animationId = requestAnimationFrame(draw);
+if (isPlayingRecorded) {
+const currentProgress = playbackOffset + (audioCtx.currentTime - playbackStartTime);
+if (!isUserChangingIndex) {
+seekBar.value = currentProgress;
+}
+if (currentProgress >= playbackAudioBuffer.duration) {
+stopBufferPlayback();
+playbackOffset = 0;
+seekBar.value = 0;
+drawStaticWave();
+return;
+}
+}
+if (isRecording && isRecordingPaused) {
+if (dataArray) dataArray.fill(0);
+if (bgmDataArray) bgmDataArray.fill(0);
+} else {
+if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
+if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
+}
+clearCanvas(ctx, canvas.width, canvas.height);
+if (bgmDataArray) {
+drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
+}
+if (dataArray) {
+drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
+}
+}
+// ========================================
+// 5. イベントリスナーの登録
+// ========================================
+btnBlack.addEventListener('click', () => {
+currentBgColor = 'black'; btnBlack.classList.add('active'); btnWhite.classList.remove('active'); btnPicture.classList.remove('active');
+canvasBg.classList.remove('theme-white'); canvasBg.style.backgroundColor = ''; pictureInput.value = ""; triggerUIRefresh();
+});
+btnWhite.addEventListener('click', () => {
+currentBgColor = 'white'; btnWhite.classList.add('active'); btnBlack.classList.remove('active'); btnPicture.classList.remove('active');
+canvasBg.classList.add('theme-white'); canvasBg.style.backgroundColor = ''; pictureInput.value = ""; triggerUIRefresh();
+});
+btnPicture.addEventListener('click', () => { pictureInput.click(); });
+pictureInput.addEventListener('change', (e) => {
+const file = e.target.files[0];
+if (file) {
+const reader = new FileReader();
+reader.onload = function(event) {
+const img = new Image();
+img.onload = function() {
+bgImage = img; currentBgColor = 'picture'; btnPicture.classList.add('active'); btnBlack.classList.remove('active'); btnWhite.classList.remove('active');
+canvasBg.style.backgroundColor = 'transparent'; triggerUIRefresh();
+};
+img.src = event.target.result;
+};
+reader.readAsDataURL(file);
+}
+});
+toukaSlider.addEventListener('input', () => {
+const sliderRatio = parseFloat(toukaSlider.value) / 100;
+currentOpacity = 1.0 - (sliderRatio * 0.6); triggerUIRefresh();
+});
+styleOptions.forEach(opt => {
+opt.addEventListener('click', () => {
+styleOptions.forEach(o => o.classList.remove('active')); opt.classList.add('active');
+currentWaveStyle = opt.dataset.style; triggerUIRefresh();
+});
+});
+volSlider.addEventListener('input', syncAudioParams);
+bgmVolSlider.addEventListener('input', syncAudioParams);
+bgmStartMinusBtn.addEventListener('click', () => { bgmStartOffset -= 0.1; updateBgmStartDisplay(); });
+bgmStartPlusBtn.addEventListener('click', () => { bgmStartOffset += 0.1; updateBgmStartDisplay(); });
+function updateBgmStartDisplay() {
+if (bgmStartOffset > 0) { bgmStartDisplay.innerText = `+${bgmStartOffset.toFixed(1)} sec`; }
+else { bgmStartDisplay.innerText = `${bgmStartOffset.toFixed(1)} sec`; }
+}
+eqLowSlider.addEventListener('input', syncAudioParams);
+eqMidSlider.addEventListener('input', syncAudioParams);
+eqHighSlider.addEventListener('input', syncAudioParams);
+noiseCancelBtn.addEventListener('click', () => {
+isNoiseCancelOn = !isNoiseCancelOn;
+if (isNoiseCancelOn) { noiseCancelBtn.classList.add('active'); noiseCancelBtn.innerText = "NOISE\nCANCEL\nON"; }
+else { noiseCancelBtn.classList.remove('active'); noiseCancelBtn.innerText = "NOISE\nCANCEL\nOFF"; }
+if (isRecording) { restartRecordingStream(); }
+else if (isPlayingRecorded) { syncAudioParams(); }
+});
+audioResetBtn.addEventListener('click', () => {
+    stopBufferPlayback();
+    volSlider.value = 1.0; 
+    bgmVolSlider.value = 0.5; 
+    eqLowSlider.value = -7; 
+    eqMidSlider.value = 3; 
+    eqHighSlider.value = -4;
+    bgmStartOffset = 0.0; 
+    updateBgmStartDisplay(); 
+    syncAudioParams();
+    playbackBgmBuffer = null;
+    bgmBlob = null; 
+    bgmGainNode = null; 
+    bgmAnalyser = null; 
+    bgmDataArray = null;
+    bgmImportBtn.classList.remove('loaded');
+    bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
+    bgmInput.value = "";
+    drawStaticWave();
+    alert("各種音量・EQ設定を初期化！\nBGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
+});
+bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
+bgmInput.addEventListener('change', async (e) => {
+const file = e.target.files[0];
+if (file) {
+bgmBlob = file;
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+try {
+const bgmArrayBuffer = await bgmBlob.arrayBuffer();
+playbackBgmBuffer = await audioCtx.decodeAudioData(bgmArrayBuffer);
+bgmImportBtn.classList.add('loaded');
+bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
+alert("BGMの読み込みに成功しました^.ˬ.^ฅ");
+} catch(e) {
+console.error("BGM Decode Error:", e);
+alert("BGMの読み込みに失敗しました꙳☄︎ファイル形式をご確認ください");
+}
+}
+});
+// ========================================
+// 6. 録音コントロール系の処理
+// ========================================
+recBtn.addEventListener('click', async () => {
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (audioCtx.state === 'suspended') await audioCtx.resume();
+if (isRecording) {
+if (isRecordingPaused) {
+isRecordingPaused = false;
+pauseBtnImg.src = IMG_PAUSE;
+if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+}
+return;
+}
+resetDataWithoutPrompt(true);
+try {
+unlockMenus();
+await startRecordingStream();
+isRecording = true;
+isRecordingPaused = false;
+recordedChunks = [];
+let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 160000 };
+if (typeof MediaRecorder.isTypeSupported === 'function' && !MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+options = { audioBitsPerSecond: 160000 };
+}
+mediaRecorder = new MediaRecorder(recordDestination.stream, options);
+mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+mediaRecorder.onstop = async () => {
+audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+try {
+const arrayBuffer = await audioBlob.arrayBuffer();
+playbackAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+seekBar.max = playbackAudioBuffer.duration;
+seekBar.value = 0;
+} catch(e) { console.error("Audio Decode Error:", e); }
+downloadBtn.classList.add('ready');
+playPauseImg.src = IMG_PLAY;
+lockMenus();
+};
+if (playbackBgmBuffer) {
+monitorBgmSource = audioCtx.createBufferSource();
+monitorBgmSource.buffer = playbackBgmBuffer;
+bgmAnalyser = audioCtx.createAnalyser();
+bgmAnalyser.fftSize = 1024;
+bgmAnalyser.smoothingTimeConstant = 0.75;
+bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
+bgmGainNode = audioCtx.createGain();
+monitorBgmSource.connect(bgmAnalyser);
+bgmAnalyser.connect(bgmGainNode);
+bgmGainNode.connect(audioCtx.destination);
+bgmGainNode.connect(recordDestination); 
+syncAudioParams();
+if (bgmStartOffset < 0) {
+monitorBgmSource.start(0, Math.abs(bgmStartOffset));
+} else {
+monitorBgmSource.start(audioCtx.currentTime + bgmStartOffset, 0);
+}
+}
+mediaRecorder.start();
+draw();
+recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
+timerInterval = setInterval(() => {
+if (!isRecordingPaused) {
+timeLeft--; updateTimerText();
+if (timeLeft <= 0) stopRecording();
+}
+}, 1000);
+} catch (err) {
+alert("マイクの起動に失敗しました꙳☄︎\n設定をご確認ください^.ˬ.^ฅ: " + err);
+}
+});
+pauseBtn.addEventListener('click', () => {
+if (!isRecording) return;
+if (!isRecordingPaused) {
+isRecordingPaused = true; pauseBtnImg.src = IMG_PLAY;
+if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
+} else {
+isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
+if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+}
+});
+stopBtn.addEventListener('click', () => { stopRecording(); });
+resetBtn.addEventListener('click', () => {
+if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\nBGMは残したまま、現在の録音データをクリアして最初からやりなおしますか？")) {
+resetDataWithoutPrompt(true);
+alert("録音をリセットしました^.ˬ.^ฅ");
+}
+});
+playPauseBtn.addEventListener('click', async () => {
+if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
+if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (audioCtx.state === 'suspended') await audioCtx.resume();
+if (isPlayingRecorded) {
+stopBufferPlayback();
+} else {
+startBufferPlayback(playbackOffset);
+}
+});
+seekBar.addEventListener('input', () => {
+if (!playbackAudioBuffer) return;
+isUserChangingIndex = true;
+const targetTime = parseFloat(seekBar.value);
+if (isPlayingRecorded) {
+startBufferPlayback(targetTime);
+} else {
+playbackOffset = targetTime;
+}
+});
+seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
+downloadBtn.addEventListener('click', async () => {
+if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
+stopBufferPlayback();
+if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
+const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
+document.getElementById('renderOverlay').style.display = 'flex';
+document.getElementById('miniGameIframe').src = 'mini-game.html';
+downloadBtn.style.pointerEvents = 'none';
+const bufferSource = renderAudioCtx.createBufferSource();
+bufferSource.buffer = playbackAudioBuffer;
+const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
+const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
+const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
+const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'highpass'; rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; rNcFilter.Q.value = 0.7;
+const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
+const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 1024; rAnalyser.smoothingTimeConstant = 0.75;
+bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
+const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
+const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
+const rCtx = captureCanvas.getContext('2d');
+const canvasStream = captureCanvas.captureStream(30);
+const renderDest = renderAudioCtx.createMediaStreamDestination();
+rGain.connect(renderDest);
+let rBgmSource = null; let rBgmAnalyser = null; let rBgmDataArray = null;
+if (playbackBgmBuffer) {
+rBgmSource = renderAudioCtx.createBufferSource(); rBgmSource.buffer = playbackBgmBuffer;
+rBgmAnalyser = renderAudioCtx.createAnalyser(); rBgmAnalyser.fftSize = 1024; rBgmAnalyser.smoothingTimeConstant = 0.75;
+rBgmDataArray = new Uint8Array(rBgmAnalyser.frequencyBinCount);
+const rBgmGain = renderAudioCtx.createGain(); rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
+rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.connect(renderDest);
+}
+const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
+let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 }; }
+const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
+const movieChunks = [];
+movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
+movieRecorder.onstop = () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const fileExtension = isIOS ? 'mov' : 'webm';
+    const mimeType = isIOS ? 'video/quicktime' : 'video/webm';
+
+    const finalBlob = new Blob(movieChunks, { type: mimeType });
+    const finalVideoUrl = URL.createObjectURL(finalBlob);
+    const fileName = `voice-wave-${Date.now()}.${fileExtension}`;
+    
+    if (!isIOS) {
+        const a = document.createElement('a'); a.href = finalVideoUrl; a.download = fileName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    
+    const videoPopup = document.getElementById('videoPopup');
+    const popupVideo = document.getElementById('popupVideo');
+    const downloadFileBtn = document.getElementById('downloadFileBtn');
+    const closePopupBtn = document.getElementById('closePopupBtn');
+    
+    popupVideo.src = finalVideoUrl;
+    videoPopup.style.display = 'flex';
+    
+    downloadBtn.style.pointerEvents = 'auto'; 
+    isMovieRendering = false;
+
+    downloadFileBtn.onclick = async () => {
+        if (isIOS) {
+            try {
+                const file = new File([finalBlob], fileName, { type: mimeType });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: '動画の保存',
+                        text: '作成した動画を保存します'
+                    });
+                } else {
+                    alert("このブラウザは動画の共有保存に対応していません。Safariで開き直してください。");
+                }
+            } catch (error) {
+                console.error("共有エラー:", error);
+                window.open(finalVideoUrl, '_blank');
+            }
+        } else {
+            const a = document.createElement('a');
+            a.href = finalVideoUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
+    
+    closePopupBtn.onclick = () => {
+        videoPopup.style.display = 'none';
+        popupVideo.src = '';
+        const finishGame = confirm("ミニゲームを終わりますか？");
+        if (finishGame) { hideOverlayAndCleanup(); alert("録音データを自動リセットしました^.ˬ.^ฅ"); }
+    };
+};
+
+isMovieRendering = true; movieRecorder.start(); bufferSource.start(0);
+if (rBgmSource) {
+if (bgmStartOffset < 0) { rBgmSource.start(0, Math.abs(bgmStartOffset)); }
+else if (bgmStartOffset > 0) { rBgmSource.start(renderAudioCtx.currentTime + bgmStartOffset); }
+else { rBgmSource.start(0); }
+}
+const startTime = performance.now(); const duration = playbackAudioBuffer.duration * 1000;
+function renderFrame() {
+const now = performance.now(); const elapsed = now - startTime;
+rAnalyser.getByteFrequencyData(rDataArray);
+if (rBgmAnalyser && rBgmDataArray) rBgmAnalyser.getByteFrequencyData(rBgmDataArray);
+clearCanvas(rCtx, captureCanvas.width, captureCanvas.height);
+if (rBgmDataArray) { drawWaveLogic(rCtx, captureCanvas, rBgmDataArray, 0.3); }
+drawWaveLogic(rCtx, captureCanvas, rDataArray, currentOpacity);
+if (elapsed < duration) requestAnimationFrame(renderFrame);
+else {
+bufferSource.stop();
+if (rBgmSource) { try { rBgmSource.stop(); } catch(e){} }
+movieRecorder.stop(); renderAudioCtx.close();
+}
+}
+renderFrame();
+});
+window.addEventListener('message', (event) => {
+if (event.data === 'MINIGAME_FINISHED') {
+if (isMovieRendering) {
+const gameIframe = document.getElementById('miniGameIframe');
+if (gameIframe) gameIframe.src = 'mini-game.html';
+alert("動画を一所懸命に書き出し中です。もう一回遊べる丼！");
+} else { hideOverlayAndCleanup(); }
+}
+});
+// ========================================
+// 7. 初期化処理の実行
+// ========================================
+initStandardColors();
+setupPaletteEvents();
+
+const customPickLabel1 = document.getElementById('customPickLabel1');
+const customPickLabel2 = document.getElementById('customPickLabel2');
+const customPreviewCircle = document.getElementById('customPreviewCircle');
+
+let activeColorIndex = 1; 
+let color1 = "#fff0f5";
+let color2 = "#faf0e6";
+
+const colorPicker = new iro.ColorPicker("#picker", {
+    width: 100, 
+    color: color1, 
+    display: "block",
+    layout: [
+        { component: iro.ui.Box },   
+        { component: iro.ui.Slider, options: { sliderType: 'hue' } } 
+    ]
+});
+
+function updateCustomPalette() {
+    customPickLabel1.style.background = color1;
+    customPickLabel2.style.background = color2;
+    customPreviewCircle.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+    document.querySelectorAll('.palette-circle').forEach(p => p.classList.remove('selected'));
+    customPreviewCircle.classList.add('selected');
+    currentWaveColors = [color1, color2];
+    triggerUIRefresh();
+}
+
+colorPicker.on('color:change', function(color) {
+    if (activeColorIndex === 1) {
+        color1 = color.hexString; 
+    } else {
+        color2 = color.hexString; 
+    }
+    updateCustomPalette();
+});
+
+customPickLabel1.addEventListener('click', () => {
+    activeColorIndex = 1;
+    customPickLabel1.classList.add('selected');
+    customPickLabel2.classList.remove('selected');
+    colorPicker.setColor(color1); 
+});
+
+customPickLabel2.addEventListener('click', () => {
+    activeColorIndex = 2;
+    customPickLabel2.classList.add('selected');
+    customPickLabel1.classList.remove('selected');
+    colorPicker.setColor(color2); 
+});
+
+customPreviewCircle.addEventListener('click', () => {
+    updateCustomPalette();
+});
+unlockMenus();
+drawStaticWave();
+</script>
+<div id="videoPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; padding: 20px;">
+    <div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
+        <p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;"> 動画が完成しました！</p>
+        <p style="color: #fff; font-size: 12px; margin-bottom: 15px; background: #111b35; padding: 5px; border-radius: 5px; font-family: sans-serif;">
+        Android/PCは自動保存されます^.ˬ.^ฅⳊ<br><br>
+        iPhoneの方は下のiPhone SAVE Btnで<br>
+        開いた動画の【画録】がオススメ！</p>
+        <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
+        
+        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE　Btn</button>
+        
+        <button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
+    </div>
+</div>
+
 </body>
 </html>
