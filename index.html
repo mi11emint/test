@@ -903,19 +903,21 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 } else if (currentWaveStyle === 'ripple') {
-    // 🌊 2D Smooth Audio Ripple（軽量・高速で滑らかな2D波紋エフェクト）
+    // 🌌 2D Pseudo-3D Audio Ripple（超軽量・横斜め上から見下ろした立体波紋）
     targetCtx.save();
     
-    // アプリの画面サイズ（600x600）に合わせた中心点設定
+    // 静止状態の仕様に合わせた中心点（Y軸を少し下めの0.65に設定）
     const cx = targetCanvas.width * 0.5;
-    const cy = targetCanvas.height * 0.5;
+    const cy = targetCanvas.height * 0.65;
     
-    // 最大半径（画面の端まで届くサイズ）
-    const maxRadius = Math.sqrt(cx * cx + cy * cy);
+    // 静止状態の楕円の比率（縦18 / 横45 ＝ 0.4）を適用して斜めの角度を再現
+    const TILT_RATIO = 18 / 45; 
+    
+    // 画面の端まで届く最大の横半径
+    const maxRadiusX = targetCanvas.width * 0.7;
 
     // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
-    // 2Dでは配列サイズを少し増やして、より遠くまで波を緻密に伝播させます
-    const historyLength = 80;
+    const historyLength = 70;
     if (!window._audioHistory2D || (!isRecording && !isPlayingRecorded && (!dataArr || dataArr[startIdx] === 0 || !dataArr.some(v => v > 0)))) {
         window._audioHistory2D = Array(historyLength).fill(0).map(() => ({ low: 0, high: 0, volume: 0 }));
     }
@@ -958,58 +960,60 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 
     // グラデーションの作成（ウェーブカラーを適用）
     const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-    const color0 = (currentWaveColors && currentWaveColors[0]) ? currentWaveColors[0] : '#00b4ff';
-    const color1 = (currentWaveColors && currentWaveColors[1]) ? currentWaveColors[1] : '#ff007f';
+    const color0 = (currentWaveColors && currentWaveColors) ? currentWaveColors : '#00b4ff';
+    const color1 = (currentWaveColors && currentWaveColors) ? currentWaveColors : '#ff007f';
     gradient.addColorStop(0, color0);
     gradient.addColorStop(1, color1);
     
     const baseOpacity = typeof opacity !== 'undefined' ? opacity : 1.0;
 
-    // 2Dの波紋の輪を何重にも描画する（ループ回数が少ないため超軽量です）
-    // 外側（古いデータ）から中心（最新データ）に向かって描画
-    const NUM_RINGS = 35; 
+    // 波紋の輪の数（静止時の4重から、動的に美しく連なるよう24重に拡張）
+    const NUM_RINGS = 24; 
     
     targetCtx.strokeStyle = gradient;
-    
-    for (let i = NUM_RINGS; i >= 0; i--) {
+
+    // 外側から中心に向かって描画
+    for (let i = NUM_RINGS; i > 0; i--) {
         // 中心からの距離の比率（0.0＝中心、1.0＝一番外側）
         const normDist = i / NUM_RINGS;
         
-        // 基本となる輪の半径
-        const baseRadius = normDist * maxRadius;
+        // 基本となる横の半径
+        const baseRadiusX = normDist * maxRadiusX;
 
-        // 外側に行くほど古い時間軸のデータを参照する
+        // 外側に行くほど古い時間軸のデータを参照
         const historyIndex = Math.floor(normDist * (historyLength - 1));
         const frameData = window._audioHistory2D[historyIndex] || { low: 0, high: 0, volume: 0 };
         
         // 外側へ行くほど波を小さくする（減衰処理）
         const damping = Math.cos(normDist * Math.PI / 2);
 
-        // 【音の速さと大きさの計算】
-        // 高音：time * 28.0 で細かく超高速に揺れる
-        // 低音：time * 6.0  でゆったり大きくうねる
-        const highWave = Math.sin(baseRadius * 0.15 - time * 28.0) * frameData.high * 8;
-        const lowWave = Math.sin(baseRadius * 0.04 - time * 6.0) * frameData.low * 25;
+        // 【音の速さと大きさの計算】楕円のサイズを直接波打たせます
+        // 高音（細かく超高速）/ 低音（ゆったり大きく）
+        const highWave = Math.sin(baseRadiusX * 0.12 - time * 26.0) * frameData.high * 10;
+        const lowWave = Math.sin(baseRadiusX * 0.03 - time * 5.0) * frameData.low * 30;
         
-        // 音量（volume）を掛け合わせて全体の振幅を決定
-        const waveOffset = (highWave + lowWave) * (frameData.volume * 2.5) * damping;
+        // 音量と減衰を掛け合わせて全体の振幅を決定
+        const waveOffset = (highWave + lowWave) * (frameData.volume * 2.8) * damping;
 
-        // 最終的な円の半径（音が鳴ると円のサイズが波打つように伸縮します）
-        const finalRadius = Math.max(0, baseRadius + waveOffset);
+        // 最終的な楕円の横半径と縦半径（TILT_RATIOを掛けて常に斜め上からの角度を維持）
+        const finalRadiusX = Math.max(0, baseRadiusX + waveOffset);
+        const finalRadiusY = finalRadiusX * TILT_RATIO;
 
-        if (finalRadius > 0) {
+        if (finalRadiusX > 0 && finalRadiusY > 0) {
             targetCtx.beginPath();
-            targetCtx.arc(cx, cy, finalRadius, 0, Math.PI * 2);
+            // 静止画のコードと同じ比率を維持した立体楕円を描画
+            targetCtx.ellipse(cx, cy, finalRadiusX, finalRadiusY, 0, 0, Math.PI * 2);
             
-            // 外側に行くほど（時間経過するほど）フェードアウトする透明度計算
+            // 外側に行くほどフェードアウトし、静止時（最大0.3）の透明度バランスに合わせる
             const edgeAlpha = Math.cos(normDist * Math.PI * 0.5);
             
-            // 線の太さも音量に応じて少し太くし、有機的な丸みと強弱を強調
-            targetCtx.lineWidth = 1.0 + frameData.volume * 4.0;
-            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.4;
+            // 線の太さ（静止画の太さ10をベースに、音量で最大14まで肉厚に変化）
+            targetCtx.lineWidth = 8.0 + frameData.volume * 6.0;
+            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.35;
             targetCtx.stroke();
         }
     }
+
     targetCtx.restore();
 }
 }
