@@ -903,7 +903,7 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 } else if (currentWaveStyle === 'ripple') {
-    // 🌌 3D Audio Ripple Surface（波自体にウェーブカラーが反映される立体サーフェス）
+    // 🌌 3D Audio Smooth Ripple Surface（丸みを帯びた滑らかな水面ウェーブ）
     targetCtx.save();
     
     // アプリの画面サイズ（600x600）に合わせた中心点とグリッド設定
@@ -911,13 +911,13 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
     const cy = targetCanvas.height * 0.55;
     const ROTATE_X = 65 * Math.PI / 180; // 3Dの傾き（俯瞰角度）
     
-    // 面を綺麗に埋めるための分割数とサイズ（細かくするほど滑らかになります）
-    const ROWS = 35;
-    const COLS = 35;
-    const CELL_SIZE = 16;
+    // 【滑らかさUP】分割数を増やして密度を上げ、1マスを細かく設定
+    const ROWS = 50;
+    const COLS = 50;
+    const CELL_SIZE = 11;
 
     // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
-    const historyLength = 55;
+    const historyLength = 65;
     if (!window._audioHistory3D || (!isRecording && !isPlayingRecorded && (!dataArr || dataArr[startIdx] === 0 || !dataArr.some(v => v > 0)))) {
         window._audioHistory3D = Array(historyLength).fill(0).map(() => ({ low: 0, high: 0, volume: 0 }));
     }
@@ -955,7 +955,7 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
         window._audioHistory3D.unshift({ low: 0, high: 0, volume: 0 });
     }
 
-    // 振動の「速さ」を制御するための時間パラメータ（ミリ秒）
+    // 振動の「速さ」を制御するための時間パラメータ
     const time = performance.now() * 0.001; 
 
     // グラデーションの作成（ウェーブカラーを適用）
@@ -978,32 +978,35 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 
         const historyIndex = Math.floor(normDist * (historyLength - 1));
         const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
-        const damping = Math.cos(normDist * Math.PI / 2);
+        
+        // 中心(0)から外(1)へ向けて滑らかに消えていくドーム状の減衰（丸みを帯びたカーブ）
+        const damping = Math.sin((1 - normDist) * Math.PI * 0.5);
 
-        // 【新機能】timeに乗算する数値を変えることで「振動の速さ」を完全に制御
-        // 高音（high）：time * 25.0 で超高速に振動
-        // 低音（low）：time * 5.0 でゆったりと大きく振動
-        const highWave = Math.sin(distance * 0.22 - time * 25.0) * frameData.high * 14;
-        const lowWave = Math.sin(distance * 0.06 - time * 5.0) * frameData.low * 45;
-        const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
+        // 【丸み補正】波のピッチを少し広げ、カクつきを防ぐマイルドな数式に変更
+        const highAngle = distance * 0.16 - time * 22.0;
+        const lowAngle = distance * 0.05 - time * 4.5;
+        
+        // サイン波を少し丸める工夫（高音のトゲトゲしさを滑らかに緩和）
+        const highWave = Math.sin(highAngle) * (1.0 + Math.cos(highAngle * 0.5) * 0.2) * frameData.high * 12;
+        const lowWave = Math.sin(lowAngle) * frameData.low * 48;
+        
+        // 全体の高さを合成
+        const heightBase = (highWave + lowWave) * (frameData.volume * 2.8) * damping;
 
         const x3d = cx + gx;
         const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
         
-        return { x: x3d, y: y3d, normDist: normDist, r: r, c: c };
+        return { x: x3d, y: y3d };
     }
 
-    // グリッド線を消し、面（四角形ポリゴン）で塗りつぶす
-    // 奥（r=0）から手前（r=ROWS-1）に向かって描画することで、立体的な重なりを正しく表現（裏面隠蔽）
+    // 面（四角形ポリゴン）で塗りつぶす
     for (let r = 0; r < ROWS - 1; r++) {
         for (let c = 0; c < COLS - 1; c++) {
-            // 四角形を構成する4つの頂点を取得
             const p1 = get3DPoint(c, r);
             const p2 = get3DPoint(c + 1, r);
             const p3 = get3DPoint(c + 1, r + 1);
             const p4 = get3DPoint(c, r + 1);
 
-            // 4点をつないで塗りつぶすパスを作成
             targetCtx.beginPath();
             targetCtx.moveTo(p1.x, p1.y);
             targetCtx.lineTo(p2.x, p2.y);
@@ -1011,15 +1014,20 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
             targetCtx.lineTo(p4.x, p4.y);
             targetCtx.closePath();
 
-            // 画面外側（手前・奥・左右の端）に行くほど綺麗にフェードアウトさせるアルファ計算
+            // 周辺フェードアウト（端を柔らかく馴染ませる）
             const edgeAlphaR = Math.sin((r / ROWS) * Math.PI);
             const edgeAlphaC = Math.sin((c / COLS) * Math.PI);
             const edgeAlpha = edgeAlphaR * edgeAlphaC;
 
-            // 塗りつぶしの色と透明度を設定（線ではなく、波の表面に色が付きます）
+            // 描画スタイルの適用
             targetCtx.fillStyle = gradient;
-            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.8;
+            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.85;
             targetCtx.fill();
+
+            // 【隙間埋めテクニック】ポリゴン同士のわずかな隙間に同色を乗せて、境界線を滑らかに一体化
+            targetCtx.strokeStyle = gradient;
+            targetCtx.lineWidth = 0.4;
+            targetCtx.stroke();
         }
     }
 
