@@ -404,11 +404,12 @@ width: 22px;
 height: 22px;
 border-radius: 50%;
 cursor: pointer;
-border: 2px solid transparent;
+ border: none; 
+    background-clip: padding-box; 
 transition: transform 0.2s;
 }
 .palette-circle.selected {
-border-color: #ffffff;
+box-shadow: inset 0 0 0 2px #ffffff; 
 transform: scale(1.1);
 }
 
@@ -528,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleChladni" class="style-option" data-style="chladni">CHLADNI</div>
+<div id="styleTunnel" class="style-option" data-style="tunnel">TUNNEL</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -585,17 +586,19 @@ const STANDARD_PALETTES = [
 ["#fff0f5", "#faf0e6"],//花朝露
 ["#fddb92", "#d1fdff"],//菜花
 ["#fff1eb", "#ace0f9"],//早朝
-["#f0fff0", "#40e0d0"],//ラグーン
+["#FFF6B7", "#F6416C"],//薔薇
 
 ["#bc8f8f", "#ffe4e1"],//テディベア
-["#FFF6B7", "#F6416C"],//薔薇
-["#00ffff", "#00008b"],//海中
-["#a8caba", "#5d4157"],//鳩
-
+["#2a6e6b", "#FFFCDB"],//月夜
+["#f0fff0", "#40e0d0"],//ラグーン
 ["#800080", "#f08080"],//口紅
+
+["#a8caba", "#5d4157"],//鳩
+["#191970", "#fffacd"],//夜明
+["#00ffff", "#00008b"],//海中
 ["#f107a3", "#7b2ff7"],//ネオン
-["#4b0082", "#6495ed"],//ミッドナイト
-["#191970", "#fffacd"],//夜明け
+
+
 ];
 const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
 const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
@@ -781,20 +784,23 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
-} else if (currentWaveStyle === 'chladni') {
-    const spacing = 20; // 砂の間隔（ピクセル）。小さくするとより細かく、大きくすると粗くなります
-    const dotSize = 2.5; // 砂の粒の大きさ
-    
-    // 画面全体を格子状に走査して点を打つ
-    for (let x = spacing; x < canvas.width; x += spacing) {
-        for (let y = spacing; y < canvas.height; y += spacing) {
-            ctx.fillRect(x, y, dotSize, dotSize);
-// ランダム感を出す場合の rect の書き方（ループの中身）
-const offsetX = (Math.random() - 0.5) * 6; // 左右に最大3pxズラす
-const offsetY = (Math.random() - 0.5) * 6; // 上下に最大3pxズラす
-ctx.fillRect(x + offsetX, y + offsetY, dotSize, dotSize);
-        }
+
+} else if (currentWaveStyle === 'tunnel') {
+    // プレビュー用の静止3Dトンネル
+    targetCtx.save();
+    const ringCount = 8;
+    for (let i = 0; i < ringCount; i++) {
+        const z = (i / ringCount) + 0.1;
+        const scale = 1 / z;
+        const radius = 18 * scale;
+        
+        targetCtx.beginPath();
+        targetCtx.lineWidth = (1.1 - z) * 2;
+        targetCtx.globalAlpha = (1.0 - z) * 0.5;
+        targetCtx.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
+        targetCtx.stroke();
     }
+    targetCtx.restore();
 }
 }
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
@@ -901,55 +907,55 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 targetCtx.restore();
 
-} else if (currentWaveStyle === 'chladni') {
+} else if (currentWaveStyle === 'tunnel') {
+    // 🌌 低負荷3Dサイバー・トンネル モード
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
-    targetCtx.lineWidth = 2;
-
-    // 音声データ（低音〜高音）の平均的な強さを計算
-    let totalVolume = 0;
-    const sampleCount = Math.min(dataArr.length, 64);
-    for (let i = 0; i < sampleCount; i++) {
-        totalVolume += dataArr[i] || 0;
-    }
-    const avgVol = totalVolume / sampleCount;
-    const boost = getBoostedValue(avgVol); // 音のノリ具合（0.0 〜 1.0）
-
-    // クラドニ図形を構成する「格子点の細かさ」を音の高さ（主要な周波数）で揺らす
-    let maxVal = 0, maxIdx = 1;
-    for(let i=1; i<sampleCount; i++) {
-        if(dataArr[i] > maxVal) { maxVal = dataArr[i]; maxIdx = i; }
-    }
     
-    // パラメータ（N, M）を音の強弱とピッチで変化させる
-    const n = 2 + (maxIdx % 4) + boost * 2;
-    const m = 3 + (maxIdx % 3) + boost * 3;
-    const step = 8; // グリッドの間隔（数字を小さくすると高密度になりますが重くなります）
+    const ringCount = 10; // 描画するリングの数（これくらいが最も軽くて綺麗です）
+    const time = performance.now() * 0.0015; // 奥から手前に進むスピードの調整
 
-    targetCtx.beginPath();
-    for (let x = 40; x < targetCanvas.width - 40; x += step) {
-        for (let y = 40; y < targetCanvas.height - 40; y += step) {
-            // 中心からの正規化座標 (-1.0 〜 1.0)
-            const nx = (x - centerX) / (targetCanvas.width / 2);
-            const ny = (y - centerY) / (targetCanvas.height / 2);
+    for (let i = 0; i < ringCount; i++) {
+        // 各リングの奥行き Z (0.01 〜 1.0) を計算。時間経過で手前に進める
+        let z = ((i / ringCount) + (time * 0.2)) % 1.0;
+        if (z <= 0) z += 1.0;
 
-            // クラドニのシミュレーション数式（定常波の干渉）
-            // cos(nπx)cos(mπy) - cos(mπx)cos(nπy)
-            const chladniVal = Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * ny) - 
-                               Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * ny);
+        // 【3D透視投影の基本数式】手前に来る（Zが小さい）ほど、スケールを大きくする
+        const scale = 1 / (z + 0.05); 
+        const baseRadius = 15 * scale; // 奥の基準の細さ
+        
+        // 画面外に広がりすぎたリングは描画をスキップして負荷軽減
+        if (baseRadius > targetCanvas.width * 1.2) continue;
 
-            // 干渉縞（ゼロになる境界線＝砂が溜まる場所）の近くにドットを打つ
-            if (Math.abs(chladniVal) < 0.15 + (boost * 0.2)) {
-                // 音の強さに合わせてドットの大きさを変える
-                const dotSize = (1 + boost * 3) * 2;
-                targetCtx.rect(x, y, dotSize, dotSize);
-            }
+        targetCtx.beginPath();
+        targetCtx.lineWidth = (1.2 - z) * 3.5 + 0.5; // 手前ほど太く、奥ほど細く
+        targetCtx.globalAlpha = (1.0 - z) * opacity; // 奥（Zが大きい）ほどフェードアウト
+
+        const points = 40; // リングを形作る点の数
+        for (let j = 0; j <= points; j++) {
+            const angle = (j / points) * Math.PI * 2;
+            
+            // 円の角度に合わせて参照する音の周波数を割り当てる
+            const dataIdx = startIdx + Math.floor((j % (points / 2)) / (points / 2) * dataRange);
+            const freqValue = getBoostedValue(dataArr[dataIdx] || 0);
+            
+            // 音の強さ(freqValue)に立体的なスケールを掛け算して凹凸を作る
+            const currentRadius = baseRadius + (freqValue * 35 * scale);
+
+            // 3D的な回転（ひねり）を少し加えるとお洒落になります
+            const rotatedAngle = angle + (z * 0.5);
+
+            const x = centerX + Math.cos(rotatedAngle) * currentRadius;
+            const y = centerY + Math.sin(rotatedAngle) * currentRadius;
+
+            if (j === 0) targetCtx.moveTo(x, y);
+            else targetCtx.lineTo(x, y);
         }
+        targetCtx.strokeStyle = gradient;
+        targetCtx.stroke();
     }
-    targetCtx.fillStyle = gradient;
-    targetCtx.fill();
     targetCtx.restore();
-    }
+}
 }
 
 async function startRecordingStream() {
