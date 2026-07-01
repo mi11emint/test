@@ -786,10 +786,10 @@ const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 
 } else if (currentWaveStyle === 'ripple') {
-    // 💡 修正：プレビュー用（待機状態・やり直し後）の波紋は、色塗りを残さず細い綺麗な線(stroke)だけにクリア化！
+   
     ctx.save();
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 10;
     const centerY = canvas.height * 0.65;
     for (let i = 1; i <= 4; i++) {
         ctx.beginPath();
@@ -903,7 +903,7 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
 } else if (currentWaveStyle === 'ripple') {
-    // 🌌 3D Audio Ripple Grid（音が中心から立体的に外側へ伝播する減衰ウェーブ）
+    // 🌌 3D Audio Ripple Surface（波自体にウェーブカラーが反映される立体サーフェス）
     targetCtx.save();
     
     // アプリの画面サイズ（600x600）に合わせた中心点とグリッド設定
@@ -911,9 +911,10 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
     const cy = targetCanvas.height * 0.55;
     const ROTATE_X = 65 * Math.PI / 180; // 3Dの傾き（俯瞰角度）
     
-    const ROWS = 40;
-    const COLS = 40;
-    const CELL_SIZE = 14;
+    // 面を綺麗に埋めるための分割数とサイズ（細かくするほど滑らかになります）
+    const ROWS = 35;
+    const COLS = 35;
+    const CELL_SIZE = 16;
 
     // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
     const historyLength = 55;
@@ -945,97 +946,81 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 
     const isAudioActive = (isRecording || isPlayingRecorded) && volume > 0.01;
 
-    // 毎フレーム履歴を更新（新しいデータを先頭に、古いデータを外側へ）
+    // 毎フレーム履歴を更新
     if (isAudioActive) {
         window._audioHistory3D.pop();
         window._audioHistory3D.unshift({ low, high, volume });
     } else {
-        // 無音時・やり直し後は平らなデータを流して初期化
         window._audioHistory3D.pop();
         window._audioHistory3D.unshift({ low: 0, high: 0, volume: 0 });
     }
 
+    // 振動の「速さ」を制御するための時間パラメータ（ミリ秒）
+    const time = performance.now() * 0.001; 
+
     // グラデーションの作成（ウェーブカラーを適用）
     const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-    // 配列が存在し、カラーが含まれているか安全にチェック
     const color0 = (currentWaveColors && currentWaveColors[0]) ? currentWaveColors[0] : '#00b4ff';
     const color1 = (currentWaveColors && currentWaveColors[1]) ? currentWaveColors[1] : '#ff007f';
     gradient.addColorStop(0, color0);
     gradient.addColorStop(1, color1);
     
-    // 現在設定されている不透明度(opacity)を考慮して全体のアルファのベースを適用
     const baseOpacity = typeof opacity !== 'undefined' ? opacity : 1.0;
 
-    // 縦方向の網の目を描画
-    targetCtx.strokeStyle = gradient;
-    targetCtx.lineWidth = 1.2;
-    for (let r = 0; r < ROWS; r++) {
-        targetCtx.beginPath();
-        for (let c = 0; c < COLS; c++) {
-            // 中心を基準とした位置
-            const gx = (c - COLS / 2) * CELL_SIZE;
-            const gy = (r - ROWS / 2) * CELL_SIZE;
-            const distance = Math.sqrt(gx * gx + gy * gy);
-            
-            // 外側への比率（0.0＝中心、1.0＝一番外側）
-            const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
-            const normDist = Math.min(distance / maxRadius, 1);
+    // 特定の格子点(c, r)の3D投影座標を計算する内部関数
+    function get3DPoint(c, r) {
+        const gx = (c - COLS / 2) * CELL_SIZE;
+        const gy = (r - ROWS / 2) * CELL_SIZE;
+        const distance = Math.sqrt(gx * gx + gy * gy);
+        
+        const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
+        const normDist = Math.min(distance / maxRadius, 1);
 
-            // 外側に行くほど古い時間軸のデータを参照する
-            const historyIndex = Math.floor(normDist * (historyLength - 1));
-            const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
+        const historyIndex = Math.floor(normDist * (historyLength - 1));
+        const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
+        const damping = Math.cos(normDist * Math.PI / 2);
 
-            // 外側へ行くほど波を小さくする（減衰処理）
-            const damping = Math.cos(normDist * Math.PI / 2);
+        // 【新機能】timeに乗算する数値を変えることで「振動の速さ」を完全に制御
+        // 高音（high）：time * 25.0 で超高速に振動
+        // 低音（low）：time * 5.0 でゆったりと大きく振動
+        const highWave = Math.sin(distance * 0.22 - time * 25.0) * frameData.high * 14;
+        const lowWave = Math.sin(distance * 0.06 - time * 5.0) * frameData.low * 45;
+        const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
 
-            // 1. 高音：細かくたくさん振動
-            const highWave = Math.sin(distance * 0.22) * frameData.high * 16;
-            // 2. 低音：ゆったり大きく振動
-            const lowWave = Math.sin(distance * 0.06) * frameData.low * 45;
-            // 3. 大きい音はより大きく（volume倍率）
-            const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
-
-            // 擬似3D投影（Y軸を圧縮し、高さの分だけ上にずらす）
-            const x3d = cx + gx;
-            const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
-
-            if (c === 0) targetCtx.moveTo(x3d, y3d);
-            else targetCtx.lineTo(x3d, y3d);
-        }
-        // 外側（手前と奥）に行くほど不透明度を下げて綺麗に馴染ませる
-        const edgeAlpha = Math.sin((r / ROWS) * Math.PI);
-        targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.5;
-        targetCtx.stroke();
+        const x3d = cx + gx;
+        const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
+        
+        return { x: x3d, y: y3d, normDist: normDist, r: r, c: c };
     }
 
-    // 横方向の網の目も重ねて描画することで、綺麗な「3Dの網（格子）」にする
-    for (let c = 0; c < COLS; c++) {
-        targetCtx.beginPath();
-        for (let r = 0; r < ROWS; r++) {
-            const gx = (c - COLS / 2) * CELL_SIZE;
-            const gy = (r - ROWS / 2) * CELL_SIZE;
-            const distance = Math.sqrt(gx * gx + gy * gy);
-            
-            const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
-            const normDist = Math.min(distance / maxRadius, 1);
+    // グリッド線を消し、面（四角形ポリゴン）で塗りつぶす
+    // 奥（r=0）から手前（r=ROWS-1）に向かって描画することで、立体的な重なりを正しく表現（裏面隠蔽）
+    for (let r = 0; r < ROWS - 1; r++) {
+        for (let c = 0; c < COLS - 1; c++) {
+            // 四角形を構成する4つの頂点を取得
+            const p1 = get3DPoint(c, r);
+            const p2 = get3DPoint(c + 1, r);
+            const p3 = get3DPoint(c + 1, r + 1);
+            const p4 = get3DPoint(c, r + 1);
 
-            const historyIndex = Math.floor(normDist * (historyLength - 1));
-            const frameData = window._audioHistory3D[historyIndex] || { low: 0, high: 0, volume: 0 };
-            const damping = Math.cos(normDist * Math.PI / 2);
+            // 4点をつないで塗りつぶすパスを作成
+            targetCtx.beginPath();
+            targetCtx.moveTo(p1.x, p1.y);
+            targetCtx.lineTo(p2.x, p2.y);
+            targetCtx.lineTo(p3.x, p3.y);
+            targetCtx.lineTo(p4.x, p4.y);
+            targetCtx.closePath();
 
-            const highWave = Math.sin(distance * 0.22) * frameData.high * 16;
-            const lowWave = Math.sin(distance * 0.06) * frameData.low * 45;
-            const heightBase = (highWave + lowWave) * (frameData.volume * 3.0) * damping;
+            // 画面外側（手前・奥・左右の端）に行くほど綺麗にフェードアウトさせるアルファ計算
+            const edgeAlphaR = Math.sin((r / ROWS) * Math.PI);
+            const edgeAlphaC = Math.sin((c / COLS) * Math.PI);
+            const edgeAlpha = edgeAlphaR * edgeAlphaC;
 
-            const x3d = cx + gx;
-            const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
-
-            if (r === 0) targetCtx.moveTo(x3d, y3d);
-            else targetCtx.lineTo(x3d, y3d);
+            // 塗りつぶしの色と透明度を設定（線ではなく、波の表面に色が付きます）
+            targetCtx.fillStyle = gradient;
+            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.8;
+            targetCtx.fill();
         }
-        const edgeAlpha = Math.sin((c / COLS) * Math.PI);
-        targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.5;
-        targetCtx.stroke();
     }
 
     targetCtx.restore();
