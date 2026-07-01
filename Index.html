@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Audio Ripple Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050510;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            cursor: pointer;
+        }
+        #ui {
+            position: absolute;
+            color: white;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        h1 { margin: 0 0 10px 0; font-size: 20px; letter-spacing: 2px; }
+        p { margin: 0; font-size: 14px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <h1>AUDIO RIPPLE 3D</h1>
+        <p>画面をクリックしてマイク音声を許可してください</p>
+    </div>
+    <canvas id="visualizer"></canvas>
+
+    <script>
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        const ui = document.getElementById('ui');
+
+        // キャンバスサイズ設定
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // グリッドの設定（3D波紋の網の目）
+        const ROWS = 45;
+        const COLS = 45;
+        const CELL_SIZE = 14;
+        
+        // 3D投影用のパラメータ
+        const P_X = 0.5; // 画面中心 X
+        const P_Y = 0.55; // 画面中心 Y
+        const ROTATE_X = 60 * Math.PI / 180; // 俯瞰角度（3Dの傾き）
+
+        // オーディオ設定
+        let audioCtx, analyser, dataArray, source;
+        let isInitialized = false;
+
+        // 過去の波の履歴（外側へ時間差で伝播させるため）
+        const historyLength = 60; 
+        let audioHistory = Array(historyLength).fill(0).map(() => ({
+            low: 0, high: 0, volume: 0
+        }));
+
+        // クリックでオーディオ開始（ブラウザのセキュリティ制限対策）
+        window.addEventListener('click', async () => {
+            if (isInitialized) return;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512; // 周波数分解能
+                
+                source = audioCtx.createMediaStreamSource(stream);
+                source.connect(analyser);
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                isInitialized = true;
+                ui.style.display = 'none'; // UIを隠す
+                
+                animate();
+            } catch (err) {
+                alert('マイクのアクセスが拒否されたか、デバイスが見つかりません。');
+                console.error(err);
+            }
+        });
+
+        // メインループ
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!isInitialized) return;
+
+            // 周波数データの取得
+            analyser.getByteFrequencyData(dataArray);
+
+            // 音域ごとのデータ抽出と計算
+            let lowSum = 0;
+            let highSum = 0;
+            let totalSum = 0;
+            const len = dataArray.length;
+
+            for (let i = 0; i < len; i++) {
+                const val = dataArray[i] / 255; // 0.0 〜 1.0 に正規化
+                totalSum += val;
+                if (i < len * 0.15) {
+                    lowSum += val; // 低音域（ベース・ドラムなど）
+                } else if (i > len * 0.5) {
+                    highSum += val; // 高音域（シンバル・高音の声など）
+                }
+            }
+
+            const volume = totalSum / len;
+            const low = lowSum / (len * 0.15);
+            const high = highSum / (len * 0.5);
+
+            // 履歴の更新（新しいデータを先頭に入れ、古いデータを1つずらす）
+            audioHistory.pop();
+            audioHistory.unshift({ low, high, volume });
+
+            // 画面クリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 3Dグリッドの描画
+            const cx = canvas.width * P_X;
+            const cy = canvas.height * P_Y;
+
+            for (let r = 0; r < ROWS; r++) {
+                ctx.beginPath();
+                for (let c = 0; c < COLS; c++) {
+                    // グリッドの中心からの距離を計算（中心を 0,0 とする）
+                    const gx = (c - COLS / 2) * CELL_SIZE;
+                    const gy = (r - ROWS / 2) * CELL_SIZE;
+                    const distance = Math.sqrt(gx * gx + gy * gy);
+                    
+                    // 最大半径に対する比率（0.0 = 中心, 1.0 = 外側）
+                    const maxRadius = Math.sqrt((COLS/2)*(COLS/2) + (ROWS/2)*(ROWS/2)) * CELL_SIZE;
+                    const normDist = Math.min(distance / maxRadius, 1);
+
+                    // 外側に行くほど古いデータ（時間経過）を参照するインデックス
+                    const historyIndex = Math.floor(normDist * (historyLength - 1));
+                    const frameData = audioHistory[historyIndex];
+
+                    // 外側へ行くほど波を小さくする（減衰処理）
+                    const damping = Math.cos(normDist * Math.PI / 2); 
+
+                    // 1. 高音：細かく振動（距離に対する周波数を細かくする）
+                    const highWave = Math.sin(distance * 0.2) * frameData.high * 15;
+
+                    // 2. 低音：ゆったり振動（距離に対する周波数を粗くする）
+                    const lowWave = Math.sin(distance * 0.05) * frameData.low * 40;
+
+                    // 3. 全体音量で波の大きさをベースアップ
+                    const heightBase = (highWave + lowWave) * (frameData.volume * 2.5) * damping;
+
+                    // 3D 投影（擬似3D変換マトリクス）
+                    // Y軸を圧縮（ROTATE_X）し、高さ（heightBase）の分だけ上にずらす
+                    const x3d = cx + gx;
+                    const y3d = cy + gy * Math.cos(ROTATE_X) - heightBase;
+
+                    // 線の描画
+                    if (c === 0) {
+                        ctx.moveTo(x3d, y3d);
+                    } else {
+                        ctx.lineTo(x3d, y3d);
+                    }
+                }
+                
+                // 外側に行くほど薄くなるグラデーションカラー
+                const alpha = Math.max(0.1, 1 - (r / ROWS));
+                ctx.strokeStyle = `rgba(0, 180, 255, ${alpha * 0.6})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>
