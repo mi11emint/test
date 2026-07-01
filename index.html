@@ -905,17 +905,18 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'ripple') {
-    // 💡 修正：水面波紋のメリハリ大幅強化（音量非連動の一定ウネウネを排除）
+    // 🌊 理想の水面波紋エフェクト（大声で上跳ね、高音で激しく、低音でゆったり）
     targetCtx.save();
     
     const centerY = targetCanvas.height * 0.65; 
     const centerX = targetCanvas.width / 2;
-    const time = performance.now() * 0.002;
+    const time = performance.now() * 0.001; // 時間経過の係数
 
     let totalVolume = 0;
     let highFreqSum = 0;
     let lowFreqSum = 0;
     
+    // 周波数データの解析
     for (let i = startIdx; i < endIdx; i++) {
         const v = dataArr[i] || 0;
         totalVolume += v;
@@ -927,52 +928,76 @@ targetCtx.restore();
     }
     
     const avgVolume = totalVolume / dataRange;
-    const boostedVol = getBoostedValue(avgVolume); // 音量に応じた跳ね返り係数
-    
+    const boostedVol = getBoostedValue(avgVolume); // 音量に応じた跳ね返り
+
+    // 🎵 高音・低音の判定比率（ピッチファクター）
     let pitchFactor = 1.0;
     if (lowFreqSum + highFreqSum > 0) {
-        pitchFactor = 0.5 + (highFreqSum / (lowFreqSum + highFreqSum)) * 2.5; 
+        // 高音が多いほど数値が大きくなり、波紋が激しく細かくなる
+        pitchFactor = 0.4 + (highFreqSum / (lowFreqSum + highFreqSum)) * 3.0; 
     }
 
-    const ringCount = 10; 
+    // 録音中/再生中で、実際に音が入っているかどうかの判定
+    const isAudioActive = (isRecording || isPlayingRecorded) && boostedVol > 0.01;
+
+    // 同心円を描く数
+    const ringCount = 8; 
+    
     for (let i = 0; i < ringCount; i++) {
-        let progress = ((i / ringCount) + (time * 0.12)) % 1.0;
+        // 音が入力されている時は高音・低音に応じて広がる速度を可変にする
+        const speedMultiplier = isAudioActive ? (0.05 + pitchFactor * 0.04) : 0.06;
+        let progress = ((i / ringCount) + (time * speedMultiplier * 1.5)) % 1.0;
         if (progress <= 0) progress += 1.0;
 
-        // 💡 修正点：無音の時は透明（完全消滅）にし、「あ！」と発声した瞬間だけクッキリ浮き出るよう音量を乗算
-        targetCtx.globalAlpha = (1.0 - progress) * opacity * (boostedVol * 1.5);
+        // 無音時（またはプレビュー・やり直し後）は、揺れのない綺麗な薄い線にする
+        if (!isAudioActive) {
+            targetCtx.globalAlpha = (1.0 - progress) * opacity * 0.25;
+            targetCtx.strokeStyle = gradient;
+            targetCtx.lineWidth = 1.5;
+            targetCtx.beginPath();
+            targetCtx.ellipse(centerX, centerY, progress * (targetCanvas.width * 0.55), progress * (targetCanvas.width * 0.55) * 0.42, 0, 0, Math.PI * 2);
+            targetCtx.stroke();
+            continue;
+        }
+
+        // 🎤 音声入力があるアクティブ時の処理
+        targetCtx.globalAlpha = (1.0 - progress) * opacity * (boostedVol * 1.8);
         if (targetCtx.globalAlpha <= 0) continue;
         
         const baseRadius = progress * (targetCanvas.width * 0.55);
 
         targetCtx.beginPath();
-        const points = 60;
+        const points = 80; // 円を構成する点の数（滑らかさ）
+        
         for (let j = 0; j <= points; j++) {
             const angle = (j / points) * Math.PI * 2;
             
-            const dataIdx = startIdx + Math.floor((j % (points / 2)) / (points / 2) * dataRange);
+            // 高い声（pitchFactor大）ほど細かく激しくうねる
+            const waveFrequency = 5 * pitchFactor;
+            const waveSpeed = time * 12 * pitchFactor;
             
-            // 💡 修正点：無音（一定ウネウネ）を防ぐため、波の揺れ幅の基準に音量を完全結合
-            const waveOffset = Math.sin(angle * 6 * pitchFactor - time * 6) * (boostedVol * 30) * (1.0 - progress);
+            // 声が入力されると中心から外側へ伝わる細かなピチピチ波
+            const waveOffset = Math.sin(angle * waveFrequency - waveSpeed) * (boostedVol * 35) * (1.0 - progress);
             const r = baseRadius + waveOffset;
             
             const x = centerX + Math.cos(angle) * r;
             let y = centerY + Math.sin(angle) * r * 0.42; 
 
-            // 💡 修正点：大声の時に上に大きくドカンと突き抜けるよう、跳ね上げパワーを40から「150」へ超強化
-            const verticalSplash = Math.max(0, Math.sin(angle * 5 * pitchFactor - time * 7)) * (boostedVol * 150) * (1.0 - progress);
+            // 😮 大きな声（boostedVol大）の時に上にドカンと大きく揺らす（最大180px以上跳ね上げ）
+            const verticalSplash = Math.max(0, Math.sin(angle * 3 - time * 8)) * (boostedVol * 180) * (1.0 - progress);
             y -= verticalSplash; 
 
             if (j === 0) targetCtx.moveTo(x, y);
             else targetCtx.lineTo(x, y);
         }
 
-        targetCtx.globalAlpha = (1.0 - progress) * opacity * 0.25 * boostedVol; 
+        // 水面のカラー面（グラデーション）で塗る
         targetCtx.fillStyle = gradient;
         targetCtx.fill(); 
     }
     targetCtx.restore();
 }
+
 }
 
 async function startRecordingStream() {
