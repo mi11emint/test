@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleChladni" class="style-option" data-style="chladni">TUNNEL</div>
+<div id="styleRipple" class="style-option" data-style="ripple">RIPPLE</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -785,24 +785,22 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 
-} else if (currentWaveStyle === 'chladni') {
-    // プレビュー用の静止3Dトンネル
+} else if (currentWaveStyle === 'ripple') {
+    // プレビュー用の静止した水面波紋
     ctx.save();
-    const ringCount = 8;
-    for (let i = 0; i < ringCount; i++) {
-        const z = (i / ringCount) + 0.1;
-        const scale = 1 / z;
-        const radius = 18 * scale;
-        
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 2;
+    const centerY = canvas.height * 0.65; // 画面の下寄りに配置
+    for (let i = 1; i <= 5; i++) {
         ctx.beginPath();
-        ctx.lineWidth = (1.1 - z) * 2;
-        ctx.globalAlpha = (1.0 - z) * 0.5;
-        ctx.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.globalAlpha = (1.0 - (i / 6)) * 0.4;
+        // 縦方向を 0.4 倍に縮めて斜めの楕円（パース）を表現
+        ctx.ellipse(canvas.width / 2, centerY, i * 40, i * 16, 0, 0, Math.PI * 2);
+        ctx.fill();
     }
     ctx.restore();
 }
-}
+} 
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
@@ -907,47 +905,77 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 targetCtx.restore();
 
-} else if (currentWaveStyle === 'chladni') {
-    // 🌌 低負荷3Dサイバー・トンネル モード
+}else if (currentWaveStyle === 'ripple') {
+    // 🌊 斜め見下ろし型 水面波紋（音量・音程連動）
     targetCtx.save();
     targetCtx.globalAlpha = opacity;
     
-    const ringCount = 10; // 描画するリングの数
-    const time = performance.now() * 0.0015; // 進むスピード
+    const centerY = targetCanvas.height * 0.65; // 画面の下寄りに水面を配置
+    const centerX = targetCanvas.width / 2;
+    const time = performance.now() * 0.002;
 
+    // 1. 周波数データから「全体の音量」と「高低音の比率（ピッチ）」を計算
+    let totalVolume = 0;
+    let highFreqSum = 0;
+    let lowFreqSum = 0;
+    
+    for (let i = startIdx; i < endIdx; i++) {
+        const v = dataArr[i] || 0;
+        totalVolume += v;
+        if (i < (startIdx + dataRange / 2)) {
+            lowFreqSum += v;
+        } else {
+            highFreqSum += v;
+        }
+    }
+    
+    const avgVolume = totalVolume / dataRange;
+    const boostedVol = getBoostedValue(avgVolume); // 音量に応じた揺れ幅の係数
+    
+    // 高音成分が多いほど波を細かく（ピッチファクターを大きく）する
+    let pitchFactor = 1.0;
+    if (lowFreqSum + highFreqSum > 0) {
+        pitchFactor = 0.5 + (highFreqSum / (lowFreqSum + highFreqSum)) * 2.5; 
+    }
+
+// 2. 同心円状の波紋をパースをつけて描画
+    const ringCount = 12; // 同心円の数
     for (let i = 0; i < ringCount; i++) {
-        let z = ((i / ringCount) + (time * 0.2)) % 1.0;
-        if (z <= 0) z += 1.0;
+        // 時間経過で外側に広がるアニメーション（0.0 ～ 1.0）
+        let progress = ((i / ringCount) + (time * 0.1)) % 1.0;
+        if (progress <= 0) progress += 1.0;
 
-        const scale = 1 / (z + 0.05); 
-        const baseRadius = 15 * scale; 
+        // 外側に行くほど薄くする
+        targetCtx.globalAlpha = (1.0 - progress) * opacity;
         
-        if (baseRadius > targetCanvas.width * 1.2) continue;
+        // 基本の半径（外側に行くほど広がる）
+        const baseRadius = progress * (targetCanvas.width * 0.6);
 
+        // ーーー ここから提示いただいたコード ーーー
         targetCtx.beginPath();
-        targetCtx.lineWidth = (1.2 - z) * 3.5 + 0.5; 
-        targetCtx.globalAlpha = (1.0 - z) * opacity; 
 
-        const points = 40; 
+        const points = 60;
         for (let j = 0; j <= points; j++) {
             const angle = (j / points) * Math.PI * 2;
             
             const dataIdx = startIdx + Math.floor((j % (points / 2)) / (points / 2) * dataRange);
             const freqValue = getBoostedValue(dataArr[dataIdx] || 0);
+            const waveOffset = Math.sin(angle * 6 * pitchFactor - time * 5) * (boostedVol * 25) * (1.0 - progress);
             
-            const currentRadius = baseRadius + (freqValue * 35 * scale);
-            const rotatedAngle = angle + (z * 0.5);
-
-            const x = centerX + Math.cos(rotatedAngle) * currentRadius;
-            const y = centerY + Math.sin(rotatedAngle) * currentRadius;
+            const r = baseRadius + waveOffset;
+            
+            const x = centerX + Math.cos(angle) * r;
+            const y = centerY + Math.sin(angle) * r * 0.45; 
 
             if (j === 0) targetCtx.moveTo(x, y);
             else targetCtx.lineTo(x, y);
         }
-        targetCtx.strokeStyle = gradient;
-        targetCtx.stroke();
+        
+        // 外側に行くほど面を薄く（半透明に）する
+        targetCtx.globalAlpha = (1.0 - progress) * opacity * 0.3; 
+        targetCtx.fillStyle = gradient;
+        targetCtx.fill(); 
     }
-    targetCtx.restore();
 }
 }
 
