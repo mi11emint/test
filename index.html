@@ -905,18 +905,23 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'ripple') {
-    // 🌊 波紋エフェクト修正版：回転を完全に廃止し、中心から外側へ波が移動する表現
+    // 🌊 波紋エフェクト決定版：音の反応が時間経過で外側へ移動する「タイムトラベル」方式
     targetCtx.save();
     
     const centerY = targetCanvas.height * 0.65; 
     const centerX = targetCanvas.width / 2;
-    const time = performance.now() * 0.001; // 時間経過
+    const time = performance.now() * 0.001;
+
+    // 1. 【超重要】過去の音の波の履歴を保存するためのメモリ空間（配列）を準備
+    // 初回実行時、または「やり直し」で初期化された時に配列を作ります
+    if (!window._rippleHistory || !isRecording && !isPlayingRecorded && (dataArr[startIdx] === 0 || !dataArr.some(v => v > 0))) {
+        window._rippleHistory = Array(40).fill(null).map(() => ({ vol: 0, pitch: 1.0, age: 0 }));
+    }
 
     let totalVolume = 0;
     let highFreqSum = 0;
     let lowFreqSum = 0;
     
-    // 周波数データの解析
     for (let i = startIdx; i < endIdx; i++) {
         const v = dataArr[i] || 0;
         totalVolume += v;
@@ -928,66 +933,85 @@ targetCtx.restore();
     }
     
     const avgVolume = totalVolume / dataRange;
-    const boostedVol = getBoostedValue(avgVolume); // 音量に応じた跳ね返り
+    const boostedVol = getBoostedValue(avgVolume);
 
-    // 🎵 高音・低音の判定比率（高音ほど波が激しく・細かくなる）
-    let pitchFactor = 1.0;
+    let currentPitch = 1.0;
     if (lowFreqSum + highFreqSum > 0) {
-        pitchFactor = 0.4 + (highFreqSum / (lowFreqSum + highFreqSum)) * 3.0; 
+        currentPitch = 0.5 + (highFreqSum / (lowFreqSum + highFreqSum)) * 2.5; 
     }
 
-    // 録音中/再生中で、実際に音が入っているかどうかの判定
+    // 録音中/再生中で、実際に意味のある音が入っているか
     const isAudioActive = (isRecording || isPlayingRecorded) && boostedVol > 0.01;
 
-    // 水面に広がる波紋の数
-    const ringCount = 6; 
-    
-    for (let i = 0; i < ringCount; i++) {
-        // 低い声ならゆったり（速度小）、高い声なら激しく（速度大）
-        const speedMultiplier = isAudioActive ? (0.3 + pitchFactor * 0.3) : 0.4;
-        
-        // 中心(0.0)から外側(1.0)へと進む、個々の波紋の「現在地（半径の比率）」
-        let progress = ((i / ringCount) + (time * speedMultiplier)) % 1.0;
-        if (progress <= 0) progress += 1.0;
+    // 2. 毎フレーム、最新の「今の音の反応」を中心に注入し、古いデータを外側（配列の後ろ）へズラす
+    if (isAudioActive) {
+        window._rippleHistory.unshift({
+            vol: boostedVol,
+            pitch: currentPitch,
+            timeOffset: time
+        });
+        window._rippleHistory.pop(); // 一番古い（外側の）データを捨てる
+    } else {
+        // 無音の時は「静かな水面」を注入
+        window._rippleHistory.unshift({ vol: 0, pitch: 1.0, timeOffset: time });
+        window._rippleHistory.pop();
+    }
 
-        // 【初期化・無音時】一切うねらない綺麗な同心円が広がる（リセット時もスッキリクリア）
-        if (!isAudioActive) {
-            targetCtx.globalAlpha = (1.0 - progress) * opacity * 0.25;
+    // 3. 配列に溜まった歴史を、内側から外側に向かって円として描画していく
+    const ringCount = window._rippleHistory.length; 
+    
+    for (let i = ringCount - 1; i >= 0; i--) {
+        const history = window._rippleHistory[i];
+        
+        // 配列のインデックス（i）がそのまま外側への距離（時間軸）になります
+        // i=0 が最新（中心）、iが大きいほど過去（外側）
+        const progress = (i / ringCount); 
+        
+        // 外側に行けば行くほど、波紋は綺麗に減衰（フェードアウト）していく
+        const fadeOut = (1.0 - progress);
+        
+        // 基本の半径（中心から外側へ）
+        const baseRadius = progress * (targetCanvas.width * 0.52);
+        if (baseRadius < 5) continue; // 中心すぎるところはスキップ
+
+        // 【初期化・完全無音時】
+        if (!isAudioActive && history.vol === 0) {
+            // やり直しボタンなどで初期化された後は、この綺麗なフラットな同心円だけが残ります
+            targetCtx.globalAlpha = fadeOut * opacity * 0.15;
             targetCtx.strokeStyle = gradient;
-            targetCtx.lineWidth = 1.5;
+            targetCtx.lineWidth = 1.0;
             targetCtx.beginPath();
-            targetCtx.ellipse(centerX, centerY, progress * (targetCanvas.width * 0.55), progress * (targetCanvas.width * 0.55) * 0.42, 0, 0, Math.PI * 2);
+            targetCtx.ellipse(centerX, centerY, baseRadius, baseRadius * 0.42, 0, 0, Math.PI * 2);
             targetCtx.stroke();
             continue;
         }
 
-        // 【音声入力あり】中心から外側へリアルな波の形が伝わっていく処理
-        targetCtx.globalAlpha = (1.0 - progress) * opacity * (boostedVol * 1.8);
+        // 【音が伝わっていく波紋の描写】
+        // その波が生まれた時の音量とピッチ（振動数）をそのまま引き継ぐ
+        targetCtx.globalAlpha = fadeOut * opacity * (history.vol * 1.5);
         if (targetCtx.globalAlpha <= 0) continue;
-        
-        // 基本となる半径（中心から外側へどんどん大きくなる）
-        const baseRadius = progress * (targetCanvas.width * 0.55);
 
         targetCtx.beginPath();
-        const points = 90; // 円を滑らかに描くための点の数
+        const points = 72; 
         
         for (let j = 0; j <= points; j++) {
             const angle = (j / points) * Math.PI * 2;
             
-            // 💡 ここがポイント：角度ではなく「中心からの距離（progress）」を使って波を作る
-            // これにより、ぐるぐる回らず「中心から外へとウネリが押し寄せる」動きになります
-            const waveFrequency = 18 * pitchFactor; // 高音ほど波が細かく密になる
-            const waveOffset = Math.sin(progress * waveFrequency - time * 10) * (boostedVol * 25) * (1.0 - progress);
+            // 高い音（history.pitchが大きい）ほど、振動数が多くなり波が細かくたくさん作られる
+            const waveFrequency = 6 * history.pitch;
+            
+            // 角度に応じた細かなギザギザ波（生まれた瞬間の振動数をキープして外へ移動）
+            const waveOffset = Math.sin(angle * waveFrequency - (history.timeOffset * 10)) * (history.vol * 20) * fadeOut;
             const r = baseRadius + waveOffset;
             
             const x = centerX + Math.cos(angle) * r;
             let y = centerY + Math.sin(angle) * r * 0.42; 
 
-            // 😮 大きい声の時に、波の上の部分（奥側）が上に大きくドカンと揺れる
+            // 😮 大きい音ほど、上半分（奥側）が上に大きくダイナミックに揺れる（最大160px）
             if (angle > Math.PI && angle < Math.PI * 2) {
-                const splashFactor = Math.sin(angle); // 円の上半分にだけ影響させる
-                const verticalSplash = splashFactor * (boostedVol * 150) * (1.0 - progress);
-                y += verticalSplash; // 画面上方へ引っ張る
+                const splashFactor = Math.sin(angle); // 上半分だけの係数
+                const verticalSplash = splashFactor * (history.vol * 160) * fadeOut;
+                y += verticalSplash; 
             }
 
             if (j === 0) targetCtx.moveTo(x, y);
@@ -1000,8 +1024,6 @@ targetCtx.restore();
     }
     targetCtx.restore();
 }
-
-
 }
 
 async function startRecordingStream() {
