@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleRipple" class="style-option" data-style="ripple">RIPPLE</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">3D BAR</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -784,22 +784,62 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+} else if (currentWaveStyle === 'bar3d') {
+    const barCount = 33;
+    // 画面の右下寄りを起点（手前）にする
+    const startX = 520;
+    const startY = 540;
+    // 左奥（左上）へ並べるオフセット
+    const stepX = -4.5;
+    const stepY = -4.5;
+    // 棒の幅と、奥行きの角度（右上へ）
+    const barWidth = 12;
+    const depthX = 10;
+    const depthY = -10;
 
-} else if (currentWaveStyle === 'ripple') {
-   
     ctx.save();
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 10;
-    const centerY = canvas.height * 0.65;
-    for (let i = 1; i <= 4; i++) {
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    
+    // 奥から手前へ描画することで、立体的な重なりを正しくする
+    for (let i = barCount - 1; i >= 0; i--) {
+        const px = startX + i * stepX;
+        const py = startY + i * stepY;
+        const height = 15; // 静的状態での高さ
+
+        // 前面
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = 0.9;
         ctx.beginPath();
-        ctx.globalAlpha = (1.0 - (i / 5)) * 0.3;
-        ctx.ellipse(canvas.width / 2, centerY, i * 45, i * 18, 0, 0, Math.PI * 2);
+        ctx.rect(px - barWidth / 2, py - height, barWidth, height);
+        ctx.fill();
+        ctx.stroke();
+
+        // 上面（透明度を下げて光の当たり方や透過クリスタル感を演出）
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(px - barWidth / 2, py - height);
+        ctx.lineTo(px - barWidth / 2 + depthX, py - height + depthY);
+        ctx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
+        ctx.lineTo(px + barWidth / 2, py - height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 右側面
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(px + barWidth / 2, py);
+        ctx.lineTo(px + barWidth / 2 + depthX, py + depthY);
+        ctx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
+        ctx.lineTo(px + barWidth / 2, py - height);
+        ctx.closePath();
+        ctx.fill();
         ctx.stroke();
     }
     ctx.restore();
 }
-} 
+}
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
@@ -902,121 +942,67 @@ const x = 40 + i * spacing + (spacing - barWidth) / 2;
 targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 }
 }
-} else if (currentWaveStyle === 'ripple') {
-    // 🌌 2D Pseudo-3D Audio Ripple（超軽量・横斜め上から見下ろした立体波紋）
+targetCtx.restore();
+
+} else if (currentWaveStyle === 'bar3d') {
+    const barCount = dataRange; // 33本
+    // 画面の右下寄りを起点（手前＝低い音）にする
+    const startX = 520;
+    const startY = 540;
+    // 左奥（左上）へ並べる
+    const stepX = -4.5;
+    const stepY = -4.5;
+    // 棒の幅と奥行きの角度（右上へ）
+    const barWidth = 12;
+    const depthX = 10;
+    const depthY = -10;
+
     targetCtx.save();
-    
-    // 静止状態の仕様に合わせた中心点（Y軸を少し下めの0.65に設定）
-    const cx = targetCanvas.width * 0.5;
-    const cy = targetCanvas.height * 0.65;
-    
-    // 静止状態の楕円の比率（縦18 / 横45 ＝ 0.4）を適用して斜めの角度を再現
-    const TILT_RATIO = 18 / 45; 
-    
-    // 画面の端まで届く最大の横半径
-    const maxRadiusX = targetCanvas.width * 0.7;
+    targetCtx.lineWidth = 1.5;
+    targetCtx.lineJoin = 'round';
 
-    // 【超重要】過去の波の履歴（外側へ時間差で伝えるメモリ）の初期化・管理
-    const historyLength = 70;
-    if (!window._audioHistory2D || (!isRecording && !isPlayingRecorded && (!dataArr || dataArr[startIdx] === 0 || !dataArr.some(v => v > 0)))) {
-        window._audioHistory2D = Array(historyLength).fill(0).map(() => ({ low: 0, high: 0, volume: 0 }));
+    // 奥（高い音）から手前（低い音）へ描画
+    for (let i = barCount - 1; i >= 0; i--) {
+        const dataIdx = startIdx + i;
+        const boosted = getBoostedValue(dataArr[dataIdx] || 0);
+        const height = 5 + boosted * 250; // 音量で高さが変化
+
+        const px = startX + i * stepX;
+        const py = startY + i * stepY;
+        const baseOpacity = opacity;
+
+        // 前面
+        targetCtx.fillStyle = gradient;
+        targetCtx.globalAlpha = baseOpacity * 0.9;
+        targetCtx.beginPath();
+        targetCtx.rect(px - barWidth / 2, py - height, barWidth, height);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        // 上面
+        targetCtx.globalAlpha = baseOpacity * 0.4;
+        targetCtx.beginPath();
+        targetCtx.moveTo(px - barWidth / 2, py - height);
+        targetCtx.lineTo(px - barWidth / 2 + depthX, py - height + depthY);
+        targetCtx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
+        targetCtx.lineTo(px + barWidth / 2, py - height);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        // 右側面
+        targetCtx.globalAlpha = baseOpacity * 0.7;
+        targetCtx.beginPath();
+        targetCtx.moveTo(px + barWidth / 2, py);
+        targetCtx.lineTo(px + barWidth / 2 + depthX, py + depthY);
+        targetCtx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
+        targetCtx.lineTo(px + barWidth / 2, py - height);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
     }
-
-    // 音域データの抽出
-    let lowSum = 0;
-    let highSum = 0;
-    let totalSum = 0;
-    const len = endIdx - startIdx;
-
-    if (dataArr && len > 0) {
-        for (let i = startIdx; i < endIdx; i++) {
-            const val = (dataArr[i] || 0) / 255;
-            totalSum += val;
-            if (i < startIdx + len * 0.2) {
-                lowSum += val;  // 低音
-            } else if (i > startIdx + len * 0.5) {
-                highSum += val; // 高音
-            }
-        }
-    }
-
-    const volume = len > 0 ? totalSum / len : 0;
-    const low = len > 0 ? lowSum / (len * 0.2) : 0;
-    const high = len > 0 ? highSum / (len * 0.5) : 0;
-
-    const isAudioActive = (isRecording || isPlayingRecorded) && volume > 0.01;
-
-    // 毎フレーム履歴を更新
-    if (isAudioActive) {
-        window._audioHistory2D.pop();
-        window._audioHistory2D.unshift({ low, high, volume });
-    } else {
-        window._audioHistory2D.pop();
-        window._audioHistory2D.unshift({ low: 0, high: 0, volume: 0 });
-    }
-
-    // 振動の「速さ」を制御するための時間パラメータ
-    const time = performance.now() * 0.001; 
-
-    // グラデーションの作成（ウェーブカラーを適用）
-    const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-    const color0 = (currentWaveColors && currentWaveColors) ? currentWaveColors : '#00b4ff';
-    const color1 = (currentWaveColors && currentWaveColors) ? currentWaveColors : '#ff007f';
-    gradient.addColorStop(0, color0);
-    gradient.addColorStop(1, color1);
-    
-    const baseOpacity = typeof opacity !== 'undefined' ? opacity : 1.0;
-
-    // 波紋の輪の数（静止時の4重から、動的に美しく連なるよう24重に拡張）
-    const NUM_RINGS = 24; 
-    
-    targetCtx.strokeStyle = gradient;
-
-    // 外側から中心に向かって描画
-    for (let i = NUM_RINGS; i > 0; i--) {
-        // 中心からの距離の比率（0.0＝中心、1.0＝一番外側）
-        const normDist = i / NUM_RINGS;
-        
-        // 基本となる横の半径
-        const baseRadiusX = normDist * maxRadiusX;
-
-        // 外側に行くほど古い時間軸のデータを参照
-        const historyIndex = Math.floor(normDist * (historyLength - 1));
-        const frameData = window._audioHistory2D[historyIndex] || { low: 0, high: 0, volume: 0 };
-        
-        // 外側へ行くほど波を小さくする（減衰処理）
-        const damping = Math.cos(normDist * Math.PI / 2);
-
-        // 【音の速さと大きさの計算】楕円のサイズを直接波打たせます
-        // 高音（細かく超高速）/ 低音（ゆったり大きく）
-        const highWave = Math.sin(baseRadiusX * 0.12 - time * 26.0) * frameData.high * 10;
-        const lowWave = Math.sin(baseRadiusX * 0.03 - time * 5.0) * frameData.low * 30;
-        
-        // 音量と減衰を掛け合わせて全体の振幅を決定
-        const waveOffset = (highWave + lowWave) * (frameData.volume * 2.8) * damping;
-
-        // 最終的な楕円の横半径と縦半径（TILT_RATIOを掛けて常に斜め上からの角度を維持）
-        const finalRadiusX = Math.max(0, baseRadiusX + waveOffset);
-        const finalRadiusY = finalRadiusX * TILT_RATIO;
-
-        if (finalRadiusX > 0 && finalRadiusY > 0) {
-            targetCtx.beginPath();
-            // 静止画のコードと同じ比率を維持した立体楕円を描画
-            targetCtx.ellipse(cx, cy, finalRadiusX, finalRadiusY, 0, 0, Math.PI * 2);
-            
-            // 外側に行くほどフェードアウトし、静止時（最大0.3）の透明度バランスに合わせる
-            const edgeAlpha = Math.cos(normDist * Math.PI * 0.5);
-            
-            // 線の太さ（静止画の太さ10をベースに、音量で最大14まで肉厚に変化）
-            targetCtx.lineWidth = 8.0 + frameData.volume * 6.0;
-            targetCtx.globalAlpha = edgeAlpha * baseOpacity * 0.35;
-            targetCtx.stroke();
-        }
-    }
-
     targetCtx.restore();
 }
-
 }
 
 async function startRecordingStream() {
@@ -1097,6 +1083,7 @@ isPlayingRecorded = false;
 playPauseImg.src = IMG_PLAY;
 }
 }
+// 🛠️ モバイル専用のメモリ直流バッファ再生エンジン
 function startBufferPlayback(offset) {
 if (!playbackAudioBuffer) return;
 stopBufferPlayback();
@@ -1105,9 +1092,11 @@ offset = 0;
 }
 playbackOffset = offset;
 playbackStartTime = audioCtx.currentTime;
+// 1. 録音データ用の音響ルーティングを構築
 activeAudioNode = audioCtx.createBufferSource();
 activeAudioNode.buffer = playbackAudioBuffer;
 setupAudioNodes(activeAudioNode, false);
+// 2. BGMが読み込まれている場合はBGM用の音響ルーティングを並列構築
 if (playbackBgmBuffer) {
 activeBgmNode = audioCtx.createBufferSource();
 activeBgmNode.buffer = playbackBgmBuffer;
@@ -1121,6 +1110,7 @@ bgmAnalyser.connect(bgmGainNode);
 bgmGainNode.connect(audioCtx.destination);
 }
 syncAudioParams();
+// 3. 計算された正しいオフセット位置から再生
 activeAudioNode.start(0, offset);
 if (activeBgmNode) {
 let bgmTargetOffset = 0;
@@ -1181,6 +1171,7 @@ const currentProgress = playbackOffset + (audioCtx.currentTime - playbackStartTi
 if (!isUserChangingIndex) {
 seekBar.value = currentProgress;
 }
+// 音声の長さを超えたら自動で停止処理
 if (currentProgress >= playbackAudioBuffer.duration) {
 stopBufferPlayback();
 playbackOffset = 0;
@@ -1260,7 +1251,10 @@ if (isRecording) { restartRecordingStream(); }
 else if (isPlayingRecorded) { syncAudioParams(); }
 });
 audioResetBtn.addEventListener('click', () => {
+    // 1. 再生中だった場合は一度安全に停止させる
     stopBufferPlayback();
+
+    // 2. 音量やイコライザーなどのスライダー設定を初期化
     volSlider.value = 1.0; 
     bgmVolSlider.value = 0.5; 
     eqLowSlider.value = -7; 
@@ -1269,15 +1263,22 @@ audioResetBtn.addEventListener('click', () => {
     bgmStartOffset = 0.0; 
     updateBgmStartDisplay(); 
     syncAudioParams();
+
+    // 3. 🔥【ここが重要】録音データには触れず、BGMデータだけをクリアする
     playbackBgmBuffer = null;
     bgmBlob = null; 
     bgmGainNode = null; 
     bgmAnalyser = null; 
     bgmDataArray = null;
+    
+    // BGMボタンの見た目を未選択の状態に戻す
     bgmImportBtn.classList.remove('loaded');
     bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
     bgmInput.value = "";
+
+    // 4. 画面の波形表示をリフレッシュする
     drawStaticWave();
+
     alert("各種音量・EQ設定を初期化！\nBGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
 });
 bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
@@ -1309,6 +1310,7 @@ if (isRecordingPaused) {
 isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE;
 if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
+// BGMモニターの一時停止解除はAudioContext全体のタイムラインに追従できないため録音時は簡易的なトリガー
 }
 return;
 }
@@ -1337,6 +1339,7 @@ downloadBtn.classList.add('ready');
 playPauseImg.src = IMG_PLAY;
 lockMenus();
 };
+// 録音中にヘッドホンでBGMを聞くためのルーティング（BGM波形も抽出）
 if (playbackBgmBuffer) {
 monitorBgmSource = audioCtx.createBufferSource();
 monitorBgmSource.buffer = playbackBgmBuffer;
@@ -1348,7 +1351,7 @@ bgmGainNode = audioCtx.createGain();
 monitorBgmSource.connect(bgmAnalyser);
 bgmAnalyser.connect(bgmGainNode);
 bgmGainNode.connect(audioCtx.destination);
-bgmGainNode.connect(recordDestination); 
+bgmGainNode.connect(recordDestination); // 録音ストリームにBGMを合成
 syncAudioParams();
 if (bgmStartOffset < 0) {
 monitorBgmSource.start(0, Math.abs(bgmStartOffset));
@@ -1386,6 +1389,7 @@ resetDataWithoutPrompt(true);
 alert("録音をリセットしました^.ˬ.^ฅ");
 }
 });
+// 確認再生ボタンの処理
 playPauseBtn.addEventListener('click', async () => {
 if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1396,6 +1400,7 @@ stopBufferPlayback();
 startBufferPlayback(playbackOffset);
 }
 });
+// シークバーを指で動かしたときのリアルタイム音響位置の追従
 seekBar.addEventListener('input', () => {
 if (!playbackAudioBuffer) return;
 isUserChangingIndex = true;
@@ -1407,6 +1412,7 @@ playbackOffset = targetTime;
 }
 });
 seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
+// 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
 downloadBtn.addEventListener('click', async () => {
 if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
 stopBufferPlayback();
@@ -1456,6 +1462,7 @@ movieRecorder.onstop = () => {
     const finalVideoUrl = URL.createObjectURL(finalBlob);
     const fileName = `voice-wave-${Date.now()}.${fileExtension}`;
     
+    // Android/PCは自動ダウンロード
     if (!isIOS) {
         const a = document.createElement('a'); a.href = finalVideoUrl; a.download = fileName;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -1472,11 +1479,16 @@ movieRecorder.onstop = () => {
     downloadBtn.style.pointerEvents = 'auto'; 
     isMovieRendering = false;
 
+    // 💡 ボタンが押された時の処理を「共有メニュー」を出す仕組みに変更！
     downloadFileBtn.onclick = async () => {
         if (isIOS) {
             try {
+                // Blobデータを、iPhoneが共有できる「Fileオブジェクト」に変換
                 const file = new File([finalBlob], fileName, { type: mimeType });
+                
+                // iPhoneの共有機能が使えるかチェック
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    //iPhone標準の共有メニューを強制的に引き出す！
                     await navigator.share({
                         files: [file],
                         title: '動画の保存',
@@ -1487,9 +1499,11 @@ movieRecorder.onstop = () => {
                 }
             } catch (error) {
                 console.error("共有エラー:", error);
+                // 万が一エラーが出た時のバックアップとして別窓を開く
                 window.open(finalVideoUrl, '_blank');
             }
         } else {
+            // AndroidやPCの場合は今まで通り一発保存
             const a = document.createElement('a');
             a.href = finalVideoUrl;
             a.download = fileName;
@@ -1545,60 +1559,78 @@ alert("動画を一所懸命に書き出し中です。もう一回遊べる丼�
 initStandardColors();
 setupPaletteEvents();
 
+// 新カスタムパレットの処理
+// 💡 ここから新しいiro.js用の処理に丸ごと差し替え
 const customPickLabel1 = document.getElementById('customPickLabel1');
 const customPickLabel2 = document.getElementById('customPickLabel2');
 const customPreviewCircle = document.getElementById('customPreviewCircle');
 
+// 現在どちらの丸（1色目か2色目か）を選択しているかを記録する変数（最初は1色目）
 let activeColorIndex = 1; 
 let color1 = "#fff0f5";
 let color2 = "#faf0e6";
 
+// 1. iro.js カラーピッカーの初期化（Google風のデザインに設定）
 const colorPicker = new iro.ColorPicker("#picker", {
-    width: 100, 
-    color: color1, 
+    width: 100, // パネル全体の幅（サイドパネルに収まるサイズ）
+    color: color1, // 初期色
     display: "block",
     layout: [
-        { component: iro.ui.Box },   
-        { component: iro.ui.Slider, options: { sliderType: 'hue' } } 
+        { component: iro.ui.Box },   // Google風のグラデーション四角形
+        { component: iro.ui.Slider, options: { sliderType: 'hue' } } // 色相（虹色）スライダー
     ]
 });
 
+// 2. 画面の色と波形を更新する共通関数
 function updateCustomPalette() {
+    // 右側の単色丸の色を更新
     customPickLabel1.style.background = color1;
     customPickLabel2.style.background = color2;
+    
+    // 左側のプレビュー丸にグラデーションを適用
     customPreviewCircle.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+    
+    // 他の標準パレット等の選択枠（selected）を一度すべて外す
     document.querySelectorAll('.palette-circle').forEach(p => p.classList.remove('selected'));
+    
+    // 完成形の丸を選択状態（枠線あり）にする
     customPreviewCircle.classList.add('selected');
+    
+    // 波形に色を反映して再描画
     currentWaveColors = [color1, color2];
     triggerUIRefresh();
 }
 
+// 3. ピッカーをいじった（色を変えた）瞬間のイベント
 colorPicker.on('color:change', function(color) {
     if (activeColorIndex === 1) {
-        color1 = color.hexString; 
+        color1 = color.hexString; // 1色目を更新
     } else {
-        color2 = color.hexString; 
+        color2 = color.hexString; // 2色目を更新
     }
     updateCustomPalette();
 });
 
+// 4. 「右の○」をクリックした時、ピッカーの編集対象を切り替える処理
 customPickLabel1.addEventListener('click', () => {
     activeColorIndex = 1;
     customPickLabel1.classList.add('selected');
     customPickLabel2.classList.remove('selected');
-    colorPicker.setColor(color1); 
+    colorPicker.setColor(color1); // ピッカーのつまみを現在の1色目の位置に合わせる
 });
 
 customPickLabel2.addEventListener('click', () => {
     activeColorIndex = 2;
     customPickLabel2.classList.add('selected');
     customPickLabel1.classList.remove('selected');
-    colorPicker.setColor(color2); 
+    colorPicker.setColor(color2); // ピッカーのつまみを現在の2色目の位置に合わせる
 });
 
+// 5. 左の完成形の○がクリックされたときも再適応
 customPreviewCircle.addEventListener('click', () => {
     updateCustomPalette();
 });
+// 💡 ここまで
 unlockMenus();
 drawStaticWave();
 </script>
