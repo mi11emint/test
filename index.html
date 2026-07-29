@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">3D BAR</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">STAGE</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -786,56 +786,92 @@ const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'bar3d') {
     const barCount = 33;
-    // 画面の右下寄りを起点（手前）にする
-    const startX = 520;
-    const startY = 540;
-    // 左奥（左上）へ並べるオフセット
-    const stepX = -4.5;
-    const stepY = -4.5;
-    // 棒の幅と、奥行きの角度（右上へ）
-    const barWidth = 12;
-    const depthX = 10;
-    const depthY = -10;
+    
+    // 起点を左右に配置（花道のように）
+    const startX_R = 500; // 右側の起点
+    const startX_L = 100; // 左側の起点
+    const startY = 560;
+    
+    // より直立に近づける（Y方向の移動を大きく、X方向を小さく）
+    const stepX_R = -2.5; 
+    const stepX_L = 2.5;
+    const stepY = -6.5; 
+
+    // 棒の幅と奥行き（長さを少し短くスマートに）
+    const barWidth = 10;
+    const depthX_R = 6;  // 右側の奥行き（右上へ）
+    const depthX_L = -6; // 左側の奥行き（左上へ）
+    const depthY = -6;
 
     ctx.save();
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.2;
     ctx.lineJoin = 'round';
     
-    // 奥から手前へ描画することで、立体的な重なりを正しくする
+    // 奥から手前へ描画
     for (let i = barCount - 1; i >= 0; i--) {
-        const px = startX + i * stepX;
-        const py = startY + i * stepY;
         const height = 15; // 静的状態での高さ
+
+        // ===右側のブロック =======
+        const pxR = startX_R + i * stepX_R;
+        const pyR = startY + i * stepY;
 
         // 前面
         ctx.fillStyle = gradient;
         ctx.globalAlpha = 0.9;
         ctx.beginPath();
-        ctx.rect(px - barWidth / 2, py - height, barWidth, height);
-        ctx.fill();
-        ctx.stroke();
+        ctx.rect(pxR - barWidth / 2, pyR - height, barWidth, height);
+        ctx.fill(); ctx.stroke();
 
-        // 上面（透明度を下げて光の当たり方や透過クリスタル感を演出）
+        // 上面
         ctx.globalAlpha = 0.4;
         ctx.beginPath();
-        ctx.moveTo(px - barWidth / 2, py - height);
-        ctx.lineTo(px - barWidth / 2 + depthX, py - height + depthY);
-        ctx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
-        ctx.lineTo(px + barWidth / 2, py - height);
+        ctx.moveTo(pxR - barWidth / 2, pyR - height);
+        ctx.lineTo(pxR - barWidth / 2 + depthX_R, pyR - height + depthY);
+        ctx.lineTo(pxR + barWidth / 2 + depthX_R, pyR - height + depthY);
+        ctx.lineTo(pxR + barWidth / 2, pyR - height);
         ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        ctx.fill(); ctx.stroke();
 
         // 右側面
         ctx.globalAlpha = 0.7;
         ctx.beginPath();
-        ctx.moveTo(px + barWidth / 2, py);
-        ctx.lineTo(px + barWidth / 2 + depthX, py + depthY);
-        ctx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
-        ctx.lineTo(px + barWidth / 2, py - height);
+        ctx.moveTo(pxR + barWidth / 2, pyR);
+        ctx.lineTo(pxR + barWidth / 2 + depthX_R, pyR + depthY);
+        ctx.lineTo(pxR + barWidth / 2 + depthX_R, pyR - height + depthY);
+        ctx.lineTo(pxR + barWidth / 2, pyR - height);
         ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        ctx.fill(); ctx.stroke();
+
+        // ===左側のブロック =======
+        const pxL = startX_L + i * stepX_L;
+        const pyL = startY + i * stepY;
+
+        // 前面
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.rect(pxL - barWidth / 2, pyL - height, barWidth, height);
+        ctx.fill(); ctx.stroke();
+
+        // 上面
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(pxL - barWidth / 2, pyL - height);
+        ctx.lineTo(pxL - barWidth / 2 + depthX_L, pyL - height + depthY);
+        ctx.lineTo(pxL + barWidth / 2 + depthX_L, pyL - height + depthY);
+        ctx.lineTo(pxL + barWidth / 2, pyL - height);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // 左側面（左側はパースに合わせて左の壁面を見せる）
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(pxL - barWidth / 2, pyL);
+        ctx.lineTo(pxL - barWidth / 2 + depthX_L, pyL + depthY);
+        ctx.lineTo(pxL - barWidth / 2 + depthX_L, pyL - height + depthY);
+        ctx.lineTo(pxL - barWidth / 2, pyL - height);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
     }
     ctx.restore();
 }
@@ -946,19 +982,25 @@ targetCtx.restore();
 
 } else if (currentWaveStyle === 'bar3d') {
     const barCount = dataRange; // 33本
-    // 画面の右下寄りを起点（手前＝低い音）にする
-    const startX = 520;
-    const startY = 540;
-    // 左奥（左上）へ並べる
-    const stepX = -4.5;
-    const stepY = -4.5;
-    // 棒の幅と奥行きの角度（右上へ）
-    const barWidth = 12;
-    const depthX = 10;
-    const depthY = -10;
+    
+    // 起点を左右に配置（花道のように）
+    const startX_R = 500; 
+    const startX_L = 100; 
+    const startY = 560;
+    
+    // より直立に近づける
+    const stepX_R = -2.5; 
+    const stepX_L = 2.5;
+    const stepY = -6.5; 
+
+    // 棒の幅と奥行き（長さを少し短く）
+    const barWidth = 10;
+    const depthX_R = 6;  
+    const depthX_L = -6; 
+    const depthY = -6;
 
     targetCtx.save();
-    targetCtx.lineWidth = 1.5;
+    targetCtx.lineWidth = 1.2;
     targetCtx.lineJoin = 'round';
 
     // 奥（高い音）から手前（低い音）へ描画
@@ -966,40 +1008,64 @@ targetCtx.restore();
         const dataIdx = startIdx + i;
         const boosted = getBoostedValue(dataArr[dataIdx] || 0);
         const height = 5 + boosted * 250; // 音量で高さが変化
-
-        const px = startX + i * stepX;
-        const py = startY + i * stepY;
+        
         const baseOpacity = opacity;
 
-        // 前面
+        // ================= 右側のブロック =================
+        const pxR = startX_R + i * stepX_R;
+        const pyR = startY + i * stepY;
+
         targetCtx.fillStyle = gradient;
         targetCtx.globalAlpha = baseOpacity * 0.9;
         targetCtx.beginPath();
-        targetCtx.rect(px - barWidth / 2, py - height, barWidth, height);
-        targetCtx.fill();
-        targetCtx.stroke();
+        targetCtx.rect(pxR - barWidth / 2, pyR - height, barWidth, height);
+        targetCtx.fill(); targetCtx.stroke();
 
-        // 上面
         targetCtx.globalAlpha = baseOpacity * 0.4;
         targetCtx.beginPath();
-        targetCtx.moveTo(px - barWidth / 2, py - height);
-        targetCtx.lineTo(px - barWidth / 2 + depthX, py - height + depthY);
-        targetCtx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
-        targetCtx.lineTo(px + barWidth / 2, py - height);
+        targetCtx.moveTo(pxR - barWidth / 2, pyR - height);
+        targetCtx.lineTo(pxR - barWidth / 2 + depthX_R, pyR - height + depthY);
+        targetCtx.lineTo(pxR + barWidth / 2 + depthX_R, pyR - height + depthY);
+        targetCtx.lineTo(pxR + barWidth / 2, pyR - height);
         targetCtx.closePath();
-        targetCtx.fill();
-        targetCtx.stroke();
+        targetCtx.fill(); targetCtx.stroke();
 
-        // 右側面
         targetCtx.globalAlpha = baseOpacity * 0.7;
         targetCtx.beginPath();
-        targetCtx.moveTo(px + barWidth / 2, py);
-        targetCtx.lineTo(px + barWidth / 2 + depthX, py + depthY);
-        targetCtx.lineTo(px + barWidth / 2 + depthX, py - height + depthY);
-        targetCtx.lineTo(px + barWidth / 2, py - height);
+        targetCtx.moveTo(pxR + barWidth / 2, pyR);
+        targetCtx.lineTo(pxR + barWidth / 2 + depthX_R, pyR + depthY);
+        targetCtx.lineTo(pxR + barWidth / 2 + depthX_R, pyR - height + depthY);
+        targetCtx.lineTo(pxR + barWidth / 2, pyR - height);
         targetCtx.closePath();
-        targetCtx.fill();
-        targetCtx.stroke();
+        targetCtx.fill(); targetCtx.stroke();
+
+        // ================= 左側のブロック =================
+        const pxL = startX_L + i * stepX_L;
+        const pyL = startY + i * stepY;
+
+        targetCtx.fillStyle = gradient;
+        targetCtx.globalAlpha = baseOpacity * 0.9;
+        targetCtx.beginPath();
+        targetCtx.rect(pxL - barWidth / 2, pyL - height, barWidth, height);
+        targetCtx.fill(); targetCtx.stroke();
+
+        targetCtx.globalAlpha = baseOpacity * 0.4;
+        targetCtx.beginPath();
+        targetCtx.moveTo(pxL - barWidth / 2, pyL - height);
+        targetCtx.lineTo(pxL - barWidth / 2 + depthX_L, pyL - height + depthY);
+        targetCtx.lineTo(pxL + barWidth / 2 + depthX_L, pyL - height + depthY);
+        targetCtx.lineTo(pxL + barWidth / 2, pyL - height);
+        targetCtx.closePath();
+        targetCtx.fill(); targetCtx.stroke();
+
+        targetCtx.globalAlpha = baseOpacity * 0.7;
+        targetCtx.beginPath();
+        targetCtx.moveTo(pxL - barWidth / 2, pyL);
+        targetCtx.lineTo(pxL - barWidth / 2 + depthX_L, pyL + depthY);
+        targetCtx.lineTo(pxL - barWidth / 2 + depthX_L, pyL - height + depthY);
+        targetCtx.lineTo(pxL - barWidth / 2, pyL - height);
+        targetCtx.closePath();
+        targetCtx.fill(); targetCtx.stroke();
     }
     targetCtx.restore();
 }
