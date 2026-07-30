@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">STAGE</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -785,103 +785,49 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'bar3d') {
-    const barCount = 33;
-    
-    // 手前の起点（パースを強調するため、少し外側に広げます）
-    const startX_R = 540; 
-    const startX_L = 60; 
-    const startY = 570;
-    
-    // 奥の終点へ向かう全体の移動距離
-    const moveX_R = -160; 
-    const moveX_L = 160;
-    const moveY = -300; 
-
-    // 手前（最大サイズ）のベース寸法
-    const baseWidth = 14;
-    const baseDepthX_R = 8;
-    const baseDepthX_L = -8;
-    const baseDepthY = -8;
+    // 画面下部に2行2列で配置する座標
+    const row1_Y = 490;
+    const row2_Y = 550;
+    const col1_X = 70;  // 左列メーターの開始X座標
+    const col2_X = 350; // 右列メーターの開始X座標
+    const barW = 180;   // メーター1本の横幅
+    const barH = 6;     // メーターの厚み（高さ）
 
     ctx.save();
-    ctx.lineWidth = 1.0;
-    ctx.lineJoin = 'round';
     
-    // 奥から手前へ描画
-    for (let i = barCount - 1; i >= 0; i--) {
-        const t = i / (barCount - 1); // 0(手前) 〜 1(奥)
+    // おしゃれでシンプルなフォント（筆記体以外）
+    ctx.font = "11px 'Helvetica Neue', Arial, sans-serif";
+    
+    // 共通のガラス風メーター背景を描画する関数
+    function drawMeterBase(x, y, leftText, rightText) {
+        // ラベルテキスト描画（余計な装飾を省いたシンプルな配置）
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.textAlign = "left";
+        ctx.fillText(leftText, x, y - 6);
+        ctx.textAlign = "right";
+        ctx.fillText(rightText, x + barW, y - 6);
 
-        // 1. 配置の圧縮（奥に行くほど間隔が詰まるカーブ）
-        const depthCurve = t * (2 - t); 
-        
-        // 2. スケールダウン（奥に行くほど小さく。手前1.0 → 奥0.25）
-        const scale = 1.0 - (t * 0.75);
+        // ガラスのスロット（背景の溝）
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 1;
+        ctx.fillRect(x, y, barW, barH);
+        ctx.strokeRect(x, y, barW, barH);
 
-        // 3. 空気遠近法（奥に行くほど透明度を下げて空間に溶け込ます）
-        const depthAlpha = 1.0 - (t * 0.6);
-
-        // スケールを適用した寸法
-        const height = 20 * scale; 
-        const bw = baseWidth * scale;
-        const dxR = baseDepthX_R * scale;
-        const dxL = baseDepthX_L * scale;
-        const dy = baseDepthY * scale;
-
-        // 座標の計算
-        const pxR = startX_R + moveX_R * depthCurve;
-        const pxL = startX_L + moveX_L * depthCurve;
-        const py  = startY + moveY * depthCurve;
-
-        // ================= 右側のブロック =================
-        ctx.fillStyle = gradient;
-        ctx.globalAlpha = 0.9 * depthAlpha;
+        // センターライン（基準値 0）
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
         ctx.beginPath();
-        ctx.rect(pxR - bw / 2, py - height, bw, height);
-        ctx.fill(); ctx.stroke();
-
-        ctx.globalAlpha = 0.4 * depthAlpha;
-        ctx.beginPath();
-        ctx.moveTo(pxR - bw / 2, py - height);
-        ctx.lineTo(pxR - bw / 2 + dxR, py - height + dy);
-        ctx.lineTo(pxR + bw / 2 + dxR, py - height + dy);
-        ctx.lineTo(pxR + bw / 2, py - height);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        ctx.globalAlpha = 0.7 * depthAlpha;
-        ctx.beginPath();
-        ctx.moveTo(pxR + bw / 2, py);
-        ctx.lineTo(pxR + bw / 2 + dxR, py + dy);
-        ctx.lineTo(pxR + bw / 2 + dxR, py - height + dy);
-        ctx.lineTo(pxR + bw / 2, py - height);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        // ================= 左側のブロック =================
-        ctx.fillStyle = gradient;
-        ctx.globalAlpha = 0.9 * depthAlpha;
-        ctx.beginPath();
-        ctx.rect(pxL - bw / 2, py - height, bw, height);
-        ctx.fill(); ctx.stroke();
-
-        ctx.globalAlpha = 0.4 * depthAlpha;
-        ctx.beginPath();
-        ctx.moveTo(pxL - bw / 2, py - height);
-        ctx.lineTo(pxL - bw / 2 + dxL, py - height + dy);
-        ctx.lineTo(pxL + bw / 2 + dxL, py - height + dy);
-        ctx.lineTo(pxL + bw / 2, py - height);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        ctx.globalAlpha = 0.7 * depthAlpha;
-        ctx.beginPath();
-        ctx.moveTo(pxL - bw / 2, py);
-        ctx.lineTo(pxL - bw / 2 + dxL, py + dy);
-        ctx.lineTo(pxL - bw / 2 + dxL, py - height + dy);
-        ctx.lineTo(pxL - bw / 2, py - height);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
+        ctx.moveTo(x + barW / 2, y - 2);
+        ctx.lineTo(x + barW / 2, y + barH + 2);
+        ctx.stroke();
     }
+
+    // 4つの計器の枠組みを静的描画
+    drawMeterBase(col1_X, row1_Y, "Deep", "Sunny");
+    drawMeterBase(col2_X, row1_Y, "Healing", "Charisma");
+    drawMeterBase(col1_X, row2_Y, "Logical", "Passion");
+    drawMeterBase(col2_X, row2_Y, "Close", "Release");
+
     ctx.restore();
 }
 }
@@ -990,98 +936,149 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'bar3d') {
-    const barCount = dataRange; // 33本
+    const barCount = dataRange; // 解析する音域の本数
     
-    const startX_R = 540; 
-    const startX_L = 60; 
-    const startY = 570;
-    
-    const moveX_R = -160; 
-    const moveX_L = 160;
-    const moveY = -300; 
+    // 針のブレを抑え、高級感のある滑らかな動き（慣性）にするためのグローバル退避領域
+    if (!window.analyzerSmooth) {
+        window.analyzerSmooth = { ds: 0, hc: -0.2, lp: -0.5, cr: 0, lastVol: 0 };
+    }
+    const s = window.analyzerSmooth;
 
-    const baseWidth = 14;
-    const baseDepthX_R = 8;  
-    const baseDepthX_L = -8; 
-    const baseDepthY = -8;
+    // --- ① リアルタイム診断ロジックの集計 ---
+    let totalSum = 0;
+    let lowSum = 0, lowCount = 0;
+    let highSum = 0, highCount = 0;
+    let midHighSum = 0;
+    let oddSum = 0, evenSum = 0;
+
+    const third = Math.floor(barCount / 3);
+
+    for (let i = 0; i < barCount; i++) {
+        const val = dataArr[startIdx + i] || 0;
+        totalSum += val;
+
+        // 【Deep ↔ Sunny】 低音域と高音域の比率用
+        if (i < third) { lowSum += val; lowCount++; }
+        if (i >= barCount - third) { highSum += val; highCount++; }
+
+        // 【Healing ↔ Charisma】 中高音域のエネルギー用
+        if (i >= Math.floor(barCount / 2)) { midHighSum += val; }
+
+        // 【Close ↔ Release】 奇数番目と偶数番目の周波数の比率（倍音特性）用
+        if (i % 2 === 0) evenSum += val;
+        else oddSum += val;
+    }
+
+    const totalAvg = totalSum / barCount;
+    const lowAvg = lowSum / (lowCount || 1);
+    const highAvg = highSum / (highCount || 1);
+    const midHighAvg = midHighSum / (barCount - Math.floor(barCount / 2));
+
+    // 各メーターの計算上の目標値（真ん中を0として -1.0 〜 1.0 にマッピング）
+    let targetDS = 0;
+    let targetHC = -0.2; // 無音時はややHealing
+    let targetLP = -0.5; // 無音時はLogical
+    let targetCR = 0;
+
+    // 音声入力が一定以上ある場合のみ診断を稼働
+    if (totalAvg > 4) {
+        // 1. Deep ↔ Sunny (低音成分が多いと左、高音成分が多いと右)
+        targetDS = ((highAvg - lowAvg) / (lowAvg + highAvg + 1)) * 3.0;
+        
+        // 2. Healing ↔ Charisma (声量が小さく落ち着くと左、声量が大きく中高音が響くと右)
+        const volFactor = totalAvg / 120;
+        const pitchFactor = midHighAvg / (totalAvg + 1);
+        targetHC = (volFactor * 0.4 + pitchFactor * 0.6) * 2.5 - 1.0;
+
+        // 3. Logical ↔ Passion (話す声のフレーム間の音量変化＝抑揚が激しいと右へ)
+        const volDiff = Math.abs(totalAvg - s.lastVol);
+        targetLP = (volDiff / 8) - 0.5;
+        
+        // 4. Close ↔ Release (声の「詰まり成分(奇数倍音)」と「抜け成分(偶数倍音)」の比率)
+        targetCR = ((evenSum - oddSum) / (evenSum + oddSum + 1)) * 4.0;
+    }
+    s.lastVol = totalAvg; // 次フレーム用に音量を保存
+
+    // 値を -1〜1 の範囲にクランプ（制限）し、線形補間（lerp）で滑らかに動かす
+    targetDS = Math.max(-1, Math.min(1, targetDS));
+    targetHC = Math.max(-1, Math.min(1, targetHC));
+    targetLP = Math.max(-1, Math.min(1, targetLP));
+    targetCR = Math.max(-1, Math.min(1, targetCR));
+
+    s.ds = s.ds * 0.88 + targetDS * 0.12;
+    s.hc = s.hc * 0.88 + targetHC * 0.12;
+    s.lp = s.lp * 0.92 + targetLP * 0.08; // エモーショナル度は特に滑らかに
+    s.cr = s.cr * 0.85 + targetCR * 0.15;
+
+    // --- ② 計器のレンダリング処理 ---
+    const row1_Y = 490;
+    const row2_Y = 550;
+    const col1_X = 70;
+    const col2_X = 350;
+    const barW = 180;
+    const barH = 6;
 
     targetCtx.save();
-    targetCtx.lineWidth = 1.0;
-    targetCtx.lineJoin = 'round';
+    targetCtx.font = "11px 'Helvetica Neue', Arial, sans-serif";
+    
+    // 動的なインジケーター（枠・文字・変動バー）を一式描画する内部関数
+    function drawIndicator(x, y, leftText, rightText, value) {
+        const baseOpacity = opacity;
 
-    for (let i = barCount - 1; i >= 0; i--) {
-        const dataIdx = startIdx + i;
-        const boosted = getBoostedValue(dataArr[dataIdx] || 0);
-        
-        const t = i / (barCount - 1);
-        const depthCurve = t * (2 - t); 
-        const scale = 1.0 - (t * 0.75);
-        const depthAlpha = 1.0 - (t * 0.6);
+        // ラベルテキスト
+        targetCtx.fillStyle = `rgba(255, 255, 255, ${baseOpacity * 0.7})`;
+        targetCtx.textAlign = "left";
+        targetCtx.fillText(leftText, x, y - 6);
+        targetCtx.textAlign = "right";
+        targetCtx.fillText(rightText, x + barW, y - 6);
 
-        // 音量による高さを計算し、さらに遠近法のスケールをかける
-        const height = (5 + boosted * 380) * scale; 
-        
-        const bw = baseWidth * scale;
-        const dxR = baseDepthX_R * scale;
-        const dxL = baseDepthX_L * scale;
-        const dy = baseDepthY * scale;
+        // 背景のスロット（ガラスの溝）
+        targetCtx.fillStyle = `rgba(255, 255, 255, ${baseOpacity * 0.04})`;
+        targetCtx.strokeStyle = `rgba(255, 255, 255, ${baseOpacity * 0.12})`;
+        targetCtx.lineWidth = 1;
+        targetCtx.fillRect(x, y, barW, barH);
+        targetCtx.strokeRect(x, y, barW, barH);
 
-        const pxR = startX_R + moveX_R * depthCurve;
-        const pxL = startX_L + moveX_L * depthCurve;
-        const py  = startY + moveY * depthCurve;
-        
-        const baseOpacity = opacity * depthAlpha;
-
-        // ================= 右側のブロック =================
-        targetCtx.fillStyle = gradient;
-        targetCtx.globalAlpha = baseOpacity * 0.9;
+        // センターライン(0)
+        targetCtx.strokeStyle = `rgba(255, 255, 255, ${baseOpacity * 0.3})`;
         targetCtx.beginPath();
-        targetCtx.rect(pxR - bw / 2, py - height, bw, height);
-        targetCtx.fill(); targetCtx.stroke();
+        targetCtx.moveTo(x + barW / 2, y - 2);
+        targetCtx.lineTo(x + barW / 2, y + barH + 2);
+        targetCtx.stroke();
 
-        targetCtx.globalAlpha = baseOpacity * 0.4;
-        targetCtx.beginPath();
-        targetCtx.moveTo(pxR - bw / 2, py - height);
-        targetCtx.lineTo(pxR - bw / 2 + dxR, py - height + dy);
-        targetCtx.lineTo(pxR + bw / 2 + dxR, py - height + dy);
-        targetCtx.lineTo(pxR + bw / 2, py - height);
-        targetCtx.closePath();
-        targetCtx.fill(); targetCtx.stroke();
+        // リアルタイムに変動するガラスバー（センターから伸縮）
+        const center_X = x + barW / 2;
+        const maxLen = barW / 2;
+        const currentLen = value * maxLen;
 
-        targetCtx.globalAlpha = baseOpacity * 0.7;
-        targetCtx.beginPath();
-        targetCtx.moveTo(pxR + bw / 2, py);
-        targetCtx.lineTo(pxR + bw / 2 + dxR, py + dy);
-        targetCtx.lineTo(pxR + bw / 2 + dxR, py - height + dy);
-        targetCtx.lineTo(pxR + bw / 2, py - height);
-        targetCtx.closePath();
-        targetCtx.fill(); targetCtx.stroke();
+        if (Math.abs(currentLen) > 0.5) {
+            targetCtx.fillStyle = gradient; // 元のアプリで定義されているグラデーション色を流用
+            targetCtx.globalAlpha = baseOpacity * 0.85;
+            
+            let barLeft = center_X;
+            let barWidth = currentLen;
+            if (currentLen < 0) {
+                barLeft = center_X + currentLen;
+                barWidth = Math.abs(currentLen);
+            }
+            targetCtx.fillRect(barLeft, y, barWidth, barH);
 
-        // ================= 左側のブロック =================
-        targetCtx.fillStyle = gradient;
-        targetCtx.globalAlpha = baseOpacity * 0.9;
-        targetCtx.beginPath();
-        targetCtx.rect(pxL - bw / 2, py - height, bw, height);
-        targetCtx.fill(); targetCtx.stroke();
-
-        targetCtx.globalAlpha = baseOpacity * 0.4;
-        targetCtx.beginPath();
-        targetCtx.moveTo(pxL - bw / 2, py - height);
-        targetCtx.lineTo(pxL - bw / 2 + dxL, py - height + dy);
-        targetCtx.lineTo(pxL + bw / 2 + dxL, py - height + dy);
-        targetCtx.lineTo(pxL + bw / 2, py - height);
-        targetCtx.closePath();
-        targetCtx.fill(); targetCtx.stroke();
-
-        targetCtx.globalAlpha = baseOpacity * 0.7;
-        targetCtx.beginPath();
-        targetCtx.moveTo(pxL - bw / 2, py);
-        targetCtx.lineTo(pxL - bw / 2 + dxL, py + dy);
-        targetCtx.lineTo(pxL - bw / 2 + dxL, py - height + dy);
-        targetCtx.lineTo(pxL - bw / 2, py - height);
-        targetCtx.closePath();
-        targetCtx.fill(); targetCtx.stroke();
+            // 【ガラス質感エフェクト】バーの最上部に1本の白いシャープな光のラインを重ねる
+            targetCtx.strokeStyle = `rgba(255, 255, 255, ${baseOpacity * 0.5})`;
+            targetCtx.lineWidth = 1;
+            targetCtx.beginPath();
+            targetCtx.moveTo(barLeft, y + 1);
+            targetCtx.lineTo(barLeft + barWidth, y + 1);
+            targetCtx.stroke();
+        }
     }
+
+    // 4つのメーターを配置
+    drawIndicator(col1_X, row1_Y, "Deep", "Sunny", s.ds);
+    drawIndicator(col2_X, row1_Y, "Healing", "Charisma", s.hc);
+    drawIndicator(col1_X, row2_Y, "Logical", "Passion", s.lp);
+    drawIndicator(col2_X, row2_Y, "Close", "Release", s.cr);
+
     targetCtx.restore();
 }
 }
