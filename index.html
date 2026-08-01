@@ -1014,72 +1014,62 @@ targetCtx.restore();
 } else if (currentWaveStyle === 'bar3d') {
     if (!window.magicCircleState) {
         window.magicCircleState = {
-            isLocked: false, pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
+            pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
         };
     }
     const state = window.magicCircleState;
 
-    // --- ① リアルタイム音声解析（ロックされていない場合のみ更新） ---
-    if (!state.isLocked) {
-        let totalVol = 0;
-        let maxVal = 0;
-        let maxIdx = 0;
-        let peaks = 0;
-        let evenPeaks = 0;
-        let oddPeaks = 0;
-        let flatDiffSum = 0; // ノイズ（ハスキー）検出用
+    // --- ① リアルタイム音声解析（常に更新） ---
+    let totalVol = 0;
+    let maxVal = 0;
+    let maxIdx = 0;
+    let peaks = 0;
+    let evenPeaks = 0;
+    let oddPeaks = 0;
+    let flatDiffSum = 0;
 
-        const len = dataArr.length;
-        for (let i = 0; i < len; i++) {
-            const val = dataArr[i] || 0;
-            totalVol += val;
-            if (val > maxVal) { maxVal = val; maxIdx = i; }
+    const len = dataArr.length;
+    for (let i = 0; i < len; i++) {
+        const val = dataArr[i] || 0;
+        totalVol += val;
+        if (val > maxVal) { maxVal = val; maxIdx = i; }
+        
+        if (i > 0 && i < len - 1) {
+            const prev = dataArr[i - 1] || 0;
+            const next = dataArr[i + 1] || 0;
+            flatDiffSum += Math.abs(val - prev);
             
-            if (i > 0 && i < len - 1) {
-                const prev = dataArr[i - 1] || 0;
-                const next = dataArr[i + 1] || 0;
-                flatDiffSum += Math.abs(val - prev); // 隣り合う帯域の差の滑らかさ
-                
-                if (val > prev && val > next && val > 30) {
-                    peaks++;
-                    if (i % 2 === 0) evenPeaks++; else oddPeaks++;
-                }
+            if (val > prev && val > next && val > 30) {
+                peaks++;
+                if (i % 2 === 0) evenPeaks++; else oddPeaks++;
             }
-        }
-
-        if (totalVol > 100) {
-            // 1. ピッチ（高さ）検出 -> 多角形の角の数 (低音3〜高音8)
-            const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
-            state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
-
-            // 2. 倍音の多さ -> 密度 (0.0 〜 1.0)
-            const targetRichness = Math.min(1.0, peaks / 8);
-            state.richness = state.richness * 0.8 + targetRichness * 0.2;
-
-            // 3. 奇数倍音(Sharp) vs 偶数倍音(Warm) の比率
-            if (oddPeaks + evenPeaks > 0) {
-                const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
-                state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
-            }
-
-            // 4. 非整数次倍音（ハスキー成分）の検出
-            // 音量があるのに山谷のトゲが少ない、または高域のガサガサ感をブレンド
-            const avgVol = totalVol / len;
-            const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
-            state.husky = state.husky * 0.85 + targetHusky * 0.15;
-
-            // 回転速度を音量に同期
-            state.rotation += 0.003 + (maxVal / 255) * 0.02;
-        } else {
-            // 無音時は徐々にベース値に戻す
-            state.pitch = state.pitch * 0.95 + 4 * 0.05;
-            state.richness = state.richness * 0.95 + 0.1 * 0.05;
-            state.husky = state.husky * 0.95 + 0.05 * 0.05;
-            state.rotation += 0.002;
         }
     }
 
-    // --- ② 描画用のセットアップ（中央配置・80%縮小） ---
+    if (totalVol > 100) {
+        const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
+        state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
+
+        const targetRichness = Math.min(1.0, peaks / 8);
+        state.richness = state.richness * 0.8 + targetRichness * 0.2;
+
+        if (oddPeaks + evenPeaks > 0) {
+            const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
+            state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
+        }
+
+        const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
+        state.husky = state.husky * 0.85 + targetHusky * 0.15;
+
+        state.rotation += 0.003 + (maxVal / 255) * 0.02;
+    } else {
+        state.pitch = state.pitch * 0.95 + 4 * 0.05;
+        state.richness = state.richness * 0.95 + 0.1 * 0.05;
+        state.husky = state.husky * 0.95 + 0.05 * 0.05;
+        state.rotation += 0.002;
+    }
+
+    // --- ② 画面中央配置の計算 ---
     const W = targetCtx.canvas.width;
     const H = targetCtx.canvas.height;
     const centerX = W / 2;
@@ -1089,47 +1079,60 @@ targetCtx.restore();
     targetCtx.save();
     targetCtx.translate(centerX, centerY);
 
-    // --- ③ ハスキー成分連動：光の粒子の湧き上がりエフェクト ---
-    // ハスキー度が高いほど同時に生まれる粒子の数をブワッと増やす
-    const spawnCount = Math.floor(state.husky * 6);
-    if (!state.isLocked && spawnCount > 0 && state.particles.length < 150) {
+    // --- ③ 【強化】ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
+    const spawnCount = Math.floor(state.husky * 8); // 生成量を少しアップ
+    if (spawnCount > 0 && state.particles.length < 200) {
         for (let k = 0; k < spawnCount; k++) {
+            // 円周上のランダムな角度
             const pAngle = Math.random() * Math.PI * 2;
-            // 魔法陣のライン上、または中心付近から発生
-            const radiusSpawn = Math.random() > 0.4 ? maxRadius * 0.85 : maxRadius * 0.4;
+            // 発生源を「一番外側の円（maxRadius）」に設定
+            const spawnRadius = maxRadius; 
+            
+            // 外側に向かう力を計算（放射状のベクトル）
+            const speed = Math.random() * 2.0 + 0.5;
             state.particles.push({
-                x: Math.cos(pAngle) * radiusSpawn,
-                y: Math.sin(pAngle) * radiusSpawn,
-                vx: (Math.random() - 0.5) * 1.5 + Math.cos(pAngle) * 0.5,
-                vy: (Math.random() - 0.5) * 1.5 + Math.sin(pAngle) * 0.5 - 1.0, // やや上方へ昇る
+                x: Math.cos(pAngle) * spawnRadius,
+                y: Math.sin(pAngle) * spawnRadius,
+                vx: Math.cos(pAngle) * speed + (Math.random() - 0.5) * 0.5,
+                vy: Math.sin(pAngle) * speed + (Math.random() - 0.5) * 0.5,
                 alpha: 1.0,
-                size: Math.random() * (3 + state.husky * 3) + 1,
-                life: Math.random() * 0.4 + 0.6
+                size: Math.random() * (4 + state.husky * 4) + 1.5, // 粒子サイズも少し大きくして目立たせる
+                life: Math.random() * 0.3 + 0.5
             });
         }
     }
 
-    // 粒子の更新＆描画
+    // ★強力発光エフェクトの肝：加算合成モードに切り替え
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = 'lighter'; 
+    
     state.particles.forEach((p, idx) => {
-        if (!state.isLocked) {
-            p.x += p.vx; p.y += p.vy; p.alpha -= 0.015 / p.life;
-        }
+        p.x += p.vx; p.y += p.vy; p.alpha -= 0.02 / p.life;
         if (p.alpha <= 0) {
             state.particles.splice(idx, 1);
             return;
         }
+        
+        // グラデーション色で塗りつぶし（色の重なりで白く強く光る）
         targetCtx.fillStyle = gradient;
-        targetCtx.globalAlpha = opacity * p.alpha * 0.7;
+        targetCtx.globalAlpha = opacity * p.alpha * 1.0;
         targetCtx.beginPath();
         targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         targetCtx.fill();
+
+        // 粒子にほのかな「光の芯」を作るため、中心に小さな白い円を重ねる（さらに発光感がアップ）
+        targetCtx.fillStyle = '#ffffff';
+        targetCtx.globalAlpha = opacity * p.alpha * 0.6;
+        targetCtx.beginPath();
+        targetCtx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+        targetCtx.fill();
     });
+    targetCtx.restore(); // 通常の合成モードに戻す
 
     // --- ④ 魔法陣 本体の幾何学描画 ---
     targetCtx.strokeStyle = gradient;
     targetCtx.globalAlpha = opacity;
     
-    // 【倍音の多さ(richness)連動】レイヤー層の数を変化 (最大4重の同心円)
     const layers = 2 + Math.floor(state.richness * 2.5);
     targetCtx.lineWidth = 1.5;
     for (let l = 0; l < layers; l++) {
@@ -1139,28 +1142,22 @@ targetCtx.restore();
         targetCtx.stroke();
     }
     
-    // 内側のコアリング
     targetCtx.lineWidth = 1.0;
     targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
     targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
 
-    // 外周の目盛り（richnessが高いほど細かく密集する）
-    ctx.save();
+    targetCtx.save();
     const ticks = Math.floor(40 + state.richness * 80);
     for (let i = 0; i < ticks; i++) {
         targetCtx.rotate((Math.PI * 2) / ticks);
-        targetCtx.beginPath();
-        targetCtx.moveTo(maxRadius * 0.92, 0);
-        targetCtx.lineTo(maxRadius * 0.85, 0);
-        targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.moveTo(maxRadius * 0.92, 0); targetCtx.lineTo(maxRadius * 0.85, 0); targetCtx.stroke();
     }
-    ctx.restore();
+    targetCtx.restore();
 
-    // 【奇数倍音(Sharp) vs 偶数倍音(Warm) の形状ブレンド描画】
+    // 奇数・偶数倍音ブレンド
     targetCtx.save();
     targetCtx.rotate(state.rotation);
     
-    // A: 奇数倍音優位(Sharp) -> 直線的・結晶的な放射ライン
     targetCtx.globalAlpha = opacity * state.sharpness;
     const sharpLines = 6 + Math.floor(state.richness * 6);
     for (let i = 0; i < sharpLines; i++) {
@@ -1171,22 +1168,19 @@ targetCtx.restore();
         targetCtx.stroke();
     }
 
-    // B: 偶数倍音優位(Warm) -> 曲線的・オーガニックな幾何学円の重なり
     targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
     const warmCircles = 3 + Math.floor(state.richness * 5);
     for (let i = 0; i < warmCircles; i++) {
         const angle = (i * Math.PI * 2) / warmCircles;
         const cx = Math.cos(angle) * maxRadius * 0.62;
         const cy = Math.sin(angle) * maxRadius * 0.62;
-        targetCtx.beginPath();
-        targetCtx.arc(cx, cy, maxRadius * 0.22, 0, Math.PI * 2);
-        targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(cx, cy, maxRadius * 0.22, 0, Math.PI * 2); targetCtx.stroke();
     }
     targetCtx.restore();
 
-    // 【声のピッチ連動】中心コアの多角形 (角の数 = state.pitch)
+    // 中心コア多角形
     targetCtx.save();
-    targetCtx.rotate(-state.rotation * 1.4); // 逆回転でサイバー感を演出
+    targetCtx.rotate(-state.rotation * 1.4);
     targetCtx.lineWidth = 2.0;
     targetCtx.globalAlpha = opacity * 0.9;
     
@@ -1198,28 +1192,16 @@ targetCtx.restore();
         const y = Math.sin(angle) * maxRadius * 0.36;
         if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
     }
-    targetCtx.closePath();
-    targetCtx.stroke();
+    targetCtx.closePath(); targetCtx.stroke();
     
-    // 多角形の頂点から中心への結線（星型化）
     targetCtx.lineWidth = 0.8;
     for (let i = 0; i < sides; i++) {
         const angle = (i * Math.PI * 2) / sides;
-        targetCtx.beginPath();
-        targetCtx.moveTo(0, 0);
-        targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36);
-        targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36); targetCtx.stroke();
     }
     targetCtx.restore();
 
-    // --- ⑤ ロック時のサイバーフォント演出 ---
-    if (state.isLocked) {
-        targetCtx.fillStyle = gradient;
-        targetCtx.font = "bold 12px 'Courier New', メイリオ, sans-serif";
-        targetCtx.textAlign = "center";
-        targetCtx.globalAlpha = opacity * (0.6 + Math.sin(performance.now() * 0.005) * 0.2); // ほのかに明滅
-        targetCtx.fillText("SYS.LOCKED // MAGIC_CIRCLE_ACTIVATED", 0, maxRadius + 25);
-    }
+    // 【削除】「SYS.LOCKED」のフォント警告表示のコードも不要になったため削除しました。
 
     targetCtx.restore();
 }
