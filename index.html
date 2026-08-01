@@ -785,130 +785,124 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'bar3d') {
-    // タイマー状態の初期化・維持（待機中は常に最初の10秒状態をキープ）
-    if (!window.matrixTimer) {
-        window.matrixTimer = {
-            startTime: performance.now(),
-            lastTime: performance.now(),
-            intervalActive: new Array(12).fill(false),
-            displayActive: new Array(12).fill(false),
-            hasInputInInterval: false,
-            isFirst10s: true
+    // 魔法陣の状態管理オブジェクトの初期化
+    if (!window.magicCircleState) {
+        window.magicCircleState = {
+            isLocked: false,
+            pitch: 4,       // 中心多角形の角の数 (3〜8)
+            richness: 0.2,   // 倍音の多さ・密度 (0〜1)
+            sharpness: 0.5,  // 奇数倍音の割合 (0〜1)
+            husky: 0.1,      // ハスキー成分 (0〜1)
+            particles: [],   // 光の粒子配列
+            rotation: 0
         };
-    } else {
-        window.matrixTimer.startTime = performance.now();
-        window.matrixTimer.lastTime = performance.now();
-        window.matrixTimer.isFirst10s = true;
+    }
+    const state = window.magicCircleState;
+    
+    // UIボタンの動的生成（存在しない場合のみ生成）
+    if (!document.getElementById('magic-lock-btn')) {
+        const btn = document.createElement('button');
+        btn.id = 'magic-lock-btn';
+        btn.innerHTML = '🔮 魔法陣を固定 (LOCK)';
+        btn.style.cssText = `
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 12px 24px; background: rgba(0, 0, 0, 0.6);
+            color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px; font-family: 'Courier New', メイリオ, sans-serif;
+            font-size: 14px; font-weight: bold; cursor: pointer; z-index: 9999;
+            backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        `;
+        btn.onmouseover = () => { btn.style.background = 'rgba(255, 255, 255, 0.2)'; btn.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)'; };
+        btn.onmouseout = () => { btn.style.background = 'rgba(0, 0, 0, 0.6)'; btn.style.boxShadow = '0 0 15px rgba(255,255,255,0.1)'; };
+        btn.onclick = () => {
+            state.isLocked = !state.isLocked;
+            btn.innerHTML = state.isLocked ? '✨ 魔法陣を解除 (UNLOCK)' : '🔮 魔法陣を固定 (LOCK)';
+            btn.style.borderColor = state.isLocked ? '#ff4444' : 'rgba(255, 255, 255, 0.3)';
+        };
+        document.body.appendChild(btn);
     }
 
     ctx.save();
     
-    // --- 画面サイズに合わせた自動拡大縮小＆中央配置 (20%の余白) ---
+    // --- 画面中央に80%の大きさで配置するスケーリング計算 ---
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
-    const tableW = 568; // テーブル基準総幅
-    const tableH = 310; // テーブル基準総高
+    const centerX = W / 2;
+    const centerY = H / 2;
+    const maxRadius = Math.min(W, H) * 0.8 / 2; // 画面の80%サイズに対応する半径
 
-    const targetW = W * 0.8;
-    const targetH = H * 0.8;
-    const scale = Math.min(targetW / tableW, targetH / tableH);
-    const tx = (W - tableW * scale) / 2;
-    const ty = (H - tableH * scale) / 2;
-
-    ctx.translate(tx, ty);
-    ctx.scale(scale, scale);
-
-    // グリッド座標定義
-    const colX = [0, 80, 190, 316, 442, 568];
-    const rowY = [0, 35, 70, 130, 190, 250, 310];
-
-    // 複数行テキストを描画するヘルパー関数
-    function drawMText(lines, x, y, size = 11, bold = false, spacing = 13) {
-        ctx.font = `${bold ? 'bold ' : ''}${size}px 'Courier New', メイリオ, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const startY = y - ((lines.length - 1) * spacing) / 2;
-        lines.forEach((line, i) => {
-            ctx.fillText(line, x, startY + i * spacing);
+    ctx.translate(centerX, centerY);
+    
+    // 待機中もゆっくり回転させる
+    if (!state.isLocked) {
+        state.rotation += 0.002;
+    }
+    
+    // 待機中の淡い粒子シミュレーション
+    if (state.particles.length < 20) {
+        state.particles.push({
+            x: (Math.random() - 0.5) * maxRadius * 0.5,
+            y: (Math.random() - 0.5) * maxRadius * 0.5,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -(Math.random() * 0.8 + 0.2),
+            alpha: Math.random() * 0.5 + 0.2,
+            size: Math.random() * 2 + 1,
+            life: 1.0
         });
     }
 
-    // 12項目のテキストデータ（画像通りのスペルで再現）
-    const matrixCells = [
-        { en: "NEBULA", jp: "-星雲-" },     { en: "SUPERNOVA", jp: "-新星爆発-" }, { en: "PROTSTAR", jp: "-原始星-" },
-        { en: "GALAXY", jp: "-銀河-" },     { en: "QUASAR", jp: "-銀河核星-" },    { en: "PULSAR", jp: "-灯台星-" },
-        { en: "MOON", jp: "-月-" },         { en: "LUMINOUS", jp: "-閃光-" },      { en: "STARDUST", jp: "-星霜-" },
-        { en: "GRAVITY", jp: "-重力-" },    { en: "ECLIPSE", jp: "-日食-" },       { en: "METEOR", jp: "-流れ星-" }
-    ];
-
-    // --- 背景の発光演出（待機時はすべて淡く光らせる） ---
-    ctx.fillStyle = gradient;
-    for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 3; c++) {
-            const x1 = colX[2 + c], x2 = colX[3 + c];
-            const y1 = rowY[2 + r], y2 = rowY[3 + r];
-            ctx.globalAlpha = 0.12; // 淡い発光
-            ctx.fillRect(x1 + 1, y1 + 1, x2 - x1 - 2, y2 - y1 - 2);
+    // 粒子の更新と描画
+    state.particles.forEach((p, idx) => {
+        p.x += p.vx; p.y += p.vy; p.alpha -= 0.005; p.life -= 0.005;
+        if (p.alpha <= 0 || p.life <= 0) {
+            state.particles[idx] = {
+                x: (Math.random() - 0.5) * maxRadius * 0.8,
+                y: maxRadius * 0.3 * (Math.random() * 0.4 + 0.6),
+                vx: (Math.random() - 0.5) * 0.6, vy: -(Math.random() * 1.2 + 0.4),
+                alpha: Math.random() * 0.6 + 0.2, size: Math.random() * 3 + 1, life: 1.0
+            };
         }
-    }
+        ctx.fillStyle = gradient;
+        ctx.globalAlpha = p.alpha * 0.4;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
 
-    // --- 文字の描画 ---
-    ctx.fillStyle = gradient;
-    
-    // ヘッダーテキスト
-    ctx.globalAlpha = 0.8;
-    drawMText(["整数次倍音", "glossy"], (colX[2] + colX[4]) / 2, rowY[1] / 2, 11, true);
-    drawMText(["非整数次倍音"], (colX[4] + colX[5]) / 2, rowY[1] / 2, 11, true);
-    drawMText(["偶数倍音", "warm"], (colX[2] + colX[3]) / 2, (rowY[1] + rowY[2]) / 2);
-    drawMText(["奇数倍音", "sharp"], (colX[3] + colX[4]) / 2, (rowY[1] + rowY[2]) / 2);
-    drawMText(["次倍音", "husky"], (colX[4] + colX[5]) / 2, (rowY[1] + rowY[2]) / 2);
-
-    drawMText(["倍音", "n≥5", "blight"], colX[1] / 2, (rowY[2] + rowY[4]) / 2, 11, true);
-    drawMText(["倍音", "n<5", "simple"], colX[1] / 2, (rowY[4] + rowY[6]) / 2, 11, true);
-
-    drawMText(["優位音域", "150Hz以上"], (colX[1] + colX[2]) / 2, (rowY[2] + rowY[3]) / 2);
-    drawMText(["優位音域", "150Hz以下"], (colX[1] + colX[2]) / 2, (rowY[3] + rowY[4]) / 2);
-    drawMText(["優位音域", "150Hz以上"], (colX[1] + colX[2]) / 2, (rowY[4] + rowY[5]) / 2);
-    drawMText(["優位音域", "150Hz以下"], (colX[1] + colX[2]) / 2, (rowY[5] + rowY[6]) / 2);
-
-    // 12項目の称号テキスト（待機時は少し薄め）
-    ctx.globalAlpha = 0.5;
-    for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 3; c++) {
-            const idx = r * 3 + c;
-            const cx = (colX[2 + c] + colX[3 + c]) / 2;
-            const cy = (rowY[2 + r] + rowY[3 + r]) / 2;
-            drawMText([matrixCells[idx].en, matrixCells[idx].jp], cx, cy, 12, true, 16);
-        }
-    }
-
-    // --- 罫線の描画 ---
+    // --- 魔法陣のベース枠描画 (待機中・淡い発光) ---
     ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.25;
 
-    ctx.strokeRect(0, 0, tableW, tableH); // 外枠
+    // 外円と内円
+    ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
 
-    [rowY[1], rowY[2], rowY[3], rowY[4], rowY[5]].forEach((y, i) => {
+    // 外周の目盛り
+    ctx.save();
+    for (let i = 0; i < 60; i++) {
+        ctx.rotate(Math.PI / 30);
         ctx.beginPath();
-        if (i === 0) ctx.moveTo(colX[2], y);
-        else if (i === 2 || i === 4) ctx.moveTo(colX[1], y);
-        else ctx.moveTo(colX[0], y);
-        ctx.lineTo(colX[5], y);
+        ctx.moveTo(maxRadius * 0.85, 0);
+        ctx.lineTo(maxRadius * (i % 5 === 0 ? 0.92 : 0.88), 0);
         ctx.stroke();
-    });
+    }
+    ctx.restore();
 
-    [colX[1], colX[2], colX[3], colX[4]].forEach((x, i) => {
-        ctx.beginPath();
-        if (i === 0) ctx.moveTo(x, rowY[2]);
-        else if (i === 1) ctx.moveTo(x, rowY[0]);
-        else ctx.moveTo(x, rowY[1]);
-        ctx.lineTo(x, tableH);
-        ctx.stroke();
-    });
-
-    // 左上の斜め線
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(colX[2], rowY[2]); ctx.stroke();
+    // 中心部の基本幾何学（四角形）
+    ctx.save();
+    ctx.rotate(state.rotation);
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI * 2) / 4;
+        const x = Math.cos(angle) * maxRadius * 0.4;
+        const y = Math.sin(angle) * maxRadius * 0.4;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
 
     ctx.restore();
 }
@@ -1018,216 +1012,214 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'bar3d') {
-    // 10秒インターバル用のタイマーと状態管理の初期化
-    if (!window.matrixTimer) {
-        window.matrixTimer = {
-            startTime: performance.now(),
-            lastTime: performance.now(),
-            intervalActive: new Array(12).fill(false),
-            displayActive: new Array(12).fill(false),
-            hasInputInInterval: false,
-            isFirst10s: true
+    if (!window.magicCircleState) {
+        window.magicCircleState = {
+            isLocked: false, pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
         };
     }
-    const mt = window.matrixTimer;
-    const now = performance.now();
+    const state = window.magicCircleState;
 
-    // 最初の10秒フラグの更新
-    if (mt.isFirst10s && now - mt.startTime >= 10000) {
-        mt.isFirst10s = false;
-    }
+    // --- ① リアルタイム音声解析（ロックされていない場合のみ更新） ---
+    if (!state.isLocked) {
+        let totalVol = 0;
+        let maxVal = 0;
+        let maxIdx = 0;
+        let peaks = 0;
+        let evenPeaks = 0;
+        let oddPeaks = 0;
+        let flatDiffSum = 0; // ノイズ（ハスキー）検出用
 
-    // --- ① リアルタイム音声解析ロジック ---
-    let totalVol = 0;
-    let maxVal = 0;
-    let maxIdx = 0;
-    let peaks = 0;
-    let evenPeaks = 0;
-    let oddPeaks = 0;
-
-    const len = dataArr.length;
-    for (let i = 0; i < len; i++) {
-        const val = dataArr[i] || 0;
-        totalVol += val;
-        if (val > maxVal) {
-            maxVal = val;
-            maxIdx = i;
-        }
-        // ピーク（山の数）の簡易検出
-        if (i > 0 && i < len - 1) {
-            const prev = dataArr[i - 1] || 0;
-            const next = dataArr[i + 1] || 0;
-            if (val > prev && val > next && val > 35) {
-                peaks++;
-                if (i % 2 === 0) evenPeaks++;
-                else oddPeaks++;
+        const len = dataArr.length;
+        for (let i = 0; i < len; i++) {
+            const val = dataArr[i] || 0;
+            totalVol += val;
+            if (val > maxVal) { maxVal = val; maxIdx = i; }
+            
+            if (i > 0 && i < len - 1) {
+                const prev = dataArr[i - 1] || 0;
+                const next = dataArr[i + 1] || 0;
+                flatDiffSum += Math.abs(val - prev); // 隣り合う帯域の差の滑らかさ
+                
+                if (val > prev && val > next && val > 30) {
+                    peaks++;
+                    if (i % 2 === 0) evenPeaks++; else oddPeaks++;
+                }
             }
         }
-    }
 
-    // 入力がある場合、該当するセルのインデックスを算出
-    if (totalVol > 120) {
-        mt.hasInputInInterval = true;
+        if (totalVol > 100) {
+            // 1. ピッチ（高さ）検出 -> 多角形の角の数 (低音3〜高音8)
+            const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
+            state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
 
-        // 1. 音域判定 (150Hzの境界線。インデックス5付近を目安に判定)
-        const isHighHz = maxIdx >= 5;
+            // 2. 倍音の多さ -> 密度 (0.0 〜 1.0)
+            const targetRichness = Math.min(1.0, peaks / 8);
+            state.richness = state.richness * 0.8 + targetRichness * 0.2;
 
-        // 2. 倍音の量判定 (ピーク数が5個以上でblight)
-        const isBlight = peaks >= 5;
+            // 3. 奇数倍音(Sharp) vs 偶数倍音(Warm) の比率
+            if (oddPeaks + evenPeaks > 0) {
+                const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
+                state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
+            }
 
-        // 3. 倍音の性質判定 (偶数優位=warm / 奇数優位=sharp / 拮抗・フラット=husky)
-        let propertyIdx = 2; // デフォルト husky
-        if (peaks > 0) {
-            if (oddPeaks > evenPeaks + 1) propertyIdx = 1;      // sharp
-            else if (evenPeaks > oddPeaks + 1) propertyIdx = 0; // warm
-        }
+            // 4. 非整数次倍音（ハスキー成分）の検出
+            // 音量があるのに山谷のトゲが少ない、または高域のガサガサ感をブレンド
+            const avgVol = totalVol / len;
+            const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
+            state.husky = state.husky * 0.85 + targetHusky * 0.15;
 
-        // 12マトリクスの該当インデックス計算 (0〜11)
-        const rowIdx = (isBlight ? 0 : 2) + (isHighHz ? 0 : 1);
-        const colIdx = propertyIdx;
-        const currentCellIdx = rowIdx * 3 + colIdx;
-
-        // 10秒間のバッファに記録 (複数点灯に対応)
-        mt.intervalActive[currentCellIdx] = true;
-    }
-
-    // --- ② 10秒ごとの判定更新ロジック ---
-    if (now - mt.lastTime >= 10000) {
-        if (mt.hasInputInInterval) {
-            mt.displayActive = [...mt.intervalActive];
+            // 回転速度を音量に同期
+            state.rotation += 0.003 + (maxVal / 255) * 0.02;
         } else {
-            // 区間中に無音だった場合は表示フラグをクリア
-            mt.displayActive.fill(false);
+            // 無音時は徐々にベース値に戻す
+            state.pitch = state.pitch * 0.95 + 4 * 0.05;
+            state.richness = state.richness * 0.95 + 0.1 * 0.05;
+            state.husky = state.husky * 0.95 + 0.05 * 0.05;
+            state.rotation += 0.002;
         }
-        // 次の10秒のためにバッファをリセット
-        mt.intervalActive.fill(false);
-        mt.hasInputInInterval = false;
-        mt.lastTime = now;
     }
 
-    // 無音時、または最初の10秒間は「全て淡く光らせる」条件フラグ
-    const showAllDim = mt.isFirst10s || mt.displayActive.every(v => !v);
-
-    // --- ③ レンダー処理 (自動拡大縮小＆中央配置) ---
+    // --- ② 描画用のセットアップ（中央配置・80%縮小） ---
     const W = targetCtx.canvas.width;
     const H = targetCtx.canvas.height;
-    const tableW = 568;
-    const tableH = 310;
-
-    const targetW = W * 0.8;
-    const targetH = H * 0.8;
-    const scale = Math.min(targetW / tableW, targetH / tableH);
-    const tx = (W - tableW * scale) / 2;
-    const ty = (H - tableH * scale) / 2;
+    const centerX = W / 2;
+    const centerY = H / 2;
+    const maxRadius = Math.min(W, H) * 0.8 / 2;
 
     targetCtx.save();
-    targetCtx.translate(tx, ty);
-    targetCtx.scale(scale, scale);
+    targetCtx.translate(centerX, centerY);
 
-    const colX = [0, 80, 190, 316, 442, 568];
-    const rowY = [0, 35, 70, 130, 190, 250, 310];
-
-    function drawMTextActive(lines, x, y, size = 11, bold = false, spacing = 13) {
-        targetCtx.font = `${bold ? 'bold ' : ''}${size}px 'Courier New', メイリオ, sans-serif`;
-        targetCtx.textAlign = "center";
-        targetCtx.textBaseline = "middle";
-        const startY = y - ((lines.length - 1) * spacing) / 2;
-        lines.forEach((line, i) => {
-            targetCtx.fillText(line, x, startY + i * spacing);
-        });
-    }
-
-    const matrixCells = [
-        { en: "NEBULA", jp: "-星雲-" },     { en: "SUPERNOVA", jp: "-新星爆発-" }, { en: "PROTSTAR", jp: "-原始星-" },
-        { en: "GALAXY", jp: "-銀河-" },     { en: "QUASAR", jp: "-銀河核星-" },    { en: "PULSAR", jp: "-灯台星-" },
-        { en: "MOON", jp: "-月-" },         { en: "LUMINOUS", jp: "-閃光-" },      { en: "STARDUST", jp: "-星霜-" },
-        { en: "GRAVITY", jp: "-重力-" },    { en: "ECLIPSE", jp: "-日食-" },       { en: "METEOR", jp: "-流れ星-" }
-    ];
-
-    // --- セル背景の発光演出 ---
-    for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 3; c++) {
-            const idx = r * 3 + c;
-            const x1 = colX[2 + c], x2 = colX[3 + c];
-            const y1 = rowY[2 + r], y2 = rowY[3 + r];
-            
-            if (showAllDim) {
-                targetCtx.fillStyle = gradient;
-                targetCtx.globalAlpha = opacity * 0.12;
-                targetCtx.fillRect(x1 + 1, y1 + 1, x2 - x1 - 2, y2 - y1 - 2);
-            } else if (mt.displayActive[idx]) {
-                // 該当項目が激しく光る演出
-                targetCtx.fillStyle = gradient;
-                targetCtx.globalAlpha = opacity * 0.45;
-                targetCtx.fillRect(x1 + 1, y1 + 1, x2 - x1 - 2, y2 - y1 - 2);
-
-                // サイバー感のある内側ハイライト枠
-                targetCtx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-                targetCtx.lineWidth = 1;
-                targetCtx.globalAlpha = opacity;
-                targetCtx.strokeRect(x1 + 2, y1 + 2, x2 - x1 - 4, y2 - y1 - 4);
-            }
+    // --- ③ ハスキー成分連動：光の粒子の湧き上がりエフェクト ---
+    // ハスキー度が高いほど同時に生まれる粒子の数をブワッと増やす
+    const spawnCount = Math.floor(state.husky * 6);
+    if (!state.isLocked && spawnCount > 0 && state.particles.length < 150) {
+        for (let k = 0; k < spawnCount; k++) {
+            const pAngle = Math.random() * Math.PI * 2;
+            // 魔法陣のライン上、または中心付近から発生
+            const radiusSpawn = Math.random() > 0.4 ? maxRadius * 0.85 : maxRadius * 0.4;
+            state.particles.push({
+                x: Math.cos(pAngle) * radiusSpawn,
+                y: Math.sin(pAngle) * radiusSpawn,
+                vx: (Math.random() - 0.5) * 1.5 + Math.cos(pAngle) * 0.5,
+                vy: (Math.random() - 0.5) * 1.5 + Math.sin(pAngle) * 0.5 - 1.0, // やや上方へ昇る
+                alpha: 1.0,
+                size: Math.random() * (3 + state.husky * 3) + 1,
+                life: Math.random() * 0.4 + 0.6
+            });
         }
     }
 
-    // --- 文字の描画 ---
-    targetCtx.fillStyle = gradient;
-    
-    // ヘッダー部
-    targetCtx.globalAlpha = opacity * 0.8;
-    drawMTextActive(["整数次倍音", "glossy"], (colX[2] + colX[4]) / 2, rowY[1] / 2, 11, true);
-    drawMTextActive(["非整数次倍音"], (colX[4] + colX[5]) / 2, rowY[1] / 2, 11, true);
-    drawMTextActive(["偶数倍音", "warm"], (colX[2] + colX[3]) / 2, (rowY[1] + rowY[2]) / 2);
-    drawMTextActive(["奇数倍音", "sharp"], (colX[3] + colX[4]) / 2, (rowY[1] + rowY[2]) / 2);
-    drawMTextActive(["次倍音", "husky"], (colX[4] + colX[5]) / 2, (rowY[1] + rowY[2]) / 2);
-
-    drawMTextActive(["倍音", "n≥5", "blight"], colX[1] / 2, (rowY[2] + rowY[4]) / 2, 11, true);
-    drawMTextActive(["倍音", "n<5", "simple"], colX[1] / 2, (rowY[4] + rowY[6]) / 2, 11, true);
-
-    drawMTextActive(["優位音域", "150Hz以上"], (colX[1] + colX[2]) / 2, (rowY[2] + rowY[3]) / 2);
-    drawMTextActive(["優位音域", "150Hz以下"], (colX[1] + colX[2]) / 2, (rowY[3] + rowY[4]) / 2);
-    drawMTextActive(["優位音域", "150Hz以上"], (colX[1] + colX[2]) / 2, (rowY[4] + rowY[5]) / 2);
-    drawMTextActive(["優位音域", "150Hz以下"], (colX[1] + colX[2]) / 2, (rowY[5] + rowY[6]) / 2);
-
-    // 12項目の称号テキスト（状態に応じて明度変化）
-    for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 3; c++) {
-            const idx = r * 3 + c;
-            const cx = (colX[2 + c] + colX[3 + c]) / 2;
-            const cy = (rowY[2 + r] + rowY[3 + r]) / 2;
-            
-            const isCellOn = mt.displayActive[idx];
-            targetCtx.globalAlpha = opacity * (showAllDim ? 0.5 : (isCellOn ? 1.0 : 0.2));
-            drawMTextActive([matrixCells[idx].en, matrixCells[idx].jp], cx, cy, 12, true, 16);
+    // 粒子の更新＆描画
+    state.particles.forEach((p, idx) => {
+        if (!state.isLocked) {
+            p.x += p.vx; p.y += p.vy; p.alpha -= 0.015 / p.life;
         }
-    }
+        if (p.alpha <= 0) {
+            state.particles.splice(idx, 1);
+            return;
+        }
+        targetCtx.fillStyle = gradient;
+        targetCtx.globalAlpha = opacity * p.alpha * 0.7;
+        targetCtx.beginPath();
+        targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        targetCtx.fill();
+    });
 
-    // --- 罫線の描画 ---
+    // --- ④ 魔法陣 本体の幾何学描画 ---
     targetCtx.strokeStyle = gradient;
-    targetCtx.lineWidth = 1;
-    targetCtx.globalAlpha = opacity * 0.6;
-
-    targetCtx.strokeRect(0, 0, tableW, tableH);
-
-    [rowY[1], rowY[2], rowY[3], rowY[4], rowY[5]].forEach((y, i) => {
+    targetCtx.globalAlpha = opacity;
+    
+    // 【倍音の多さ(richness)連動】レイヤー層の数を変化 (最大4重の同心円)
+    const layers = 2 + Math.floor(state.richness * 2.5);
+    targetCtx.lineWidth = 1.5;
+    for (let l = 0; l < layers; l++) {
+        const rFactor = 1.0 - (l * 0.08);
         targetCtx.beginPath();
-        if (i === 0) targetCtx.moveTo(colX[2], y);
-        else if (i === 2 || i === 4) targetCtx.moveTo(colX[1], y);
-        else targetCtx.moveTo(colX[0], y);
-        targetCtx.lineTo(colX[5], y);
+        targetCtx.arc(0, 0, maxRadius * rFactor, 0, Math.PI * 2);
         targetCtx.stroke();
-    });
+    }
+    
+    // 内側のコアリング
+    targetCtx.lineWidth = 1.0;
+    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
+    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
 
-    [colX[1], colX[2], colX[3], colX[4]].forEach((x, i) => {
+    // 外周の目盛り（richnessが高いほど細かく密集する）
+    ctx.save();
+    const ticks = Math.floor(40 + state.richness * 80);
+    for (let i = 0; i < ticks; i++) {
+        targetCtx.rotate((Math.PI * 2) / ticks);
         targetCtx.beginPath();
-        if (i === 0) targetCtx.moveTo(x, rowY[2]);
-        else if (i === 1) targetCtx.moveTo(x, rowY[0]);
-        else targetCtx.moveTo(x, rowY[1]);
-        targetCtx.lineTo(x, tableH);
+        targetCtx.moveTo(maxRadius * 0.92, 0);
+        targetCtx.lineTo(maxRadius * 0.85, 0);
         targetCtx.stroke();
-    });
+    }
+    ctx.restore();
 
-    targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(colX[2], rowY[2]); targetCtx.stroke();
+    // 【奇数倍音(Sharp) vs 偶数倍音(Warm) の形状ブレンド描画】
+    targetCtx.save();
+    targetCtx.rotate(state.rotation);
+    
+    // A: 奇数倍音優位(Sharp) -> 直線的・結晶的な放射ライン
+    targetCtx.globalAlpha = opacity * state.sharpness;
+    const sharpLines = 6 + Math.floor(state.richness * 6);
+    for (let i = 0; i < sharpLines; i++) {
+        const angle = (i * Math.PI * 2) / sharpLines;
+        targetCtx.beginPath();
+        targetCtx.moveTo(Math.cos(angle) * maxRadius * 0.4, Math.sin(angle) * maxRadius * 0.4);
+        targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.85, Math.sin(angle) * maxRadius * 0.85);
+        targetCtx.stroke();
+    }
+
+    // B: 偶数倍音優位(Warm) -> 曲線的・オーガニックな幾何学円の重なり
+    targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
+    const warmCircles = 3 + Math.floor(state.richness * 5);
+    for (let i = 0; i < warmCircles; i++) {
+        const angle = (i * Math.PI * 2) / warmCircles;
+        const cx = Math.cos(angle) * maxRadius * 0.62;
+        const cy = Math.sin(angle) * maxRadius * 0.62;
+        targetCtx.beginPath();
+        targetCtx.arc(cx, cy, maxRadius * 0.22, 0, Math.PI * 2);
+        targetCtx.stroke();
+    }
+    targetCtx.restore();
+
+    // 【声のピッチ連動】中心コアの多角形 (角の数 = state.pitch)
+    targetCtx.save();
+    targetCtx.rotate(-state.rotation * 1.4); // 逆回転でサイバー感を演出
+    targetCtx.lineWidth = 2.0;
+    targetCtx.globalAlpha = opacity * 0.9;
+    
+    const sides = Math.round(state.pitch);
+    targetCtx.beginPath();
+    for (let i = 0; i < sides; i++) {
+        const angle = (i * Math.PI * 2) / sides;
+        const x = Math.cos(angle) * maxRadius * 0.36;
+        const y = Math.sin(angle) * maxRadius * 0.36;
+        if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+    }
+    targetCtx.closePath();
+    targetCtx.stroke();
+    
+    // 多角形の頂点から中心への結線（星型化）
+    targetCtx.lineWidth = 0.8;
+    for (let i = 0; i < sides; i++) {
+        const angle = (i * Math.PI * 2) / sides;
+        targetCtx.beginPath();
+        targetCtx.moveTo(0, 0);
+        targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36);
+        targetCtx.stroke();
+    }
+    targetCtx.restore();
+
+    // --- ⑤ ロック時のサイバーフォント演出 ---
+    if (state.isLocked) {
+        targetCtx.fillStyle = gradient;
+        targetCtx.font = "bold 12px 'Courier New', メイリオ, sans-serif";
+        targetCtx.textAlign = "center";
+        targetCtx.globalAlpha = opacity * (0.6 + Math.sin(performance.now() * 0.005) * 0.2); // ほのかに明滅
+        targetCtx.fillText("SYS.LOCKED // MAGIC_CIRCLE_ACTIVATED", 0, maxRadius + 25);
+    }
 
     targetCtx.restore();
 }
