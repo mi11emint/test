@@ -785,114 +785,109 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'bar3d') {
-    // 魔法陣の状態管理オブジェクトの初期化
+    
     if (!window.magicCircleState) {
         window.magicCircleState = {
-            isLocked: false,
-            pitch: 4,       // 中心多角形の角の数 (3〜8)
-            richness: 0.2,   // 倍音の多さ・密度 (0〜1)
-            sharpness: 0.5,  // 奇数倍音の割合 (0〜1)
-            husky: 0.1,      // ハスキー成分 (0〜1)
-            particles: [],   // 光の粒子配列
+            pitch: 4,       
+            richness: 0.2,   
+            sharpness: 0.5,  
+            husky: 0.1,      
+            particles: [],   
             rotation: 0
         };
     }
     const state = window.magicCircleState;
-    
-    // UIボタンの動的生成（存在しない場合のみ生成）
-    if (!document.getElementById('magic-lock-btn')) {
-        const btn = document.createElement('button');
-        btn.id = 'magic-lock-btn';
-        btn.innerHTML = '🔮 魔法陣を固定 (LOCK)';
-        btn.style.cssText = `
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 12px 24px; background: rgba(0, 0, 0, 0.6);
-            color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 30px; font-family: 'Courier New', メイリオ, sans-serif;
-            font-size: 14px; font-weight: bold; cursor: pointer; z-index: 9999;
-            backdrop-filter: blur(5px); transition: all 0.3s ease; box-shadow: 0 0 15px rgba(255,255,255,0.1);
-        `;
-        btn.onmouseover = () => { btn.style.background = 'rgba(255, 255, 255, 0.2)'; btn.style.boxShadow = '0 0 20px rgba(255,255,255,0.3)'; };
-        btn.onmouseout = () => { btn.style.background = 'rgba(0, 0, 0, 0.6)'; btn.style.boxShadow = '0 0 15px rgba(255,255,255,0.1)'; };
-        btn.onclick = () => {
-            state.isLocked = !state.isLocked;
-            btn.innerHTML = state.isLocked ? '✨ 魔法陣を解除 (UNLOCK)' : '🔮 魔法陣を固定 (LOCK)';
-            btn.style.borderColor = state.isLocked ? '#ff4444' : 'rgba(255, 255, 255, 0.3)';
-        };
-        document.body.appendChild(btn);
-    }
 
     ctx.save();
     
-    // --- 画面中央に80%の大きさで配置するスケーリング計算 ---
+    // --- スケーリング計算 ---
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
     const centerX = W / 2;
     const centerY = H / 2;
-    const maxRadius = Math.min(W, H) * 0.8 / 2; // 画面の80%サイズに対応する半径
+    const maxRadius = Math.min(W, H) * 0.8 / 2;
+
+    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
+    const bar3dGradient = ctx.createRadialGradient(
+        centerX, centerY, 0,           // 中心点（半径0）
+        centerX, centerY, maxRadius    // 外円（最大半径）
+    );
+    bar3dGradient.addColorStop(0, currentWaveColors[0]);
+    if (currentWaveColors.length > 2) {
+        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
+        bar3dGradient.addColorStop(1, currentWaveColors[2]);
+    } else {
+        bar3dGradient.addColorStop(1, currentWaveColors[1]);
+    }
 
     ctx.translate(centerX, centerY);
     
-    // 待機中もゆっくり回転させる
-    if (!state.isLocked) {
-        state.rotation += 0.002;
-    }
+    // 常にゆっくり回転
+    state.rotation += 0.002;
     
-    // 待機中の淡い粒子シミュレーション
+    // 待機中の淡い粒子シミュレーション（外側に漂わせる）
     if (state.particles.length < 20) {
+        const pAngle = Math.random() * Math.PI * 2;
+        const pDist = maxRadius * (1.0 + Math.random() * 0.3); // 円の外側
         state.particles.push({
-            x: (Math.random() - 0.5) * maxRadius * 0.5,
-            y: (Math.random() - 0.5) * maxRadius * 0.5,
-            vx: (Math.random() - 0.5) * 0.5,
-            vy: -(Math.random() * 0.8 + 0.2),
-            alpha: Math.random() * 0.5 + 0.2,
+            x: Math.cos(pAngle) * pDist,
+            y: Math.sin(pAngle) * pDist,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: (Math.random() - 0.5) * 0.3,
+            alpha: Math.random() * 0.4 + 0.1,
             size: Math.random() * 2 + 1,
             life: 1.0
         });
     }
 
     // 粒子の更新と描画
+    ctx.save();
+    // 💡 【修正①】白背景の時はブレンドモードを通常合成に切り替えて見えるようにする
+    if (currentBgColor === 'white') {
+        ctx.globalCompositeOperation = 'source-over';
+    } else {
+        ctx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
+    }
+
     state.particles.forEach((p, idx) => {
-        p.x += p.vx; p.y += p.vy; p.alpha -= 0.005; p.life -= 0.005;
-        if (p.alpha <= 0 || p.life <= 0) {
+        p.x += p.vx; p.y += p.vy; p.alpha -= 0.002;
+        if (p.alpha <= 0) {
+            const pAngle = Math.random() * Math.PI * 2;
+            const pDist = maxRadius * (1.0 + Math.random() * 0.3);
             state.particles[idx] = {
-                x: (Math.random() - 0.5) * maxRadius * 0.8,
-                y: maxRadius * 0.3 * (Math.random() * 0.4 + 0.6),
-                vx: (Math.random() - 0.5) * 0.6, vy: -(Math.random() * 1.2 + 0.4),
-                alpha: Math.random() * 0.6 + 0.2, size: Math.random() * 3 + 1, life: 1.0
+                x: Math.cos(pAngle) * pDist, y: Math.sin(pAngle) * pDist,
+                vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+                alpha: Math.random() * 0.4 + 0.1, size: Math.random() * 2 + 1, life: 1.0
             };
         }
-        ctx.fillStyle = gradient;
-        ctx.globalAlpha = p.alpha * 0.4;
+        ctx.fillStyle = bar3dGradient; 
+        ctx.globalAlpha = p.alpha * 0.6;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
     });
+    ctx.restore();
 
-    // --- 魔法陣のベース枠描画 (待機中・淡い発光) ---
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1.5;
+    // --- 魔法陣のベース枠描画 ---
+    ctx.strokeStyle = bar3dGradient; 
+    ctx.lineWidth = 2.5; 
     ctx.globalAlpha = 0.25;
 
-    // 外円と内円
     ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
 
-    // 外周の目盛り
     ctx.save();
+    ctx.lineWidth = 1.8; 
     for (let i = 0; i < 60; i++) {
         ctx.rotate(Math.PI / 30);
-        ctx.beginPath();
-        ctx.moveTo(maxRadius * 0.85, 0);
-        ctx.lineTo(maxRadius * (i % 5 === 0 ? 0.92 : 0.88), 0);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
     }
     ctx.restore();
 
-    // 中心部の基本幾何学（四角形）
     ctx.save();
     ctx.rotate(state.rotation);
+    ctx.lineWidth = 2.0; 
     ctx.beginPath();
     for (let i = 0; i < 4; i++) {
         const angle = (i * Math.PI * 2) / 4;
@@ -900,8 +895,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
         const y = Math.sin(angle) * maxRadius * 0.4;
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
-    ctx.closePath();
-    ctx.stroke();
+    ctx.closePath(); ctx.stroke();
     ctx.restore();
 
     ctx.restore();
@@ -1065,7 +1059,7 @@ targetCtx.restore();
     } else {
         state.pitch = state.pitch * 0.95 + 4 * 0.05;
         state.richness = state.richness * 0.95 + 0.1 * 0.05;
-        state.husky = state.husky * 0.95 + 0.05 * 0.05;
+        state.husky = state.husky * 0.05 * 0.05;
         state.rotation += 0.002;
     }
 
@@ -1076,19 +1070,28 @@ targetCtx.restore();
     const centerY = H / 2;
     const maxRadius = Math.min(W, H) * 0.8 / 2;
 
+    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
+    const bar3dGradient = targetCtx.createRadialGradient(
+        centerX, centerY, 0,           // 中心点（半径0）
+        centerX, centerY, maxRadius    // 外円（最大半径）
+    );
+    bar3dGradient.addColorStop(0, currentWaveColors[0]);
+    if (currentWaveColors.length > 2) {
+        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
+        bar3dGradient.addColorStop(1, currentWaveColors[2]);
+    } else {
+        bar3dGradient.addColorStop(1, currentWaveColors[1]);
+    }
+
     targetCtx.save();
     targetCtx.translate(centerX, centerY);
 
-    // --- ③ 【強化】ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
-    const spawnCount = Math.floor(state.husky * 8); // 生成量を少しアップ
+    // --- ③ ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
+    const spawnCount = Math.floor(state.husky * 8); 
     if (spawnCount > 0 && state.particles.length < 200) {
         for (let k = 0; k < spawnCount; k++) {
-            // 円周上のランダムな角度
             const pAngle = Math.random() * Math.PI * 2;
-            // 発生源を「一番外側の円（maxRadius）」に設定
             const spawnRadius = maxRadius; 
-            
-            // 外側に向かう力を計算（放射状のベクトル）
             const speed = Math.random() * 2.0 + 0.5;
             state.particles.push({
                 x: Math.cos(pAngle) * spawnRadius,
@@ -1096,15 +1099,19 @@ targetCtx.restore();
                 vx: Math.cos(pAngle) * speed + (Math.random() - 0.5) * 0.5,
                 vy: Math.sin(pAngle) * speed + (Math.random() - 0.5) * 0.5,
                 alpha: 1.0,
-                size: Math.random() * (4 + state.husky * 4) + 1.5, // 粒子サイズも少し大きくして目立たせる
+                size: Math.random() * (4 + state.husky * 4) + 1.5, 
                 life: Math.random() * 0.3 + 0.5
             });
         }
     }
 
-    // ★強力発光エフェクトの肝：加算合成モードに切り替え
+    // 💡 【修正①】背景色に応じて合成モードを切り替え（白背景対策）
     targetCtx.save();
-    targetCtx.globalCompositeOperation = 'lighter'; 
+    if (currentBgColor === 'white') {
+        targetCtx.globalCompositeOperation = 'source-over'; // 白背景なら通常重ね合わせ
+    } else {
+        targetCtx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
+    }
     
     state.particles.forEach((p, idx) => {
         p.x += p.vx; p.y += p.vy; p.alpha -= 0.02 / p.life;
@@ -1113,28 +1120,27 @@ targetCtx.restore();
             return;
         }
         
-        // グラデーション色で塗りつぶし（色の重なりで白く強く光る）
-        targetCtx.fillStyle = gradient;
+        targetCtx.fillStyle = bar3dGradient; 
         targetCtx.globalAlpha = opacity * p.alpha * 1.0;
         targetCtx.beginPath();
         targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         targetCtx.fill();
 
-        // 粒子にほのかな「光の芯」を作るため、中心に小さな白い円を重ねる（さらに発光感がアップ）
-        targetCtx.fillStyle = '#ffffff';
+        // 💡 【修正①】白背景の時は芯をダークグレー（#333333）、それ以外は白（#ffffff）にして視認性を確保
+        targetCtx.fillStyle = (currentBgColor === 'white') ? '#333333' : '#ffffff';
         targetCtx.globalAlpha = opacity * p.alpha * 0.6;
         targetCtx.beginPath();
         targetCtx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
         targetCtx.fill();
     });
-    targetCtx.restore(); // 通常の合成モードに戻す
+    targetCtx.restore();
 
     // --- ④ 魔法陣 本体の幾何学描画 ---
-    targetCtx.strokeStyle = gradient;
+    targetCtx.strokeStyle = bar3dGradient; 
     targetCtx.globalAlpha = opacity;
     
     const layers = 2 + Math.floor(state.richness * 2.5);
-    targetCtx.lineWidth = 1.5;
+    targetCtx.lineWidth = 2.5; 
     for (let l = 0; l < layers; l++) {
         const rFactor = 1.0 - (l * 0.08);
         targetCtx.beginPath();
@@ -1142,12 +1148,13 @@ targetCtx.restore();
         targetCtx.stroke();
     }
     
-    targetCtx.lineWidth = 1.0;
+    targetCtx.lineWidth = 1.8; 
     targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
     targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
 
     targetCtx.save();
     const ticks = Math.floor(40 + state.richness * 80);
+    targetCtx.lineWidth = 1.5; 
     for (let i = 0; i < ticks; i++) {
         targetCtx.rotate((Math.PI * 2) / ticks);
         targetCtx.beginPath(); targetCtx.moveTo(maxRadius * 0.92, 0); targetCtx.lineTo(maxRadius * 0.85, 0); targetCtx.stroke();
@@ -1160,6 +1167,7 @@ targetCtx.restore();
     
     targetCtx.globalAlpha = opacity * state.sharpness;
     const sharpLines = 6 + Math.floor(state.richness * 6);
+    targetCtx.lineWidth = 1.8; 
     for (let i = 0; i < sharpLines; i++) {
         const angle = (i * Math.PI * 2) / sharpLines;
         targetCtx.beginPath();
@@ -1170,6 +1178,7 @@ targetCtx.restore();
 
     targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
     const warmCircles = 3 + Math.floor(state.richness * 5);
+    targetCtx.lineWidth = 1.8; 
     for (let i = 0; i < warmCircles; i++) {
         const angle = (i * Math.PI * 2) / warmCircles;
         const cx = Math.cos(angle) * maxRadius * 0.62;
@@ -1181,7 +1190,7 @@ targetCtx.restore();
     // 中心コア多角形
     targetCtx.save();
     targetCtx.rotate(-state.rotation * 1.4);
-    targetCtx.lineWidth = 2.0;
+    targetCtx.lineWidth = 3.0; 
     targetCtx.globalAlpha = opacity * 0.9;
     
     const sides = Math.round(state.pitch);
@@ -1194,14 +1203,12 @@ targetCtx.restore();
     }
     targetCtx.closePath(); targetCtx.stroke();
     
-    targetCtx.lineWidth = 0.8;
+    targetCtx.lineWidth = 1.2; 
     for (let i = 0; i < sides; i++) {
         const angle = (i * Math.PI * 2) / sides;
         targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36); targetCtx.stroke();
     }
     targetCtx.restore();
-
-    // 【削除】「SYS.LOCKED」のフォント警告表示のコードも不要になったため削除しました。
 
     targetCtx.restore();
 }
