@@ -1067,15 +1067,28 @@ targetCtx.restore();
         }
         targetCtx.restore();
 
+        // 💡 修正ポイント: 音声データから動的なパラメータを生成する
+        let totalVol = 0;
+        for (let i = startIdx; i < endIdx; i++) {
+            totalVol += getBoostedValue(dataArr[i] || 0);
+        }
+        const avgVol = totalVol / (endIdx - startIdx); // 音の大きさ
+        
+        // 回転角度と各種パラメータの生成
+        const currentRot = Date.now() * 0.0005; // ゆっくり回転させる
+        const richness = avgVol; 
+        const sharpness = Math.max(0.2, 1.0 - (avgVol * 0.5));
+        const noiseLevel = avgVol * 0.8;
+
         // --- 奇数・偶数倍音ブレンド（星型 ＆ 月・時計） ---
         targetCtx.save();
-        targetCtx.rotate(state.rotation);
+        targetCtx.rotate(currentRot);
         
         // 【奇数倍音】: 豊かさ(richness)に応じて増殖する星型（六芒星・八芒星）
-        targetCtx.globalAlpha = opacity * state.sharpness;
+        targetCtx.globalAlpha = opacity * sharpness;
         targetCtx.lineWidth = 1.5; 
         
-        const starLayers = 1 + Math.floor(state.richness * 3); 
+        const starLayers = 1 + Math.floor(richness * 3); 
         for (let l = 0; l < starLayers; l++) {
             const currentRadius = maxRadius * (0.8 - l * 0.12);
             const rotOffset = l * (Math.PI / 6); 
@@ -1094,7 +1107,7 @@ targetCtx.restore();
             }
             
             // 八芒星 (音が豊かな場合)
-            if (state.richness > 0.4) {
+            if (richness > 0.4) {
                 targetCtx.save();
                 targetCtx.rotate(Math.PI / 8); 
                 for (let t = 0; t < 2; t++) {
@@ -1113,9 +1126,9 @@ targetCtx.restore();
         }
 
         // 【偶数倍音】: 豊かさ(richness)に応じて増殖する月・時計の天体円
-        targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
+        targetCtx.globalAlpha = opacity * (1.0 - sharpness);
         
-        const planetCount = 4 + Math.floor(state.richness * 8); 
+        const planetCount = 4 + Math.floor(richness * 8); 
         const orbitRadius = maxRadius * 0.65; 
         
         for (let i = 0; i < planetCount; i++) {
@@ -1126,7 +1139,7 @@ targetCtx.restore();
             
             targetCtx.save();
             targetCtx.translate(cx, cy);
-            targetCtx.rotate(-state.rotation * 2.5); // 逆回転で自転
+            targetCtx.rotate(-currentRot * 2.5); // 逆回転で自転
             
             // 太陽の輪
             targetCtx.lineWidth = 2.0;
@@ -1135,9 +1148,6 @@ targetCtx.restore();
             // 内円
             targetCtx.lineWidth = 1.0;
             targetCtx.beginPath(); targetCtx.arc(0, 0, pRadius * 0.6, 0, Math.PI * 2); targetCtx.stroke();
-            
-            // 時計の目盛り
-            
             
             // 三日月
             if (i % 2 === 0) {
@@ -1151,14 +1161,11 @@ targetCtx.restore();
         // ====================================================
         // 【非整数次倍音（ノイズ）】: 魔法陣外側に舞う光のパーティクル
         // ====================================================
-        // ※ 実際のノイズ/非整数次倍音の変数名（state.inharmonicity, state.noise 等）に合わせて適宜変更してください
-        const noiseLevel = typeof state.inharmonicity !== 'undefined' ? state.inharmonicity : 0.0; 
-        
         if (noiseLevel > 0.01) { // わずかでもノイズ要素があれば描画
             targetCtx.save();
             
-            // ※ 実際の背景判定変数（isDarkMode等）がある場合は差し替えてください
-            const isDark = typeof isDarkMode !== 'undefined' ? isDarkMode : true; 
+            // 背景色に応じてパーティクルの色を調整
+            const isDark = (currentBgColor === 'black' || currentBgColor === 'picture'); 
             const particleColor = isDark ? '#ffffff' : '#cccccc';
             
             targetCtx.fillStyle = particleColor;
@@ -1170,14 +1177,14 @@ targetCtx.restore();
             
             for (let i = 0; i < particleCount; i++) {
                 // 魔法陣の外側（1.1倍 〜 1.4倍の半径）に配置し、回転速度を変えて浮遊感を出す
-                const angle = (i * Math.PI * 2) / Math.max(1, particleCount) + (state.rotation * (i % 2 === 0 ? 1.5 : -1.2));
-                const radius = maxRadius * 1.1 + (Math.sin(state.rotation * 3 + i) * 0.5 + 0.5) * (maxRadius * 0.3);
+                const angle = (i * Math.PI * 2) / Math.max(1, particleCount) + (currentRot * (i % 2 === 0 ? 1.5 : -1.2));
+                const radius = maxRadius * 1.1 + (Math.sin(currentRot * 3 + i) * 0.5 + 0.5) * (maxRadius * 0.3);
                 
                 const px = Math.cos(angle) * radius;
                 const py = Math.sin(angle) * radius;
                 
                 // ノイズ量と時間で明滅させる
-                const pAlpha = opacity * Math.min(1.0, noiseLevel * 1.5) * (Math.sin(state.rotation * 8 + i) * 0.5 + 0.5);
+                const pAlpha = opacity * Math.min(1.0, noiseLevel * 1.5) * (Math.sin(currentRot * 8 + i) * 0.5 + 0.5);
                 targetCtx.globalAlpha = Math.max(0, pAlpha);
                 
                 targetCtx.beginPath();
@@ -1189,7 +1196,7 @@ targetCtx.restore();
 
         // --- 中心コア多角形 ---
         targetCtx.globalAlpha = opacity;
-        targetCtx.rotate(-state.rotation * 2.4);
+        targetCtx.rotate(-currentRot * 2.4);
         targetCtx.lineWidth = 2.0;
         targetCtx.beginPath();
         for (let i = 0; i < 4; i++) {
