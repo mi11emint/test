@@ -870,7 +870,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
 
     // --- 魔法陣のベース枠描画 ---
     ctx.strokeStyle = bar3dGradient; 
-    ctx.lineWidth = 2.5; 
+    ctx.lineWidth = 1.8; 
     ctx.globalAlpha = 0.25;
 
     ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
@@ -887,7 +887,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
 
     ctx.save();
     ctx.rotate(state.rotation);
-    ctx.lineWidth = 2.0; 
+    ctx.lineWidth = 1.8; 
     ctx.beginPath();
     for (let i = 0; i < 4; i++) {
         const angle = (i * Math.PI * 2) / 4;
@@ -1158,23 +1158,23 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // --- ⑤ 奇数倍音（星型） ＆ 偶数倍音（密度可変の波線）の描画 ---
+    // --- ⑤ 奇数倍音（星型・目盛りの手前まで拡大） ＆ 偶数倍音（密度可変の波線）の描画 ---
     targetCtx.save();
     targetCtx.rotate(state.rotation);
     
-    // 【奇数倍音検出】：判定に幅を持たせ、三角を重ねた幾何学的な星型（六芒星構造）を描画
+    // 【奇数倍音検出】：目盛りの手前（約0.82付近）まで頂点が伸びる星型を描画
     if (state.sharpness > 0.3) {
         targetCtx.globalAlpha = opacity * state.sharpness;
         targetCtx.lineWidth = 1.8; 
         
-        // 無秩序に増やさず、sharpnessの度合いに応じて1〜2層にコントロール
         const starLayers = (state.sharpness > 0.65) ? 2 : 1;
         for (let l = 0; l < starLayers; l++) {
             targetCtx.save();
-            if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらして美しく重ねる
-            const starRadius = maxRadius * (0.68 - l * 0.1);
+            if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらす
             
-            // 正三角形を2つ逆向きに組み合わせた星型
+            // ★変更点：最大半径を 0.82（目盛りの内側 0.85 の手前）に拡大
+            const starRadius = maxRadius * (0.82 - l * 0.08);
+            
             for (let t = 0; t < 2; t++) {
                 targetCtx.save();
                 if (t === 1) targetCtx.rotate(Math.PI);
@@ -1193,16 +1193,15 @@ targetCtx.restore();
         }
     }
 
-    // 【偶数倍音検出】：円ではなく波線を描画。倍音や音の豊かさ（richness）が多いほど波の密度を高める
+    // 【偶数倍音検出】：星型とバランスを合わせて、少し外側に波線を描画（密度可変）
     const evenIntensity = 1.0 - state.sharpness;
     if (evenIntensity > 0.2) {
         targetCtx.globalAlpha = opacity * evenIntensity;
         targetCtx.lineWidth = 1.8; 
         
-        // richness（倍音・音の豊かさ）に連動して波の密度（周波数）を滑らかに変動
         const waveDensity = Math.floor(12 + state.richness * 24); 
-        const baseWaveRadius = maxRadius * 0.62;
-        const waveAmplitude = maxRadius * 0.07 * (0.5 + state.richness * 0.5); // 振幅
+        const baseWaveRadius = maxRadius * 0.75; // 星型に合わせて少し外側に調整
+        const waveAmplitude = maxRadius * 0.06 * (0.5 + state.richness * 0.5); 
         
         targetCtx.beginPath();
         const steps = 180;
@@ -1222,7 +1221,7 @@ targetCtx.restore();
     // --- ⑥ 中心コア多角形 ---
     targetCtx.save();
     targetCtx.rotate(-state.rotation * 1.4);
-    targetCtx.lineWidth = 3.0; 
+    targetCtx.lineWidth = 2.0; 
     targetCtx.globalAlpha = opacity * 0.9;
     
     const sides = Math.round(state.pitch);
