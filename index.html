@@ -878,7 +878,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
     ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
 
     ctx.save();
-    ctx.lineWidth = 1.8; 
+    ctx.lineWidth = 1.5; 
     for (let i = 0; i < 60; i++) {
         ctx.rotate(Math.PI / 30);
         ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
@@ -1070,10 +1070,9 @@ targetCtx.restore();
     const centerY = H / 2;
     const maxRadius = Math.min(W, H) * 0.8 / 2;
 
-    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
     const bar3dGradient = targetCtx.createRadialGradient(
-        centerX, centerY, 0,           // 中心点（半径0）
-        centerX, centerY, maxRadius    // 外円（最大半径）
+        centerX, centerY, 0,           
+        centerX, centerY, maxRadius    
     );
     bar3dGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
@@ -1105,12 +1104,11 @@ targetCtx.restore();
         }
     }
 
-    // 💡 【修正①】背景色に応じて合成モードを切り替え（白背景対策）
     targetCtx.save();
     if (currentBgColor === 'white') {
-        targetCtx.globalCompositeOperation = 'source-over'; // 白背景なら通常重ね合わせ
+        targetCtx.globalCompositeOperation = 'source-over'; 
     } else {
-        targetCtx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
+        targetCtx.globalCompositeOperation = 'lighter'; 
     }
     
     state.particles.forEach((p, idx) => {
@@ -1126,7 +1124,6 @@ targetCtx.restore();
         targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         targetCtx.fill();
 
-        // 💡 【修正①】白背景の時は芯をダークグレー（#333333）、それ以外は白（#ffffff）にして視認性を確保
         targetCtx.fillStyle = (currentBgColor === 'white') ? '#333333' : '#ffffff';
         targetCtx.globalAlpha = opacity * p.alpha * 0.6;
         targetCtx.beginPath();
@@ -1140,7 +1137,7 @@ targetCtx.restore();
     targetCtx.globalAlpha = opacity;
     
     const layers = 2 + Math.floor(state.richness * 2.5);
-    targetCtx.lineWidth = 2.5; 
+    targetCtx.lineWidth = 1.8; 
     for (let l = 0; l < layers; l++) {
         const rFactor = 1.0 - (l * 0.08);
         targetCtx.beginPath();
@@ -1161,33 +1158,68 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // 奇数・偶数倍音ブレンド
+    // --- ⑤ 奇数倍音（星型） ＆ 偶数倍音（密度可変の波線）の描画 ---
     targetCtx.save();
     targetCtx.rotate(state.rotation);
     
-    targetCtx.globalAlpha = opacity * state.sharpness;
-    const sharpLines = 6 + Math.floor(state.richness * 6);
-    targetCtx.lineWidth = 1.8; 
-    for (let i = 0; i < sharpLines; i++) {
-        const angle = (i * Math.PI * 2) / sharpLines;
+    // 【奇数倍音検出】：判定に幅を持たせ、三角を重ねた幾何学的な星型（六芒星構造）を描画
+    if (state.sharpness > 0.3) {
+        targetCtx.globalAlpha = opacity * state.sharpness;
+        targetCtx.lineWidth = 1.8; 
+        
+        // 無秩序に増やさず、sharpnessの度合いに応じて1〜2層にコントロール
+        const starLayers = (state.sharpness > 0.65) ? 2 : 1;
+        for (let l = 0; l < starLayers; l++) {
+            targetCtx.save();
+            if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらして美しく重ねる
+            const starRadius = maxRadius * (0.68 - l * 0.1);
+            
+            // 正三角形を2つ逆向きに組み合わせた星型
+            for (let t = 0; t < 2; t++) {
+                targetCtx.save();
+                if (t === 1) targetCtx.rotate(Math.PI);
+                targetCtx.beginPath();
+                for (let i = 0; i < 3; i++) {
+                    const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
+                    const x = Math.cos(angle) * starRadius;
+                    const y = Math.sin(angle) * starRadius;
+                    if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+                }
+                targetCtx.closePath();
+                targetCtx.stroke();
+                targetCtx.restore();
+            }
+            targetCtx.restore();
+        }
+    }
+
+    // 【偶数倍音検出】：円ではなく波線を描画。倍音や音の豊かさ（richness）が多いほど波の密度を高める
+    const evenIntensity = 1.0 - state.sharpness;
+    if (evenIntensity > 0.2) {
+        targetCtx.globalAlpha = opacity * evenIntensity;
+        targetCtx.lineWidth = 1.8; 
+        
+        // richness（倍音・音の豊かさ）に連動して波の密度（周波数）を滑らかに変動
+        const waveDensity = Math.floor(12 + state.richness * 24); 
+        const baseWaveRadius = maxRadius * 0.62;
+        const waveAmplitude = maxRadius * 0.07 * (0.5 + state.richness * 0.5); // 振幅
+        
         targetCtx.beginPath();
-        targetCtx.moveTo(Math.cos(angle) * maxRadius * 0.4, Math.sin(angle) * maxRadius * 0.4);
-        targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.85, Math.sin(angle) * maxRadius * 0.85);
+        const steps = 180;
+        for (let i = 0; i <= steps; i++) {
+            const theta = (i / steps) * Math.PI * 2;
+            const r = baseWaveRadius + Math.sin(theta * waveDensity) * waveAmplitude;
+            const x = Math.cos(theta) * r;
+            const y = Math.sin(theta) * r;
+            if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+        }
+        targetCtx.closePath();
         targetCtx.stroke();
     }
 
-    targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
-    const warmCircles = 3 + Math.floor(state.richness * 5);
-    targetCtx.lineWidth = 1.8; 
-    for (let i = 0; i < warmCircles; i++) {
-        const angle = (i * Math.PI * 2) / warmCircles;
-        const cx = Math.cos(angle) * maxRadius * 0.62;
-        const cy = Math.sin(angle) * maxRadius * 0.62;
-        targetCtx.beginPath(); targetCtx.arc(cx, cy, maxRadius * 0.22, 0, Math.PI * 2); targetCtx.stroke();
-    }
     targetCtx.restore();
 
-    // 中心コア多角形
+    // --- ⑥ 中心コア多角形 ---
     targetCtx.save();
     targetCtx.rotate(-state.rotation * 1.4);
     targetCtx.lineWidth = 3.0; 
