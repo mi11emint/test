@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">MAGIC</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -1040,7 +1040,18 @@ targetCtx.restore();
         }
     }
 
-    if (totalVol > 100) {
+    // 録音がクリアされた（音声データが完全に0）かどうかの判定
+    const isCleared = (totalVol === 0);
+
+    if (isCleared) {
+        // 録音クリア時は状態を初期値に固定し、回転を止め、パーティクルを空にする（静止描画）
+        state.pitch = 4;
+        state.richness = 0.2;
+        state.sharpness = 0.5;
+        state.husky = 0;
+        state.particles = [];
+        // rotationは加算しないため静止状態を維持
+    } else if (totalVol > 100) {
         const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
         state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
 
@@ -1059,7 +1070,7 @@ targetCtx.restore();
     } else {
         state.pitch = state.pitch * 0.95 + 4 * 0.05;
         state.richness = state.richness * 0.95 + 0.1 * 0.05;
-        state.husky = state.husky * 0.05 * 0.05;
+        state.husky = state.husky * 0.85 + 0.05 * 0.15;
         state.rotation += 0.002;
     }
 
@@ -1070,9 +1081,13 @@ targetCtx.restore();
     const centerY = H / 2;
     const maxRadius = Math.min(W, H) * 0.8 / 2;
 
+    targetCtx.save();
+    targetCtx.translate(centerX, centerY);
+
+    // 【修正】中心（ローカル 0,0）から外側（maxRadius）へ向かう正確な放射状グラデーション
     const bar3dGradient = targetCtx.createRadialGradient(
-        centerX, centerY, 0,           
-        centerX, centerY, maxRadius    
+        0, 0, 0,           
+        0, 0, maxRadius    
     );
     bar3dGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
@@ -1082,11 +1097,8 @@ targetCtx.restore();
         bar3dGradient.addColorStop(1, currentWaveColors[1]);
     }
 
-    targetCtx.save();
-    targetCtx.translate(centerX, centerY);
-
     // --- ③ ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
-    const spawnCount = Math.floor(state.husky * 8); 
+    const spawnCount = isCleared ? 0 : Math.floor(state.husky * 8); 
     if (spawnCount > 0 && state.particles.length < 200) {
         for (let k = 0; k < spawnCount; k++) {
             const pAngle = Math.random() * Math.PI * 2;
@@ -1158,7 +1170,7 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // --- ⑤ 奇数倍音（星型・目盛りの手前まで拡大） ＆ 偶数倍音（密度可変の波線）の描画 ---
+    // --- ⑤ 奇数倍音（星型） ＆ 偶数倍音（密度可変の波線）の描画 ---
     targetCtx.save();
     targetCtx.rotate(state.rotation);
     
@@ -1172,7 +1184,6 @@ targetCtx.restore();
             targetCtx.save();
             if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらす
             
-            // ★変更点：最大半径を 0.82（目盛りの内側 0.85 の手前）に拡大
             const starRadius = maxRadius * (0.82 - l * 0.08);
             
             for (let t = 0; t < 2; t++) {
@@ -1200,7 +1211,7 @@ targetCtx.restore();
         targetCtx.lineWidth = 1.8; 
         
         const waveDensity = Math.floor(12 + state.richness * 24); 
-        const baseWaveRadius = maxRadius * 0.75; // 星型に合わせて少し外側に調整
+        const baseWaveRadius = maxRadius * 0.75; 
         const waveAmplitude = maxRadius * 0.06 * (0.5 + state.richness * 0.5); 
         
         targetCtx.beginPath();
@@ -1221,7 +1232,7 @@ targetCtx.restore();
     // --- ⑥ 中心コア多角形 ---
     targetCtx.save();
     targetCtx.rotate(-state.rotation * 1.4);
-    targetCtx.lineWidth = 2.0; 
+    targetCtx.lineWidth = 3.0; 
     targetCtx.globalAlpha = opacity * 0.9;
     
     const sides = Math.round(state.pitch);
