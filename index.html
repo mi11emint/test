@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">MAGIC</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -784,122 +784,142 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 } else if (currentWaveStyle === 'building') {
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
+
 } else if (currentWaveStyle === 'bar3d') {
-    
-    if (!window.magicCircleState) {
-        window.magicCircleState = {
-            pitch: 4,       
-            richness: 0.2,   
-            sharpness: 0.5,  
-            husky: 0.1,      
-            particles: [],   
-            rotation: 0
-        };
-    }
-    const state = window.magicCircleState;
+        // --- スケーリング計算 ---
+        const W = ctx.canvas.width;
+        const H = ctx.canvas.height;
+        const centerX = W / 2;
+        const centerY = H / 2;
+        const maxRadius = Math.min(W, H) * 0.8 / 2;
 
-    ctx.save();
-    
-    // --- スケーリング計算 ---
-    const W = ctx.canvas.width;
-    const H = ctx.canvas.height;
-    const centerX = W / 2;
-    const centerY = H / 2;
-    const maxRadius = Math.min(W, H) * 0.8 / 2;
+        ctx.save();
+        // 先に中心へ座標を移動（グラデーションずれの修正）
+        ctx.translate(centerX, centerY);
 
-    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
-    const bar3dGradient = ctx.createRadialGradient(
-        centerX, centerY, 0,           // 中心点（半径0）
-        centerX, centerY, maxRadius    // 外円（最大半径）
-    );
-    bar3dGradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) {
-        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
-        bar3dGradient.addColorStop(1, currentWaveColors[2]);
-    } else {
-        bar3dGradient.addColorStop(1, currentWaveColors[1]);
-    }
-
-    ctx.translate(centerX, centerY);
-    
-    // 常にゆっくり回転
-    state.rotation += 0.002;
-    
-    // 待機中の淡い粒子シミュレーション（外側に漂わせる）
-    if (state.particles.length < 20) {
-        const pAngle = Math.random() * Math.PI * 2;
-        const pDist = maxRadius * (1.0 + Math.random() * 0.3); // 円の外側
-        state.particles.push({
-            x: Math.cos(pAngle) * pDist,
-            y: Math.sin(pAngle) * pDist,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: (Math.random() - 0.5) * 0.3,
-            alpha: Math.random() * 0.4 + 0.1,
-            size: Math.random() * 2 + 1,
-            life: 1.0
-        });
-    }
-
-    // 粒子の更新と描画
-    ctx.save();
-    // 💡 【修正①】白背景の時はブレンドモードを通常合成に切り替えて見えるようにする
-    if (currentBgColor === 'white') {
-        ctx.globalCompositeOperation = 'source-over';
-    } else {
-        ctx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
-    }
-
-    state.particles.forEach((p, idx) => {
-        p.x += p.vx; p.y += p.vy; p.alpha -= 0.002;
-        if (p.alpha <= 0) {
-            const pAngle = Math.random() * Math.PI * 2;
-            const pDist = maxRadius * (1.0 + Math.random() * 0.3);
-            state.particles[idx] = {
-                x: Math.cos(pAngle) * pDist, y: Math.sin(pAngle) * pDist,
-                vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-                alpha: Math.random() * 0.4 + 0.1, size: Math.random() * 2 + 1, life: 1.0
-            };
+        // 移動後の中心(0,0)を基準に線形グラデーション
+        const bar3dGradient = ctx.createLinearGradient(
+            -maxRadius, -maxRadius,
+            maxRadius, maxRadius
+        );
+        bar3dGradient.addColorStop(0, currentWaveColors[0]);
+        if (currentWaveColors.length > 2) {
+            bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
+            bar3dGradient.addColorStop(1, currentWaveColors[2]);
+        } else {
+            bar3dGradient.addColorStop(1, currentWaveColors[1]);
         }
-        ctx.fillStyle = bar3dGradient; 
-        ctx.globalAlpha = p.alpha * 0.6;
+
+        // --- 魔法陣のベース枠描画 ---
+        ctx.strokeStyle = bar3dGradient; 
+        ctx.lineWidth = 2.5; 
+        ctx.globalAlpha = 0.25;
+
+        ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
+
+        ctx.save();
+        ctx.lineWidth = 1.8; 
+        for (let i = 0; i < 60; i++) {
+            ctx.rotate(Math.PI / 30);
+            ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
+        }
+        ctx.restore();
+
+        // プレビュー用に回転値を安全に取得
+        const currentRot = typeof state !== 'undefined' ? state.rotation : 0;
+        
+        // --- 奇数・偶数倍音プレビュー ---
+        ctx.save();
+        ctx.rotate(currentRot);
+        
+        // 【奇数倍音イメージ：星型】
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 1.5; 
+        for (let t = 0; t < 2; t++) {
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+                const angle = (t * Math.PI / 3) + (i * Math.PI * 2) / 3;
+                const x = Math.cos(angle) * (maxRadius * 0.8);
+                const y = Math.sin(angle) * (maxRadius * 0.8);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath(); ctx.stroke();
+        }
+
+        // 【偶数倍音イメージ：月と時計】
+        ctx.globalAlpha = 0.35;
+        const planetCountPreview = 4;
+        for (let i = 0; i < planetCountPreview; i++) {
+            const angle = (i * Math.PI * 2) / planetCountPreview;
+            const cx = Math.cos(angle) * (maxRadius * 0.65);
+            const cy = Math.sin(angle) * (maxRadius * 0.65);
+            const pRadius = maxRadius * 0.18;
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+            
+            ctx.lineWidth = 2.0;
+            ctx.beginPath(); ctx.arc(0, 0, pRadius, 0, Math.PI * 2); ctx.stroke();
+            ctx.lineWidth = 1.0;
+            ctx.beginPath(); ctx.arc(0, 0, pRadius * 0.6, 0, Math.PI * 2); ctx.stroke();
+            
+            for(let t = 0; t < 12; t++) {
+                const tAngle = (t * Math.PI * 2) / 12;
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(tAngle) * pRadius * 0.6, Math.sin(tAngle) * pRadius * 0.6);
+                ctx.lineTo(Math.cos(tAngle) * pRadius * 0.9, Math.sin(tAngle) * pRadius * 0.9);
+                ctx.stroke();
+            }
+            
+            if (i % 2 === 0) {
+                ctx.beginPath(); ctx.arc(0, 0, pRadius * 0.4, -Math.PI/2, Math.PI/2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(pRadius * 0.15, 0, pRadius * 0.45, -Math.PI/2, Math.PI/2); ctx.stroke();
+            }
+            ctx.restore();
+        }
+        ctx.restore();
+
+        // ====================================================
+        // 【非整数次倍音（ノイズ）プレビュー】: 魔法陣外側の光のパーティクル
+        // ====================================================
+        ctx.save();
+        // ※ 実際の背景判定変数（isDarkMode等）がある場合は差し替えてください
+        const isDarkPreview = typeof isDarkMode !== 'undefined' ? isDarkMode : true; 
+        const previewParticleColor = isDarkPreview ? '#ffffff' : '#cccccc';
+        
+        ctx.fillStyle = previewParticleColor;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = previewParticleColor;
+        ctx.globalCompositeOperation = 'lighter'; // lightning（加算合成）
+        
+        for (let i = 0; i < 20; i++) {
+            const angle = (i * Math.PI * 2) / 20 + currentRot;
+            const radius = maxRadius * 1.15 + (Math.sin(currentRot * 2 + i) * 0.5 + 0.5) * (maxRadius * 0.2);
+            
+            ctx.globalAlpha = 0.4 * (Math.sin(currentRot * 5 + i) * 0.5 + 0.5);
+            ctx.beginPath();
+            ctx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, 1.5 + (i % 2), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // --- 中心コア多角形 ---
+        ctx.globalAlpha = 0.6;
+        ctx.rotate(-currentRot * 2.4);
+        ctx.lineWidth = 2.0;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.restore();
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI * 2) / 4;
+            const x = Math.cos(angle) * maxRadius * 0.36;
+            const y = Math.sin(angle) * maxRadius * 0.36;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath(); ctx.stroke();
 
-    // --- 魔法陣のベース枠描画 ---
-    ctx.strokeStyle = bar3dGradient; 
-    ctx.lineWidth = 2.5; 
-    ctx.globalAlpha = 0.25;
-
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
-
-    ctx.save();
-    ctx.lineWidth = 1.8; 
-    for (let i = 0; i < 60; i++) {
-        ctx.rotate(Math.PI / 30);
-        ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
+        ctx.restore();
     }
-    ctx.restore();
-
-    ctx.save();
-    ctx.rotate(state.rotation);
-    ctx.lineWidth = 2.0; 
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI * 2) / 4;
-        const x = Math.cos(angle) * maxRadius * 0.4;
-        const y = Math.sin(angle) * maxRadius * 0.4;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath(); ctx.stroke();
-    ctx.restore();
-
-    ctx.restore();
-}
 }
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
@@ -1006,212 +1026,182 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'bar3d') {
-    if (!window.magicCircleState) {
-        window.magicCircleState = {
-            pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
-        };
-    }
-    const state = window.magicCircleState;
+        // --- 画面中央配置の計算 ---
+        const W = targetCtx.canvas.width;
+        const H = targetCtx.canvas.height;
+        const centerX = W / 2;
+        const centerY = H / 2;
+        const maxRadius = Math.min(W, H) * 0.8 / 2;
 
-    // --- ① リアルタイム音声解析（常に更新） ---
-    let totalVol = 0;
-    let maxVal = 0;
-    let maxIdx = 0;
-    let peaks = 0;
-    let evenPeaks = 0;
-    let oddPeaks = 0;
-    let flatDiffSum = 0;
+        targetCtx.save();
+        // 先に中心へ座標を移動（グラデーションずれの修正）
+        targetCtx.translate(centerX, centerY);
 
-    const len = dataArr.length;
-    for (let i = 0; i < len; i++) {
-        const val = dataArr[i] || 0;
-        totalVol += val;
-        if (val > maxVal) { maxVal = val; maxIdx = i; }
+        // 移動後の中心(0,0)を基準に線形グラデーション
+        const bar3dGradient = targetCtx.createLinearGradient(
+            -maxRadius, -maxRadius,
+            maxRadius, maxRadius
+        );
+        bar3dGradient.addColorStop(0, currentWaveColors[0]);
+        if (currentWaveColors.length > 2) {
+            bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
+            bar3dGradient.addColorStop(1, currentWaveColors[2]);
+        } else {
+            bar3dGradient.addColorStop(1, currentWaveColors[1]);
+        }
+
+        // --- 魔法陣のベース枠描画 ---
+        targetCtx.strokeStyle = bar3dGradient; 
+        targetCtx.lineWidth = 2.5; 
+        targetCtx.globalAlpha = 0.25;
+
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
+
+        targetCtx.save();
+        targetCtx.lineWidth = 1.8; 
+        for (let i = 0; i < 60; i++) {
+            targetCtx.rotate(Math.PI / 30);
+            targetCtx.beginPath(); targetCtx.moveTo(maxRadius * 0.85, 0); targetCtx.lineTo(maxRadius * 0.88, 0); targetCtx.stroke();
+        }
+        targetCtx.restore();
+
+        // --- 奇数・偶数倍音ブレンド（星型 ＆ 月・時計） ---
+        targetCtx.save();
+        targetCtx.rotate(state.rotation);
         
-        if (i > 0 && i < len - 1) {
-            const prev = dataArr[i - 1] || 0;
-            const next = dataArr[i + 1] || 0;
-            flatDiffSum += Math.abs(val - prev);
+        // 【奇数倍音】: 豊かさ(richness)に応じて増殖する星型（六芒星・八芒星）
+        targetCtx.globalAlpha = opacity * state.sharpness;
+        targetCtx.lineWidth = 1.5; 
+        
+        const starLayers = 1 + Math.floor(state.richness * 3); 
+        for (let l = 0; l < starLayers; l++) {
+            const currentRadius = maxRadius * (0.8 - l * 0.12);
+            const rotOffset = l * (Math.PI / 6); 
             
-            if (val > prev && val > next && val > 30) {
-                peaks++;
-                if (i % 2 === 0) evenPeaks++; else oddPeaks++;
+            // 六芒星
+            for (let t = 0; t < 2; t++) {
+                targetCtx.beginPath();
+                for (let i = 0; i < 3; i++) {
+                    const angle = rotOffset + (t * Math.PI / 3) + (i * Math.PI * 2) / 3;
+                    const x = Math.cos(angle) * currentRadius;
+                    const y = Math.sin(angle) * currentRadius;
+                    if (i === 0) targetCtx.moveTo(x, y); 
+                    else targetCtx.lineTo(x, y);
+                }
+                targetCtx.closePath(); targetCtx.stroke();
+            }
+            
+            // 八芒星 (音が豊かな場合)
+            if (state.richness > 0.4) {
+                targetCtx.save();
+                targetCtx.rotate(Math.PI / 8); 
+                for (let t = 0; t < 2; t++) {
+                    targetCtx.beginPath();
+                    for (let i = 0; i < 4; i++) {
+                        const angle = rotOffset + (t * Math.PI / 4) + (i * Math.PI * 2) / 4;
+                        const x = Math.cos(angle) * currentRadius * 0.85;
+                        const y = Math.sin(angle) * currentRadius * 0.85;
+                        if (i === 0) targetCtx.moveTo(x, y); 
+                        else targetCtx.lineTo(x, y);
+                    }
+                    targetCtx.closePath(); targetCtx.stroke();
+                }
+                targetCtx.restore();
             }
         }
-    }
 
-    if (totalVol > 100) {
-        const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
-        state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
-
-        const targetRichness = Math.min(1.0, peaks / 8);
-        state.richness = state.richness * 0.8 + targetRichness * 0.2;
-
-        if (oddPeaks + evenPeaks > 0) {
-            const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
-            state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
-        }
-
-        const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
-        state.husky = state.husky * 0.85 + targetHusky * 0.15;
-
-        state.rotation += 0.003 + (maxVal / 255) * 0.02;
-    } else {
-        state.pitch = state.pitch * 0.95 + 4 * 0.05;
-        state.richness = state.richness * 0.95 + 0.1 * 0.05;
-        state.husky = state.husky * 0.05 * 0.05;
-        state.rotation += 0.002;
-    }
-
-    // --- ② 画面中央配置の計算 ---
-    const W = targetCtx.canvas.width;
-    const H = targetCtx.canvas.height;
-    const centerX = W / 2;
-    const centerY = H / 2;
-    const maxRadius = Math.min(W, H) * 0.8 / 2;
-
-    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
-    const bar3dGradient = targetCtx.createRadialGradient(
-        centerX, centerY, 0,           // 中心点（半径0）
-        centerX, centerY, maxRadius    // 外円（最大半径）
-    );
-    bar3dGradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) {
-        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
-        bar3dGradient.addColorStop(1, currentWaveColors[2]);
-    } else {
-        bar3dGradient.addColorStop(1, currentWaveColors[1]);
-    }
-
-    targetCtx.save();
-    targetCtx.translate(centerX, centerY);
-
-    // --- ③ ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
-    const spawnCount = Math.floor(state.husky * 8); 
-    if (spawnCount > 0 && state.particles.length < 200) {
-        for (let k = 0; k < spawnCount; k++) {
-            const pAngle = Math.random() * Math.PI * 2;
-            const spawnRadius = maxRadius; 
-            const speed = Math.random() * 2.0 + 0.5;
-            state.particles.push({
-                x: Math.cos(pAngle) * spawnRadius,
-                y: Math.sin(pAngle) * spawnRadius,
-                vx: Math.cos(pAngle) * speed + (Math.random() - 0.5) * 0.5,
-                vy: Math.sin(pAngle) * speed + (Math.random() - 0.5) * 0.5,
-                alpha: 1.0,
-                size: Math.random() * (4 + state.husky * 4) + 1.5, 
-                life: Math.random() * 0.3 + 0.5
-            });
-        }
-    }
-
-    // 💡 【修正①】背景色に応じて合成モードを切り替え（白背景対策）
-    targetCtx.save();
-    if (currentBgColor === 'white') {
-        targetCtx.globalCompositeOperation = 'source-over'; // 白背景なら通常重ね合わせ
-    } else {
-        targetCtx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
-    }
-    
-    state.particles.forEach((p, idx) => {
-        p.x += p.vx; p.y += p.vy; p.alpha -= 0.02 / p.life;
-        if (p.alpha <= 0) {
-            state.particles.splice(idx, 1);
-            return;
-        }
+        // 【偶数倍音】: 豊かさ(richness)に応じて増殖する月・時計の天体円
+        targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
         
-        targetCtx.fillStyle = bar3dGradient; 
-        targetCtx.globalAlpha = opacity * p.alpha * 1.0;
+        const planetCount = 4 + Math.floor(state.richness * 8); 
+        const orbitRadius = maxRadius * 0.65; 
+        
+        for (let i = 0; i < planetCount; i++) {
+            const angle = (i * Math.PI * 2) / planetCount;
+            const cx = Math.cos(angle) * orbitRadius;
+            const cy = Math.sin(angle) * orbitRadius;
+            const pRadius = maxRadius * 0.16; 
+            
+            targetCtx.save();
+            targetCtx.translate(cx, cy);
+            targetCtx.rotate(-state.rotation * 2.5); // 逆回転で自転
+            
+            // 太陽の輪
+            targetCtx.lineWidth = 2.0;
+            targetCtx.beginPath(); targetCtx.arc(0, 0, pRadius, 0, Math.PI * 2); targetCtx.stroke();
+            
+            // 内円
+            targetCtx.lineWidth = 1.0;
+            targetCtx.beginPath(); targetCtx.arc(0, 0, pRadius * 0.6, 0, Math.PI * 2); targetCtx.stroke();
+            
+            // 時計の目盛り
+            
+            
+            // 三日月
+            if (i % 2 === 0) {
+                targetCtx.beginPath(); targetCtx.arc(0, 0, pRadius * 0.4, -Math.PI/2, Math.PI/2); targetCtx.stroke();
+                targetCtx.beginPath(); targetCtx.arc(pRadius * 0.15, 0, pRadius * 0.45, -Math.PI/2, Math.PI/2); targetCtx.stroke();
+            }
+            targetCtx.restore();
+        }
+        targetCtx.restore();
+
+        // ====================================================
+        // 【非整数次倍音（ノイズ）】: 魔法陣外側に舞う光のパーティクル
+        // ====================================================
+        // ※ 実際のノイズ/非整数次倍音の変数名（state.inharmonicity, state.noise 等）に合わせて適宜変更してください
+        const noiseLevel = typeof state.inharmonicity !== 'undefined' ? state.inharmonicity : 0.0; 
+        
+        if (noiseLevel > 0.01) { // わずかでもノイズ要素があれば描画
+            targetCtx.save();
+            
+            // ※ 実際の背景判定変数（isDarkMode等）がある場合は差し替えてください
+            const isDark = typeof isDarkMode !== 'undefined' ? isDarkMode : true; 
+            const particleColor = isDark ? '#ffffff' : '#cccccc';
+            
+            targetCtx.fillStyle = particleColor;
+            targetCtx.shadowBlur = 10;
+            targetCtx.shadowColor = particleColor;
+            targetCtx.globalCompositeOperation = 'lighter'; // lightning（加算合成）
+            
+            const particleCount = Math.floor(noiseLevel * 60); // ノイズ量に応じて最大60個程度
+            
+            for (let i = 0; i < particleCount; i++) {
+                // 魔法陣の外側（1.1倍 〜 1.4倍の半径）に配置し、回転速度を変えて浮遊感を出す
+                const angle = (i * Math.PI * 2) / Math.max(1, particleCount) + (state.rotation * (i % 2 === 0 ? 1.5 : -1.2));
+                const radius = maxRadius * 1.1 + (Math.sin(state.rotation * 3 + i) * 0.5 + 0.5) * (maxRadius * 0.3);
+                
+                const px = Math.cos(angle) * radius;
+                const py = Math.sin(angle) * radius;
+                
+                // ノイズ量と時間で明滅させる
+                const pAlpha = opacity * Math.min(1.0, noiseLevel * 1.5) * (Math.sin(state.rotation * 8 + i) * 0.5 + 0.5);
+                targetCtx.globalAlpha = Math.max(0, pAlpha);
+                
+                targetCtx.beginPath();
+                targetCtx.arc(px, py, 1.5 + (i % 3), 0, Math.PI * 2);
+                targetCtx.fill();
+            }
+            targetCtx.restore();
+        }
+
+        // --- 中心コア多角形 ---
+        targetCtx.globalAlpha = opacity;
+        targetCtx.rotate(-state.rotation * 2.4);
+        targetCtx.lineWidth = 2.0;
         targetCtx.beginPath();
-        targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        targetCtx.fill();
-
-        // 💡 【修正①】白背景の時は芯をダークグレー（#333333）、それ以外は白（#ffffff）にして視認性を確保
-        targetCtx.fillStyle = (currentBgColor === 'white') ? '#333333' : '#ffffff';
-        targetCtx.globalAlpha = opacity * p.alpha * 0.6;
-        targetCtx.beginPath();
-        targetCtx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
-        targetCtx.fill();
-    });
-    targetCtx.restore();
-
-    // --- ④ 魔法陣 本体の幾何学描画 ---
-    targetCtx.strokeStyle = bar3dGradient; 
-    targetCtx.globalAlpha = opacity;
-    
-    const layers = 2 + Math.floor(state.richness * 2.5);
-    targetCtx.lineWidth = 2.5; 
-    for (let l = 0; l < layers; l++) {
-        const rFactor = 1.0 - (l * 0.08);
-        targetCtx.beginPath();
-        targetCtx.arc(0, 0, maxRadius * rFactor, 0, Math.PI * 2);
-        targetCtx.stroke();
+        for (let i = 0; i < 4; i++) {
+            const angle = (i * Math.PI * 2) / 4;
+            const x = Math.cos(angle) * maxRadius * 0.36;
+            const y = Math.sin(angle) * maxRadius * 0.36;
+            if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+        }
+        targetCtx.closePath(); targetCtx.stroke();
+        
+        targetCtx.restore();
     }
-    
-    targetCtx.lineWidth = 1.8; 
-    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
-    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
-
-    targetCtx.save();
-    const ticks = Math.floor(40 + state.richness * 80);
-    targetCtx.lineWidth = 1.5; 
-    for (let i = 0; i < ticks; i++) {
-        targetCtx.rotate((Math.PI * 2) / ticks);
-        targetCtx.beginPath(); targetCtx.moveTo(maxRadius * 0.92, 0); targetCtx.lineTo(maxRadius * 0.85, 0); targetCtx.stroke();
-    }
-    targetCtx.restore();
-
-    // 奇数・偶数倍音ブレンド
-    targetCtx.save();
-    targetCtx.rotate(state.rotation);
-    
-    targetCtx.globalAlpha = opacity * state.sharpness;
-    const sharpLines = 6 + Math.floor(state.richness * 6);
-    targetCtx.lineWidth = 1.8; 
-    for (let i = 0; i < sharpLines; i++) {
-        const angle = (i * Math.PI * 2) / sharpLines;
-        targetCtx.beginPath();
-        targetCtx.moveTo(Math.cos(angle) * maxRadius * 0.4, Math.sin(angle) * maxRadius * 0.4);
-        targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.85, Math.sin(angle) * maxRadius * 0.85);
-        targetCtx.stroke();
-    }
-
-    targetCtx.globalAlpha = opacity * (1.0 - state.sharpness);
-    const warmCircles = 3 + Math.floor(state.richness * 5);
-    targetCtx.lineWidth = 1.8; 
-    for (let i = 0; i < warmCircles; i++) {
-        const angle = (i * Math.PI * 2) / warmCircles;
-        const cx = Math.cos(angle) * maxRadius * 0.62;
-        const cy = Math.sin(angle) * maxRadius * 0.62;
-        targetCtx.beginPath(); targetCtx.arc(cx, cy, maxRadius * 0.22, 0, Math.PI * 2); targetCtx.stroke();
-    }
-    targetCtx.restore();
-
-    // 中心コア多角形
-    targetCtx.save();
-    targetCtx.rotate(-state.rotation * 1.4);
-    targetCtx.lineWidth = 3.0; 
-    targetCtx.globalAlpha = opacity * 0.9;
-    
-    const sides = Math.round(state.pitch);
-    targetCtx.beginPath();
-    for (let i = 0; i < sides; i++) {
-        const angle = (i * Math.PI * 2) / sides;
-        const x = Math.cos(angle) * maxRadius * 0.36;
-        const y = Math.sin(angle) * maxRadius * 0.36;
-        if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
-    }
-    targetCtx.closePath(); targetCtx.stroke();
-    
-    targetCtx.lineWidth = 1.2; 
-    for (let i = 0; i < sides; i++) {
-        const angle = (i * Math.PI * 2) / sides;
-        targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36); targetCtx.stroke();
-    }
-    targetCtx.restore();
-
-    targetCtx.restore();
-}
 }
 
 async function startRecordingStream() {
