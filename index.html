@@ -1016,7 +1016,7 @@ targetCtx.restore();
 
     // --- ① 3秒ごとに音声解析・パラメータを再計算（毎フレームの重い計算をカット） ---
     const nowTime = performance.now();
-    const isTimeForUpdate = !state.lastUpdateTimestamp || (nowTime - state.lastUpdateTimestamp > 3000);
+    const isTimeForUpdate = !state.lastUpdateTimestamp || (nowTime - state.lastUpdateTimestamp > 500);
 
     let totalVol = 0;
     let maxVal = 0;
