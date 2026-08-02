@@ -870,7 +870,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
 
     // --- 魔法陣のベース枠描画 ---
     ctx.strokeStyle = bar3dGradient; 
-    ctx.lineWidth = 1.8; 
+    ctx.lineWidth = 2.0; 
     ctx.globalAlpha = 0.25;
 
     ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
@@ -878,7 +878,7 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
     ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
 
     ctx.save();
-    ctx.lineWidth = 1.5; 
+    ctx.lineWidth = 2.0; 
     for (let i = 0; i < 60; i++) {
         ctx.rotate(Math.PI / 30);
         ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
@@ -1008,16 +1008,12 @@ targetCtx.restore();
 } else if (currentWaveStyle === 'bar3d') {
     if (!window.magicCircleState) {
         window.magicCircleState = {
-            pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0,
-            lastUpdateTimestamp: 0, particleFrame: 0
+            pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
         };
     }
     const state = window.magicCircleState;
 
-    // --- ① 3秒ごとに音声解析・パラメータを再計算（毎フレームの重い計算をカット） ---
-    const nowTime = performance.now();
-    const isTimeForUpdate = !state.lastUpdateTimestamp || (nowTime - state.lastUpdateTimestamp > 500);
-
+    // --- ① リアルタイム音声解析（常に更新） ---
     let totalVol = 0;
     let maxVal = 0;
     let maxIdx = 0;
@@ -1027,50 +1023,56 @@ targetCtx.restore();
     let flatDiffSum = 0;
 
     const len = dataArr.length;
-
-    if (isTimeForUpdate) {
-        state.lastUpdateTimestamp = nowTime;
-        for (let i = 0; i < len; i++) {
-            const val = dataArr[i] || 0;
-            totalVol += val;
-            if (val > maxVal) { maxVal = val; maxIdx = i; }
+    for (let i = 0; i < len; i++) {
+        const val = dataArr[i] || 0;
+        totalVol += val;
+        if (val > maxVal) { maxVal = val; maxIdx = i; }
+        
+        if (i > 0 && i < len - 1) {
+            const prev = dataArr[i - 1] || 0;
+            const next = dataArr[i + 1] || 0;
+            flatDiffSum += Math.abs(val - prev);
             
-            if (i > 0 && i < len - 1) {
-                const prev = dataArr[i - 1] || 0;
-                const next = dataArr[i + 1] || 0;
-                flatDiffSum += Math.abs(val - prev);
-                
-                if (val > prev && val > next && val > 30) {
-                    peaks++;
-                    if (i % 2 === 0) evenPeaks++; else oddPeaks++;
-                }
+            if (val > prev && val > next && val > 30) {
+                peaks++;
+                if (i % 2 === 0) evenPeaks++; else oddPeaks++;
             }
         }
+    }
 
-        const isCleared = (totalVol === 0);
-        if (isCleared) {
-            state.targetPitch = 4;
-            state.targetRichness = 0.2;
-            state.targetSharpness = 0.5;
-            state.targetHusky = 0;
-        } else {
-            state.targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
-            state.targetRichness = Math.min(1.0, peaks / 8);
-            state.targetSharpness = (oddPeaks + evenPeaks > 0) ? (oddPeaks / (oddPeaks + evenPeaks)) : 0.5;
-            state.targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
+    // 録音がクリアされた（音声データが完全に0）かどうかの判定
+    const isCleared = (totalVol === 0);
+
+    if (isCleared) {
+        // 録音クリア時は状態を初期値に固定し、回転を止め、パーティクルを空にする（静止描画）
+        state.pitch = 4;
+        state.richness = 0.2;
+        state.sharpness = 0.5;
+        state.husky = 0;
+        state.particles = [];
+        // rotationは加算しないため静止状態を維持
+    } else if (totalVol > 100) {
+        const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
+        state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
+
+        const targetRichness = Math.min(1.0, peaks / 8);
+        state.richness = state.richness * 0.8 + targetRichness * 0.2;
+
+        if (oddPeaks + evenPeaks > 0) {
+            const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
+            state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
         }
-    }
 
-    // 毎フレームはなめらかに補間追従
-    if (state.targetPitch !== undefined) {
-        state.pitch = state.pitch * 0.8 + state.targetPitch * 0.2;
-        state.richness = state.richness * 0.8 + state.targetRichness * 0.2;
-        state.sharpness = state.sharpness * 0.8 + state.targetSharpness * 0.2;
-        state.husky = state.husky * 0.8 + state.targetHusky * 0.2;
-    }
+        const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
+        state.husky = state.husky * 0.85 + targetHusky * 0.15;
 
-    // 回転は毎フレーム維持してスムーズに回す
-    state.rotation += 0.005;
+        state.rotation += 0.003 + (maxVal / 255) * 0.02;
+    } else {
+        state.pitch = state.pitch * 0.95 + 4 * 0.05;
+        state.richness = state.richness * 0.95 + 0.1 * 0.05;
+        state.husky = state.husky * 0.85 + 0.05 * 0.15;
+        state.rotation += 0.002;
+    }
 
     // --- ② 画面中央配置の計算 ---
     const W = targetCtx.canvas.width;
@@ -1082,7 +1084,11 @@ targetCtx.restore();
     targetCtx.save();
     targetCtx.translate(centerX, centerY);
 
-    const bar3dGradient = targetCtx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
+    // 【修正】中心（ローカル 0,0）から外側（maxRadius）へ向かう正確な放射状グラデーション
+    const bar3dGradient = targetCtx.createRadialGradient(
+        0, 0, 0,           
+        0, 0, maxRadius    
+    );
     bar3dGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
         bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
@@ -1091,7 +1097,7 @@ targetCtx.restore();
         bar3dGradient.addColorStop(1, currentWaveColors[1]);
     }
 
-    // --- ③ パーティクル処理（最大100個・発生間引き・寿命1秒） ---
+    // --- ③ ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
     state.particleFrame = (state.particleFrame || 0) + 1;
     const canSpawn = (state.particleFrame % 2 === 0); // 2フレームに1回に発生を間引く
     const spawnCount = Math.floor(state.husky * 6);
@@ -1113,8 +1119,12 @@ targetCtx.restore();
     }
 
     targetCtx.save();
-    targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
-
+    if (currentBgColor === 'white') {
+        targetCtx.globalCompositeOperation = 'source-over'; 
+    } else {
+        targetCtx.globalCompositeOperation = 'lighter'; 
+    }
+    
     state.particles.forEach((p, idx) => {
         p.x += p.vx; 
         p.y += p.vy; 
@@ -1127,9 +1137,15 @@ targetCtx.restore();
         }
         
         targetCtx.fillStyle = bar3dGradient; 
-        targetCtx.globalAlpha = opacity * p.alpha;
+        targetCtx.globalAlpha = opacity * p.alpha * 1.0;
         targetCtx.beginPath();
         targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = (currentBgColor === 'white') ? '#cccccc' : '#ffffff';
+        targetCtx.globalAlpha = opacity * p.alpha * 0.6;
+        targetCtx.beginPath();
+        targetCtx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
         targetCtx.fill();
     });
     targetCtx.restore();
@@ -1152,7 +1168,7 @@ targetCtx.restore();
     targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
 
     targetCtx.save();
-    const ticks = Math.floor(40 + state.richness * 40);
+    const ticks = Math.floor(40 + state.richness * 80);
     targetCtx.lineWidth = 1.8; 
     for (let i = 0; i < ticks; i++) {
         targetCtx.rotate((Math.PI * 2) / ticks);
@@ -1160,40 +1176,52 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // --- ⑤ 奇数倍音・偶数倍音の描画 ---
+    // --- ⑤ 奇数倍音（星型） ＆ 偶数倍音（密度可変の波線）の描画 ---
     targetCtx.save();
     targetCtx.rotate(state.rotation);
     
+    // 【奇数倍音検出】：目盛りの手前（約0.82付近）まで頂点が伸びる星型を描画
     if (state.sharpness > 0.3) {
         targetCtx.globalAlpha = opacity * state.sharpness;
         targetCtx.lineWidth = 2.0; 
-        const starRadius = maxRadius * 0.82;
-        for (let t = 0; t < 2; t++) {
+        
+        const starLayers = (state.sharpness > 0.65) ? 2 : 1;
+        for (let l = 0; l < starLayers; l++) {
             targetCtx.save();
-            if (t === 1) targetCtx.rotate(Math.PI);
-            targetCtx.beginPath();
-            for (let i = 0; i < 3; i++) {
-                const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
-                const x = Math.cos(angle) * starRadius;
-                const y = Math.sin(angle) * starRadius;
-                if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+            if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらす
+            
+            const starRadius = maxRadius * (0.82 - l * 0.08);
+            
+            for (let t = 0; t < 2; t++) {
+                targetCtx.save();
+                if (t === 1) targetCtx.rotate(Math.PI);
+                targetCtx.beginPath();
+                for (let i = 0; i < 3; i++) {
+                    const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
+                    const x = Math.cos(angle) * starRadius;
+                    const y = Math.sin(angle) * starRadius;
+                    if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+                }
+                targetCtx.closePath();
+                targetCtx.stroke();
+                targetCtx.restore();
             }
-            targetCtx.closePath();
-            targetCtx.stroke();
             targetCtx.restore();
         }
     }
 
+    // 【偶数倍音検出】：星型とバランスを合わせて、少し外側に波線を描画（密度可変）
     const evenIntensity = 1.0 - state.sharpness;
     if (evenIntensity > 0.2) {
         targetCtx.globalAlpha = opacity * evenIntensity;
         targetCtx.lineWidth = 1.8; 
-        const waveDensity = Math.floor(12 + state.richness * 16); 
+        
+        const waveDensity = Math.floor(12 + state.richness * 24); 
         const baseWaveRadius = maxRadius * 0.75; 
-        const waveAmplitude = maxRadius * 0.06; 
+        const waveAmplitude = maxRadius * 0.06 * (0.5 + state.richness * 0.5); 
         
         targetCtx.beginPath();
-        const steps = 120; // 描画ステップ数を最適化して軽量化
+        const steps = 180;
         for (let i = 0; i <= steps; i++) {
             const theta = (i / steps) * Math.PI * 2;
             const r = baseWaveRadius + Math.sin(theta * waveDensity) * waveAmplitude;
@@ -1222,6 +1250,12 @@ targetCtx.restore();
         if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
     }
     targetCtx.closePath(); targetCtx.stroke();
+    
+    targetCtx.lineWidth = 1.2; 
+    for (let i = 0; i < sides; i++) {
+        const angle = (i * Math.PI * 2) / sides;
+        targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36); targetCtx.stroke();
+    }
     targetCtx.restore();
 
     targetCtx.restore();
