@@ -950,6 +950,7 @@ targetCtx.restore();
     // --- 録音・再生中の家紋描画と3秒判定（声質24属性） ---
     if (!window.kamonState) {
         window.kamonState = { 
+            startTime: performance.now(),
             lastUpdate: performance.now(), 
             currentIndex: 0, 
             rotation: 0,
@@ -957,8 +958,7 @@ targetCtx.restore();
             oddEvenType: 0, 
             harmonicAmountType: 0, 
             huskyType: 0,
-            hasRichHarmonics: false,
-            isSevereHusky: false,
+            noiseRatio: 0,
             isInitialized: false
         };
     }
@@ -976,13 +976,16 @@ targetCtx.restore();
         totalVol += dataArr[i] || 0;
     }
 
-    // 3秒（3000ms）経過 ＆ 音が鳴っている場合のみ属性を更新（属性判定にも完全に適応）
-    if (totalVol > 100 && now - state.lastUpdate >= 3000) {
-        const sampleRate = (window.audioCtx && window.audioCtx.sampleRate) ? window.audioCtx.sampleRate : 44100;
-        const freqPerBin = sampleRate / 1024; 
+    const elapsed = now - state.startTime;
+    const sampleRate = (window.audioCtx && window.audioCtx.sampleRate) ? window.audioCtx.sampleRate : 44100;
+    const freqPerBin = sampleRate / 1024; 
+    
+    // 0〜60Hzのノイズを無視するための最小ビン
+    const minEffectiveBin = Math.max(1, Math.ceil(60 / freqPerBin));
 
-        // 1. ピッチの算出 (F0)
-        let minF0Bin = Math.max(1, Math.floor(80 / freqPerBin));
+    // 属性更新を行う関数（0〜60Hz除外・厳格なハスキー判定）
+    const updateAttributes = () => {
+        let minF0Bin = Math.max(minEffectiveBin, Math.floor(80 / freqPerBin));
         let maxF0Bin = Math.min(len - 1, Math.ceil(1000 / freqPerBin));
         let maxVal = 0;
         let f0Bin = minF0Bin;
@@ -999,7 +1002,6 @@ targetCtx.restore();
         else if (f0Hz <= 340) pitchType = 1;
         else pitchType = 2;
 
-        // 2. 偶数・奇数倍音優位の判定
         let evenSum = 0;
         let oddSum = 0;
         for (let mult = 2; mult <= 8; mult++) {
@@ -1011,7 +1013,6 @@ targetCtx.restore();
         }
         let oddEvenType = (oddSum >= evenSum) ? 0 : 1;
 
-        // 3. 倍音数（少/多）と倍音の豊かさ（比率）の計算
         let harmonicSum = 0;
         for (let mult = 2; mult <= 10; mult++) {
             let bin = f0Bin * mult;
@@ -1020,9 +1021,10 @@ targetCtx.restore();
         let harmonicRatio = harmonicSum / (totalVol || 1);
         let harmonicAmountType = (harmonicRatio > 0.08) ? 1 : 0;
 
-        // 4. ハスキー（低/高）＝ ノイズ成分の判定
         let noiseSum = 0;
-        for (let i = minF0Bin; i < len; i++) {
+        let validVol = 0;
+        for (let i = minEffectiveBin; i < len; i++) {
+            validVol += dataArr[i];
             let isHarmonic = false;
             for (let mult = 1; mult <= 20; mult++) {
                 let hBin = f0Bin * mult;
@@ -1035,20 +1037,31 @@ targetCtx.restore();
                 noiseSum += dataArr[i];
             }
         }
-        let noiseRatio = noiseSum / (totalVol || 1);
-        let huskyType = (noiseRatio > 0.50) ? 1 : 0;
+        let noiseRatio = noiseSum / (validVol || 1);
+        state.noiseRatio = noiseRatio;
+
+        // 声にハスキーな魅力がある場合のみ（閾値を厳格化）
+        let huskyType = (noiseRatio > 0.62) ? 1 : 0;
 
         state.pitchType = pitchType;
         state.oddEvenType = oddEvenType;
         state.harmonicAmountType = harmonicAmountType;
         state.huskyType = huskyType;
-        
-        state.hasRichHarmonics = (harmonicRatio > 0.12);
-        state.isSevereHusky = (noiseRatio > 0.55);
-
         state.currentIndex = (pitchType * 8) + (oddEvenType * 4) + (harmonicAmountType * 2) + huskyType;
-        state.lastUpdate = now;
-        state.isInitialized = true;
+    };
+
+    // 3秒経過時の判定処理
+    if (!state.isInitialized) {
+        if (elapsed >= 3000) {
+            updateAttributes();
+            state.lastUpdate = now;
+            state.isInitialized = true;
+        }
+    } else {
+        if (totalVol > 100 && now - state.lastUpdate >= 3000) {
+            updateAttributes();
+            state.lastUpdate = now;
+        }
     }
 
     state.rotation += 0.002 + (totalVol / (255 * len)) * 0.05;
@@ -1060,22 +1073,6 @@ targetCtx.restore();
     
     const size = Math.min(W, H) * 0.6;
     const maxRadius = size / 2;
-
-    // --- 🌟 倍音豊かな声の検知時にパーティクルを生成（最大50個） ---
-    const isHarmonicActive = (state.hasRichHarmonics && totalVol > 80);
-    if (isHarmonicActive && window.kamonParticles.length < 50) {
-        const angle = Math.random() * Math.PI * 2;
-        const spawnRadius = maxRadius * (1.0 + Math.random() * 0.15);
-        window.kamonParticles.push({
-            x: Math.cos(angle) * spawnRadius,
-            y: Math.sin(angle) * spawnRadius,
-            vx: Math.cos(angle) * (0.8 + Math.random() * 1.5),
-            vy: Math.sin(angle) * (0.8 + Math.random() * 1.5),
-            radius: 2.0 + Math.random() * 2.5,
-            life: 1.0,
-            maxLife: 1.0
-        });
-    }
 
     targetCtx.save();
     targetCtx.translate(activeCenterX, activeCenterY);
@@ -1089,7 +1086,53 @@ targetCtx.restore();
         kamonGradient.addColorStop(1, currentWaveColors[1]);
     }
 
-    // --- 🪶 パーティクルの描画処理（判定中も常時描画） ---
+    // --- 🌟 最初の3秒間の待機・フェードアウト演出（パーティクルなし） ---
+    if (!state.isInitialized) {
+        let fadeAlpha = 1.0;
+        if (elapsed > 2000) {
+            fadeAlpha = Math.max(0, 1.0 - (elapsed - 2000) / 1000);
+        }
+
+        targetCtx.globalAlpha = opacity * fadeAlpha;
+        targetCtx.strokeStyle = kamonGradient;
+        targetCtx.fillStyle = kamonGradient;
+        targetCtx.lineWidth = 1.5;
+
+        // 一重の外枠円
+        targetCtx.beginPath();
+        targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2);
+        targetCtx.stroke();
+
+        // 3seconds ANALYZER テキスト表示
+        targetCtx.textAlign = 'center';
+        targetCtx.textBaseline = 'middle';
+        targetCtx.font = "bold 20px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
+        targetCtx.fillText("3seconds", 0, -15);
+        targetCtx.font = "bold 24px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
+        targetCtx.fillText("ANALYZER", 0, 15);
+
+        targetCtx.restore();
+        return;
+    }
+
+    // --- 🌟 非整数次倍音（ノイズ）検知時にパーティクルを生成（最大50個） ---
+    let currentNoiseRatio = state.noiseRatio || 0;
+    const isNoiseActive = (currentNoiseRatio > 0.25 && totalVol > 50);
+    if (isNoiseActive && window.kamonParticles.length < 50) {
+        const angle = Math.random() * Math.PI * 2;
+        const spawnRadius = maxRadius * (1.0 + Math.random() * 0.15);
+        window.kamonParticles.push({
+            x: Math.cos(angle) * spawnRadius,
+            y: Math.sin(angle) * spawnRadius,
+            vx: Math.cos(angle) * (0.8 + Math.random() * 1.5),
+            vy: Math.sin(angle) * (0.8 + Math.random() * 1.5),
+            radius: 2.0 + Math.random() * 2.5,
+            life: 1.0,
+            maxLife: 1.0
+        });
+    }
+
+    // --- 🪶 パーティクルの描画処理（軽量化・半透明重ね合わせ） ---
     const dt = 1 / 60;
     for (let i = window.kamonParticles.length - 1; i >= 0; i--) {
         let p = window.kamonParticles[i];
@@ -1118,91 +1161,89 @@ targetCtx.restore();
         targetCtx.fill();
         targetCtx.restore();
     }
-    // ----------------------------------------------------
 
-    // --- 🔒 初回3秒の判定中は、家紋本体（外枠・モチーフ・文字）を描画しない ---
-    if (state.isInitialized) {
-        targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
-        targetCtx.strokeStyle = kamonGradient;
-        targetCtx.fillStyle = kamonGradient;
-        targetCtx.globalAlpha = opacity;
+    targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
+    targetCtx.strokeStyle = kamonGradient;
+    targetCtx.fillStyle = kamonGradient;
+    targetCtx.globalAlpha = opacity;
 
-        // 息のハスキーさが際立つ時のみ外枠を波線にする
-        if (state.isSevereHusky) {
-            targetCtx.setLineDash([4, 6]);
-        } else {
-            targetCtx.setLineDash([]);
+    // --- 描画の線：倍音が少ない時に波線、多い時に実線 ---
+    if (state.harmonicAmountType === 0) {
+        targetCtx.setLineDash([4, 6]); // 少ない：波線
+    } else {
+        targetCtx.setLineDash([]);     // 多い：実線
+    }
+
+    // 外枠の描画
+    targetCtx.save();
+    targetCtx.rotate(state.rotation * 0.5);
+    if (state.pitchType === 0) {
+        targetCtx.lineWidth = 4;
+        targetCtx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            let angle = i * Math.PI * 2 / 8;
+            if (i === 0) targetCtx.moveTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
+            else targetCtx.lineTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
         }
+        targetCtx.closePath(); targetCtx.stroke();
+    } else if (state.pitchType === 1) {
+        targetCtx.lineWidth = 1.5;
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
+    } else {
+        targetCtx.lineWidth = 0.5;
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.95, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); targetCtx.stroke();
+    }
+    targetCtx.restore();
 
-        // 外枠の描画
-        targetCtx.save();
-        targetCtx.rotate(state.rotation * 0.5);
-        if (state.pitchType === 0) {
-            targetCtx.lineWidth = 4;
+    // --- 🌟 中心モチーフの描画（声が大きい時は外枠の手前までダイナミックに拡大） ---
+    targetCtx.save();
+    targetCtx.rotate(-state.rotation);
+    targetCtx.lineWidth = 2;
+    
+    let volRatio = Math.min(1.0, (totalVol / (255 * len)) * 6.0);
+    let innerBase = maxRadius * 0.25;
+    let innerRadius = innerBase + volRatio * (maxRadius * 0.60); // 最大で外枠手前までダイナミックに変化
+
+    if (state.oddEvenType === 0) {
+        let points = (state.harmonicAmountType === 0) ? 4 : 8;
+        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
+        for (let l = 0; l < loops; l++) {
+            let r = innerRadius * (1 - l * 0.3);
             targetCtx.beginPath();
-            for (let i = 0; i < 8; i++) {
-                let angle = i * Math.PI * 2 / 8;
-                if (i === 0) targetCtx.moveTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
-                else targetCtx.lineTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
+            for (let i = 0; i < points * 2; i++) {
+                let pr = (i % 2 === 0) ? r : r * 0.4;
+                let angle = i * Math.PI * 2 / (points * 2);
+                if (i === 0) targetCtx.moveTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
+                else targetCtx.lineTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
             }
             targetCtx.closePath(); targetCtx.stroke();
-        } else if (state.pitchType === 1) {
-            targetCtx.lineWidth = 1.5;
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
-        } else {
-            targetCtx.lineWidth = 0.5;
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.95, 0, Math.PI * 2); targetCtx.stroke();
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
-            targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); targetCtx.stroke();
         }
-        targetCtx.restore();
-
-        // --- 🌟 中心モチーフの描画（音量によるダイナミックな大きさを適用：最小10%減、最大50%増） ---
-        targetCtx.save();
-        targetCtx.rotate(-state.rotation);
-        targetCtx.lineWidth = 2;
-        
-        let innerBase = maxRadius * 0.45; // 従来の 0.5 から 10% 小さく設定
-        let dynamicRange = (totalVol / (255 * len)) * (maxRadius * 0.45); // 従来の変動幅 0.3 から 50% 大きく拡張 (0.3 * 1.5 = 0.45)
-        let innerRadius = innerBase + dynamicRange;
-
-        if (state.oddEvenType === 0) {
-            let points = (state.harmonicAmountType === 0) ? 4 : 8;
-            let loops = (state.harmonicAmountType === 0) ? 1 : 2;
-            for (let l = 0; l < loops; l++) {
-                let r = innerRadius * (1 - l * 0.3);
-                targetCtx.beginPath();
-                for (let i = 0; i < points * 2; i++) {
-                    let pr = (i % 2 === 0) ? r : r * 0.4;
-                    let angle = i * Math.PI * 2 / (points * 2);
-                    if (i === 0) targetCtx.moveTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
-                    else targetCtx.lineTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
-                }
-                targetCtx.closePath(); targetCtx.stroke();
+    } else {
+        let petals = (state.harmonicAmountType === 0) ? 5 : 12;
+        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
+        for (let l = 0; l < loops; l++) {
+            let r = innerRadius * (1 - l * 0.3);
+            targetCtx.beginPath();
+            for (let i = 0; i < petals; i++) {
+                let angle = i * Math.PI * 2 / petals;
+                let nextAngle = (i + 1) * Math.PI * 2 / petals;
+                let midAngle = (angle + nextAngle) / 2;
+                targetCtx.moveTo(Math.cos(angle) * (r * 0.2), Math.sin(angle) * (r * 0.2));
+                targetCtx.quadraticCurveTo(Math.cos(midAngle) * r * 1.5, Math.sin(midAngle) * r * 1.5, Math.cos(nextAngle) * (r * 0.2), Math.sin(nextAngle) * (r * 0.2));
             }
-        } else {
-            let petals = (state.harmonicAmountType === 0) ? 5 : 12;
-            let loops = (state.harmonicAmountType === 0) ? 1 : 2;
-            for (let l = 0; l < loops; l++) {
-                let r = innerRadius * (1 - l * 0.3);
-                targetCtx.beginPath();
-                for (let i = 0; i < petals; i++) {
-                    let angle = i * Math.PI * 2 / petals;
-                    let nextAngle = (i + 1) * Math.PI * 2 / petals;
-                    let midAngle = (angle + nextAngle) / 2;
-                    targetCtx.moveTo(Math.cos(angle) * (r * 0.2), Math.sin(angle) * (r * 0.2));
-                    targetCtx.quadraticCurveTo(Math.cos(midAngle) * r * 1.5, Math.sin(midAngle) * r * 1.5, Math.cos(nextAngle) * (r * 0.2), Math.sin(nextAngle) * (r * 0.2));
-                }
-                targetCtx.stroke();
-            }
+            targetCtx.stroke();
         }
-        targetCtx.restore();
+    }
+    targetCtx.restore();
 
-        targetCtx.setLineDash([]);
-        targetCtx.globalCompositeOperation = 'source-over';
-        
+    targetCtx.setLineDash([]);
+    targetCtx.globalCompositeOperation = 'source-over';
+    
+    if (state.isInitialized) {
         const currentAttr = KAMON_ATTRIBUTES[state.currentIndex];
         if (currentAttr) {
             targetCtx.fillStyle = kamonGradient;
