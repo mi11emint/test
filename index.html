@@ -824,7 +824,8 @@ ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLi
     const centerX = W / 2;
     const centerY = H / 2;
 
-    const kamonGradient = ctx.createLinearGradient(0, 0, W, H);
+    // 中心から外側への放射状グラデーションに変更
+    const kamonGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 180);
     kamonGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
         kamonGradient.addColorStop(0.5, currentWaveColors[1]);
@@ -1077,7 +1078,8 @@ targetCtx.restore();
     targetCtx.save();
     targetCtx.translate(activeCenterX, activeCenterY);
 
-    const kamonGradient = targetCtx.createLinearGradient(-maxRadius, -maxRadius, maxRadius, maxRadius);
+    // 中心(0, 0)から外側(maxRadius)へ向かう円形グラデーションに変更
+    const kamonGradient = targetCtx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
     kamonGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
         kamonGradient.addColorStop(0.5, currentWaveColors[1]);
@@ -1098,18 +1100,12 @@ targetCtx.restore();
         targetCtx.fillStyle = kamonGradient;
         targetCtx.lineWidth = 1.5;
 
-        // 一重の外枠円
-        targetCtx.beginPath();
-        targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2);
-        targetCtx.stroke();
-
-        // 3seconds ANALYZER テキスト表示
+        // 3seconds ANALYZER テキスト表示（待機中と同一のフォントサイズ・スタイル・位置）
         targetCtx.textAlign = 'center';
         targetCtx.textBaseline = 'middle';
-        targetCtx.font = "bold 20px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
-        targetCtx.fillText("3seconds", 0, -15);
-        targetCtx.font = "bold 24px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
-        targetCtx.fillText("ANALYZER", 0, 15);
+        targetCtx.font = "bold 30px 'Cinecaption', 'Courier New', sans-serif";
+        targetCtx.fillText("3seconds", 0, 0);
+        targetCtx.fillText("ANALYZER", 0, 40);
 
         targetCtx.restore();
         return;
@@ -1199,14 +1195,15 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // --- 🌟 中心モチーフの描画（声が大きい時は外枠の手前までダイナミックに拡大） ---
+    // --- 🌟 中心モチーフの描画 ---
     targetCtx.save();
     targetCtx.rotate(-state.rotation);
     targetCtx.lineWidth = 2;
     
     let volRatio = Math.min(1.0, (totalVol / (255 * len)) * 6.0);
     let innerBase = maxRadius * 0.25;
-    let innerRadius = innerBase + volRatio * (maxRadius * 0.60); // 最大で外枠手前までダイナミックに変化
+    // 最大値を20%抑えて上品な広がりへ変更 (0.60 -> 0.48)
+    let innerRadius = innerBase + volRatio * (maxRadius * 0.48);
 
     if (state.oddEvenType === 0) {
         let points = (state.harmonicAmountType === 0) ? 4 : 8;
@@ -1223,19 +1220,41 @@ targetCtx.restore();
             targetCtx.closePath(); targetCtx.stroke();
         }
     } else {
+        // --- 偶数倍音時：より優美で立体的な花びら描画 ---
         let petals = (state.harmonicAmountType === 0) ? 5 : 12;
         let loops = (state.harmonicAmountType === 0) ? 1 : 2;
+        let petalWidthAngle = (Math.PI * 2 / petals) * 0.4; // 花びらの広がり角度
+
         for (let l = 0; l < loops; l++) {
-            let r = innerRadius * (1 - l * 0.3);
-            targetCtx.beginPath();
+            let r = innerRadius * (1 - l * 0.35);
             for (let i = 0; i < petals; i++) {
                 let angle = i * Math.PI * 2 / petals;
-                let nextAngle = (i + 1) * Math.PI * 2 / petals;
-                let midAngle = (angle + nextAngle) / 2;
-                targetCtx.moveTo(Math.cos(angle) * (r * 0.2), Math.sin(angle) * (r * 0.2));
-                targetCtx.quadraticCurveTo(Math.cos(midAngle) * r * 1.5, Math.sin(midAngle) * r * 1.5, Math.cos(nextAngle) * (r * 0.2), Math.sin(nextAngle) * (r * 0.2));
+                let leftAngle = angle - petalWidthAngle;
+                let rightAngle = angle + petalWidthAngle;
+
+                let tipX = Math.cos(angle) * r;
+                let tipY = Math.sin(angle) * r;
+                
+                let cpLeftX = Math.cos(leftAngle) * (r * 0.85);
+                let cpLeftY = Math.sin(leftAngle) * (r * 0.85);
+                
+                let cpRightX = Math.cos(rightAngle) * (r * 0.85);
+                let cpRightY = Math.sin(rightAngle) * (r * 0.85);
+                
+                let baseLeftX = Math.cos(leftAngle) * (r * 0.15);
+                let baseLeftY = Math.sin(leftAngle) * (r * 0.15);
+                
+                let baseRightX = Math.cos(rightAngle) * (r * 0.15);
+                let baseRightY = Math.sin(rightAngle) * (r * 0.15);
+
+                targetCtx.beginPath();
+                targetCtx.moveTo(baseLeftX, baseLeftY);
+                // 根元から先端への柔らかな膨らみ
+                targetCtx.quadraticCurveTo(cpLeftX, cpLeftY, tipX, tipY);
+                // 先端から反対側の根元へ戻る曲線
+                targetCtx.quadraticCurveTo(cpRightX, cpRightY, baseRightX, baseRightY);
+                targetCtx.stroke();
             }
-            targetCtx.stroke();
         }
     }
     targetCtx.restore();
