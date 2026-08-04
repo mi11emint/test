@@ -1083,12 +1083,12 @@ targetCtx.restore();
     }
 
     // --- パーティクルの描画ループ（寿命1秒・最大100個） ---
-    const dt = 1 / 60; // 60fps基準での1フレームあたりの時間減少量
+    const dt = 1 / 60;
     for (let i = window.kamonParticles.length - 1; i >= 0; i--) {
         let p = window.kamonParticles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.life -= dt; // 約1秒でlifeが0になる
+        p.life -= dt;
         let alpha = Math.max(0, p.life / p.maxLife);
 
         if (p.life <= 0) {
@@ -1098,20 +1098,17 @@ targetCtx.restore();
 
         targetCtx.save();
         if (currentBgColor === 'white') {
-            // 白背景用：視認性を高めるため濃い色と影を付与
+            // 白背景用：重い影を使わず、濃い目の半透明色で視認性を確保
             targetCtx.fillStyle = currentWaveColors[0];
-            targetCtx.globalAlpha = alpha * 0.85;
-            targetCtx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-            targetCtx.shadowBlur = 3;
+            targetCtx.globalAlpha = alpha * 0.6;
         } else {
-            // 黒背景・ピクチャー用：光るパーティクル表現
+            // 黒背景・ピクチャー用：'lighter'合成で光っているように見せる（影なしで高速）
             targetCtx.fillStyle = kamonGradient;
-            targetCtx.globalAlpha = alpha;
+            targetCtx.globalAlpha = alpha * 0.8;
             targetCtx.globalCompositeOperation = 'lighter';
-            targetCtx.shadowColor = currentWaveColors[0];
-            targetCtx.shadowBlur = 6;
         }
 
+        // 半透明の円をそのまま描画
         targetCtx.beginPath();
         targetCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         targetCtx.fill();
