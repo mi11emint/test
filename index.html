@@ -960,6 +960,11 @@ targetCtx.restore();
             isInitialized: false
         };
     }
+    // パーティクル管理用配列の初期化
+    if (!window.kamonParticles) {
+        window.kamonParticles = [];
+    }
+
     const state = window.kamonState;
     const now = performance.now();
     let totalVol = 0;
@@ -971,9 +976,7 @@ targetCtx.restore();
 
     // 3秒（3000ms）経過 ＆ 音が鳴っている場合のみ属性を更新
     if (totalVol > 100 && now - state.lastUpdate >= 3000) {
-        // AudioCtxのサンプルレート推定（取れなければ44100）
         const sampleRate = (window.audioCtx && window.audioCtx.sampleRate) ? window.audioCtx.sampleRate : 44100;
-        // アナライザーのFFTサイズからビンあたりの周波数を算出 (fftSizeは1024でfrequencyBinCountは512)
         const freqPerBin = sampleRate / 1024; 
 
         // 1. ピッチの算出 (F0)
@@ -989,7 +992,7 @@ targetCtx.restore();
         }
         let f0Hz = f0Bin * freqPerBin;
 
-        let pitchType = 0; // 0:低, 1:中, 2:高
+        let pitchType = 0; 
         if (f0Hz <= 170) pitchType = 0;
         else if (f0Hz <= 340) pitchType = 1;
         else pitchType = 2;
@@ -1004,7 +1007,7 @@ targetCtx.restore();
                 else oddSum += dataArr[bin];
             }
         }
-        let oddEvenType = (oddSum >= evenSum) ? 0 : 1; // 0:奇数優位, 1:偶数優位
+        let oddEvenType = (oddSum >= evenSum) ? 0 : 1;
 
         // 3. 倍音数（少/多）
         let harmonicSum = 0;
@@ -1012,9 +1015,9 @@ targetCtx.restore();
             let bin = f0Bin * mult;
             if (bin < len) harmonicSum += dataArr[bin];
         }
-        let harmonicAmountType = (harmonicSum > totalVol * 0.08) ? 1 : 0; // 0:少, 1:多
+        let harmonicAmountType = (harmonicSum > totalVol * 0.08) ? 1 : 0;
 
-        // 4. ハスキー（低/高）
+        // 4. ハスキー（低/高）＝ ノイズ成分の判定
         let noiseSum = 0;
         for (let i = minF0Bin; i < len; i++) {
             let isHarmonic = false;
@@ -1029,9 +1032,8 @@ targetCtx.restore();
                 noiseSum += dataArr[i];
             }
         }
-        let huskyType = (noiseSum > totalVol * 0.35) ? 1 : 0; // 0:低, 1:高
+        let huskyType = (noiseSum > totalVol * 0.35) ? 1 : 0;
 
-        // インデックスと状態の更新
         state.pitchType = pitchType;
         state.oddEvenType = oddEvenType;
         state.harmonicAmountType = harmonicAmountType;
@@ -1041,17 +1043,32 @@ targetCtx.restore();
         state.isInitialized = true;
     }
 
-    // 音量に応じて回転速度を上げる
     state.rotation += 0.002 + (totalVol / (255 * len)) * 0.05;
 
     const W = targetCtx.canvas.width;
     const H = targetCtx.canvas.height;
     const activeCenterX = W / 2;
-    const activeCenterY = H / 2 - 20; // テキスト用に少し上にずらす
+    const activeCenterY = H / 2 - 20;
     
-    // 家紋のサイズ（画面の60%程の大きさ）
     const size = Math.min(W, H) * 0.6;
     const maxRadius = size / 2;
+
+    // --- 🌟 ノイズ検出時のパーティクル生成・更新処理 ---
+    // ハスキー高（ノイズ検知時）かつ音量がある場合に外側にパーティクルを発生
+    const isNoiseDetected = (state.huskyType === 1 && totalVol > 50);
+    if (isNoiseDetected && window.kamonParticles.length < 100) {
+        const angle = Math.random() * Math.PI * 2;
+        const spawnRadius = maxRadius * (1.0 + Math.random() * 0.15); // 枠の外側付近から発生
+        window.kamonParticles.push({
+            x: Math.cos(angle) * spawnRadius,
+            y: Math.sin(angle) * spawnRadius,
+            vx: Math.cos(angle) * (0.8 + Math.random() * 1.5), // 外側に広がる速度
+            vy: Math.sin(angle) * (0.8 + Math.random() * 1.5),
+            radius: 1.5 + Math.random() * 2.5,
+            life: 1.0,    // 寿命1秒
+            maxLife: 1.0
+        });
+    }
 
     targetCtx.save();
     targetCtx.translate(activeCenterX, activeCenterY);
@@ -1065,23 +1082,58 @@ targetCtx.restore();
         kamonGradient.addColorStop(1, currentWaveColors[1]);
     }
 
+    // --- パーティクルの描画ループ（寿命1秒・最大100個） ---
+    const dt = 1 / 60; // 60fps基準での1フレームあたりの時間減少量
+    for (let i = window.kamonParticles.length - 1; i >= 0; i--) {
+        let p = window.kamonParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= dt; // 約1秒でlifeが0になる
+        let alpha = Math.max(0, p.life / p.maxLife);
+
+        if (p.life <= 0) {
+            window.kamonParticles.splice(i, 1);
+            continue;
+        }
+
+        targetCtx.save();
+        if (currentBgColor === 'white') {
+            // 白背景用：視認性を高めるため濃い色と影を付与
+            targetCtx.fillStyle = currentWaveColors[0];
+            targetCtx.globalAlpha = alpha * 0.85;
+            targetCtx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            targetCtx.shadowBlur = 3;
+        } else {
+            // 黒背景・ピクチャー用：光るパーティクル表現
+            targetCtx.fillStyle = kamonGradient;
+            targetCtx.globalAlpha = alpha;
+            targetCtx.globalCompositeOperation = 'lighter';
+            targetCtx.shadowColor = currentWaveColors[0];
+            targetCtx.shadowBlur = 6;
+        }
+
+        targetCtx.beginPath();
+        targetCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.restore();
+    }
+    // ----------------------------------------------------
+
     targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
     targetCtx.strokeStyle = kamonGradient;
     targetCtx.fillStyle = kamonGradient;
     targetCtx.globalAlpha = opacity;
 
-    // ハスキー高の場合は破線
     if (state.huskyType === 1) {
         targetCtx.setLineDash([4, 6]);
     } else {
         targetCtx.setLineDash([]);
     }
 
-    // 外枠（ピッチによる判定）
+    // 外枠の描画
     targetCtx.save();
     targetCtx.rotate(state.rotation * 0.5);
     if (state.pitchType === 0) {
-        // 低音域：角枠（八角形、太め）
         targetCtx.lineWidth = 4;
         targetCtx.beginPath();
         for (let i = 0; i < 8; i++) {
@@ -1091,12 +1143,10 @@ targetCtx.restore();
         }
         targetCtx.closePath(); targetCtx.stroke();
     } else if (state.pitchType === 1) {
-        // 中音域：細丸や藤輪（細い二重丸）
         targetCtx.lineWidth = 1.5;
         targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
         targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
     } else {
-        // 高音域：雪輪や極細の多重丸
         targetCtx.lineWidth = 0.5;
         targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
         targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.95, 0, Math.PI * 2); targetCtx.stroke();
@@ -1105,17 +1155,15 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
-    // 中心モチーフ（奇数/偶数・倍音量による判定）
+    // 中心モチーフの描画
     targetCtx.save();
-    targetCtx.rotate(-state.rotation); // 逆回転
+    targetCtx.rotate(-state.rotation);
     targetCtx.lineWidth = 2;
-    // 音量に応じてモチーフを拡縮させる
     let innerBase = maxRadius * 0.5;
     let innerRadius = innerBase + (totalVol / (255 * len)) * (maxRadius * 0.3);
 
     if (state.oddEvenType === 0) {
-        // 奇数優位（シャープ、直線的）
-        let points = (state.harmonicAmountType === 0) ? 4 : 8; // 倍音少: 4, 多: 8
+        let points = (state.harmonicAmountType === 0) ? 4 : 8;
         let loops = (state.harmonicAmountType === 0) ? 1 : 2;
         for (let l = 0; l < loops; l++) {
             let r = innerRadius * (1 - l * 0.3);
@@ -1129,8 +1177,7 @@ targetCtx.restore();
             targetCtx.closePath(); targetCtx.stroke();
         }
     } else {
-        // 偶数優位（マイルド、曲線的）
-        let petals = (state.harmonicAmountType === 0) ? 5 : 12; // 倍音少: 5, 多: 12
+        let petals = (state.harmonicAmountType === 0) ? 5 : 12;
         let loops = (state.harmonicAmountType === 0) ? 1 : 2;
         for (let l = 0; l < loops; l++) {
             let r = innerRadius * (1 - l * 0.3);
@@ -1147,14 +1194,10 @@ targetCtx.restore();
     }
     targetCtx.restore();
 
+    targetCtx.setLineDash([]);
 
-
-    targetCtx.setLineDash([]); // ダッシュをリセット
-
-    // テキスト表示（架空家紋の下部）
     targetCtx.globalCompositeOperation = 'source-over';
     
-    // 初期化（3秒経過）されている場合のみテキストを表示
     if (state.isInitialized) {
         const currentAttr = KAMON_ATTRIBUTES[state.currentIndex];
         if (currentAttr) {
@@ -1162,11 +1205,9 @@ targetCtx.restore();
             targetCtx.textAlign = 'center';
             targetCtx.textBaseline = 'top';
             
-            // 属性（30px）
             targetCtx.font = "30px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
             targetCtx.fillText(currentAttr.name, 0, maxRadius + 20);
             
-            // 特徴（15px）
             targetCtx.font = "15px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
             targetCtx.fillText(currentAttr.desc, 0, maxRadius + 60);
         }
