@@ -529,7 +529,7 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 <div id="styleStar" class="style-option" data-style="star">STAR</div>
 <div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
 <div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">MAGIC</div>
+<div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
 </div>
 <div class="setting-section" id="menuColor" style="margin-bottom: 0;">
 <div class="setting-title">WAVE COLOR</div>
@@ -582,6 +582,39 @@ style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; 
 // 1. 定数・設定データの定義
 // ========================================
 
+// --- 新しい声質24属性と特徴 ---
+const KAMON_ATTRIBUTES = [
+  // ①〜⑧ 低音域
+  { name: "黒珈", desc: "輪郭のある引き締まった低音。無駄がなく、知的で落ち着いた苦味のある魅力。" }, // 0: 低, 奇, 少, 低
+  { name: "燻胡", desc: "乾いた低音と鋭い個性を持つ声。都会的で、少し刺激的な魅力。" }, // 1: 低, 奇, 少, 高
+  { name: "樽熟", desc: "厚みと奥行きのある声。成熟した安心感と品格。" }, // 2: 低, 奇, 多, 低
+  { name: "煙樹", desc: "濃厚な低音に渋みを持つ声。力強さと色気の共存。" }, // 3: 低, 奇, 多, 高
+  { name: "珀蜜", desc: "柔らかく穏やかな低音。安心感と優しい温度を感じさせる。" }, // 4: 低, 偶, 少, 低
+  { name: "琥霞", desc: "柔らかな低音に繊細な陰影を持つ声。静かな色気と余韻。" }, // 5: 低, 偶, 少, 高
+  { name: "芳樹", desc: "豊かな厚みと温かさを持つ声。包容力があり、自然と人を安心させる。" }, // 6: 低, 偶, 多, 低
+  { name: "黒蜜", desc: "深い艶と豊かな余韻を持つ声。成熟した魅力を感じさせる。" }, // 7: 低, 偶, 多, 高
+  
+  // ⑨〜⑯ 中音域
+  { name: "薄荷", desc: "透明感と芯を持つ声。清潔感と知性を感じさせる。" }, // 8: 中, 奇, 少, 低
+  { name: "碧椒", desc: "鋭さと爽快感を持つ声。洗練された個性が際立つ。" }, // 9: 中, 奇, 少, 高
+  { name: "果魅", desc: "芯の強さと豊かな奥行きを持つ声。説得力と存在感がある。" }, // 10: 中, 奇, 多, 低
+  { name: "焙香", desc: "熱量と複雑さを持つ声。情熱的で記憶に残る。" }, // 11: 中, 奇, 多, 高
+  { name: "花誘", desc: "柔らかく親しみやすい声。自然な優しさと温度感がある。" }, // 12: 中, 偶, 少, 低
+  { name: "梅霧", desc: "繊細で柔らかな声。上品で控えめな魅力。" }, // 13: 中, 偶, 少, 高
+  { name: "芳檀", desc: "複雑で豊かな声。深み、品格、表現力を感じさせる。" }, // 14: 中, 偶, 多, 低
+  { name: "艶葡", desc: "艶と奥行きを併せ持つ声。華やかさと色気の共存。" }, // 15: 中, 偶, 多, 高
+  
+  // ⑰〜㉔ 高音域
+  { name: "爽柑", desc: "透明感と鋭さを持つ高音。爽やかで洗練された印象。" }, // 16: 高, 奇, 少, 低
+  { name: "銀煙", desc: "透明感に陰影を持つ声。神秘的で個性的な魅力がある。" }, // 17: 高, 奇, 少, 高
+  { name: "金瑞", desc: "華やかで豊かな高音。明るさと存在感を兼ね備える。" }, // 18: 高, 奇, 多, 低
+  { name: "紅醇", desc: "情熱的で複雑な高音。強い個性と魅力を放つ。" }, // 19: 高, 奇, 多, 高
+  { name: "茶露", desc: "澄んだ柔らかな高音。清らかで自然な美しさ。" }, // 20: 高, 偶, 少, 低
+  { name: "霞桜", desc: "儚く繊細な高音。優雅で柔らかな余韻を残す。" }, // 21: 高, 偶, 少, 高
+  { name: "蜜泡", desc: "豊かな広がりと明るさを持つ声。華やかで心地よい魅力。" }, // 22: 高, 偶, 多, 低
+  { name: "月薫", desc: "透明感、奥行き、艶を併せ持つ声。幻想的で長い余韻を残す。" }  // 23: 高, 偶, 多, 高
+];
+  
 const STANDARD_PALETTES = [
 ["#fff0f5", "#faf0e6"],//花朝露
 ["#fddb92", "#d1fdff"],//菜花
@@ -785,122 +818,30 @@ ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY)
 const baseLineY = canvas.height - 80;
 ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
 } else if (currentWaveStyle === 'bar3d') {
-    
-    if (!window.magicCircleState) {
-        window.magicCircleState = {
-            pitch: 4,       
-            richness: 0.2,   
-            sharpness: 0.5,  
-            husky: 0.1,      
-            particles: [],   
-            rotation: 0
-        };
-    }
-    const state = window.magicCircleState;
-
-    ctx.save();
-    
-    // --- スケーリング計算 ---
+    // --- 待機中の表示（ANALYZERのみ） ---
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
     const centerX = W / 2;
     const centerY = H / 2;
-    const maxRadius = Math.min(W, H) * 0.8 / 2;
 
-    // 💡 【修正②】グラデーションを魔法陣の中心合わせ（放射円グラデーション）に変更
-    const bar3dGradient = ctx.createRadialGradient(
-        centerX, centerY, 0,           // 中心点（半径0）
-        centerX, centerY, maxRadius    // 外円（最大半径）
-    );
-    bar3dGradient.addColorStop(0, currentWaveColors[0]);
+    const kamonGradient = ctx.createLinearGradient(0, 0, W, H);
+    kamonGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
-        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
-        bar3dGradient.addColorStop(1, currentWaveColors[2]);
+        kamonGradient.addColorStop(0.5, currentWaveColors[1]);
+        kamonGradient.addColorStop(1, currentWaveColors[2]);
     } else {
-        bar3dGradient.addColorStop(1, currentWaveColors[1]);
+        kamonGradient.addColorStop(1, currentWaveColors[1]);
     }
 
-    ctx.translate(centerX, centerY);
-    
-    // 常にゆっくり回転
-    state.rotation += 0.002;
-    
-    // 待機中の淡い粒子シミュレーション（外側に漂わせる）
-    if (state.particles.length < 20) {
-        const pAngle = Math.random() * Math.PI * 2;
-        const pDist = maxRadius * (1.0 + Math.random() * 0.3); // 円の外側
-        state.particles.push({
-            x: Math.cos(pAngle) * pDist,
-            y: Math.sin(pAngle) * pDist,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: (Math.random() - 0.5) * 0.3,
-            alpha: Math.random() * 0.4 + 0.1,
-            size: Math.random() * 2 + 1,
-            life: 1.0
-        });
-    }
-
-    // 粒子の更新と描画
-    ctx.save();
-    // 💡 【修正①】白背景の時はブレンドモードを通常合成に切り替えて見えるようにする
-    if (currentBgColor === 'white') {
-        ctx.globalCompositeOperation = 'source-over';
-    } else {
-        ctx.globalCompositeOperation = 'lighter'; // 黒・画像背景なら発光
-    }
-
-    state.particles.forEach((p, idx) => {
-        p.x += p.vx; p.y += p.vy; p.alpha -= 0.002;
-        if (p.alpha <= 0) {
-            const pAngle = Math.random() * Math.PI * 2;
-            const pDist = maxRadius * (1.0 + Math.random() * 0.3);
-            state.particles[idx] = {
-                x: Math.cos(pAngle) * pDist, y: Math.sin(pAngle) * pDist,
-                vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-                alpha: Math.random() * 0.4 + 0.1, size: Math.random() * 2 + 1, life: 1.0
-            };
-        }
-        ctx.fillStyle = bar3dGradient; 
-        ctx.globalAlpha = p.alpha * 0.6;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.restore();
-
-    // --- 魔法陣のベース枠描画 ---
-    ctx.strokeStyle = bar3dGradient; 
-    ctx.lineWidth = 2.0; 
-    ctx.globalAlpha = 0.25;
-
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); ctx.stroke();
-
-    ctx.save();
-    ctx.lineWidth = 2.0; 
-    for (let i = 0; i < 60; i++) {
-        ctx.rotate(Math.PI / 30);
-        ctx.beginPath(); ctx.moveTo(maxRadius * 0.85, 0); ctx.lineTo(maxRadius * 0.88, 0); ctx.stroke();
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.rotate(state.rotation);
-    ctx.lineWidth = 1.8; 
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-        const angle = (i * Math.PI * 2) / 4;
-        const x = Math.cos(angle) * maxRadius * 0.4;
-        const y = Math.sin(angle) * maxRadius * 0.4;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath(); ctx.stroke();
-    ctx.restore();
-
-    ctx.restore();
+    ctx.fillStyle = kamonGradient;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = "bold 30px 'Cinecaption', 'Courier New', sans-serif";
+    ctx.fillText("3seconds", centerX, centerY - 20);
+    ctx.fillText("ANALYZER", centerX, centerY + 20);
 }
 }
+
 function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
 const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
 gradient.addColorStop(0, currentWaveColors[0]);
@@ -1006,257 +947,240 @@ targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
 targetCtx.restore();
 
 } else if (currentWaveStyle === 'bar3d') {
-    if (!window.magicCircleState) {
-        window.magicCircleState = {
-            pitch: 4, richness: 0.2, sharpness: 0.5, husky: 0.1, particles: [], rotation: 0
+    // --- 録音・再生中の家紋描画と3秒判定（声質24属性） ---
+    if (!window.kamonState) {
+        window.kamonState = { 
+            lastUpdate: performance.now(), 
+            currentIndex: 0, 
+            rotation: 0,
+            pitchType: 1, 
+            oddEvenType: 0, 
+            harmonicAmountType: 0, 
+            huskyType: 0,
+            isInitialized: false
         };
     }
-    const state = window.magicCircleState;
-
-    // --- ① リアルタイム音声解析（常に更新） ---
+    const state = window.kamonState;
+    const now = performance.now();
     let totalVol = 0;
-    let maxVal = 0;
-    let maxIdx = 0;
-    let peaks = 0;
-    let evenPeaks = 0;
-    let oddPeaks = 0;
-    let flatDiffSum = 0;
-
     const len = dataArr.length;
+
     for (let i = 0; i < len; i++) {
-        const val = dataArr[i] || 0;
-        totalVol += val;
-        if (val > maxVal) { maxVal = val; maxIdx = i; }
-        
-        if (i > 0 && i < len - 1) {
-            const prev = dataArr[i - 1] || 0;
-            const next = dataArr[i + 1] || 0;
-            flatDiffSum += Math.abs(val - prev);
-            
-            if (val > prev && val > next && val > 30) {
-                peaks++;
-                if (i % 2 === 0) evenPeaks++; else oddPeaks++;
+        totalVol += dataArr[i] || 0;
+    }
+
+    // 3秒（3000ms）経過 ＆ 音が鳴っている場合のみ属性を更新
+    if (totalVol > 100 && now - state.lastUpdate >= 3000) {
+        // AudioCtxのサンプルレート推定（取れなければ44100）
+        const sampleRate = (window.audioCtx && window.audioCtx.sampleRate) ? window.audioCtx.sampleRate : 44100;
+        // アナライザーのFFTサイズからビンあたりの周波数を算出 (fftSizeは1024でfrequencyBinCountは512)
+        const freqPerBin = sampleRate / 1024; 
+
+        // 1. ピッチの算出 (F0)
+        let minF0Bin = Math.max(1, Math.floor(80 / freqPerBin));
+        let maxF0Bin = Math.min(len - 1, Math.ceil(1000 / freqPerBin));
+        let maxVal = 0;
+        let f0Bin = minF0Bin;
+        for (let i = minF0Bin; i <= maxF0Bin; i++) {
+            if (dataArr[i] > maxVal) {
+                maxVal = dataArr[i];
+                f0Bin = i;
             }
         }
-    }
+        let f0Hz = f0Bin * freqPerBin;
 
-    // 録音がクリアされた（音声データが完全に0）かどうかの判定
-    const isCleared = (totalVol === 0);
+        let pitchType = 0; // 0:低, 1:中, 2:高
+        if (f0Hz <= 170) pitchType = 0;
+        else if (f0Hz <= 340) pitchType = 1;
+        else pitchType = 2;
 
-    if (isCleared) {
-        // 録音クリア時は状態を初期値に固定し、回転を止め、パーティクルを空にする（静止描画）
-        state.pitch = 4;
-        state.richness = 0.2;
-        state.sharpness = 0.5;
-        state.husky = 0;
-        state.particles = [];
-        // rotationは加算しないため静止状態を維持
-    } else if (totalVol > 100) {
-        const targetPitch = Math.min(8, Math.max(3, Math.floor(3 + (maxIdx / 3))));
-        state.pitch = state.pitch * 0.9 + targetPitch * 0.1;
-
-        const targetRichness = Math.min(1.0, peaks / 8);
-        state.richness = state.richness * 0.8 + targetRichness * 0.2;
-
-        if (oddPeaks + evenPeaks > 0) {
-            const targetSharp = oddPeaks / (oddPeaks + evenPeaks);
-            state.sharpness = state.sharpness * 0.8 + targetSharp * 0.2;
+        // 2. 偶数・奇数倍音優位の判定
+        let evenSum = 0;
+        let oddSum = 0;
+        for (let mult = 2; mult <= 8; mult++) {
+            let bin = f0Bin * mult;
+            if (bin < len) {
+                if (mult % 2 === 0) evenSum += dataArr[bin];
+                else oddSum += dataArr[bin];
+            }
         }
+        let oddEvenType = (oddSum >= evenSum) ? 0 : 1; // 0:奇数優位, 1:偶数優位
 
-        const targetHusky = Math.min(1.0, (flatDiffSum / totalVol) * 2.5);
-        state.husky = state.husky * 0.85 + targetHusky * 0.15;
+        // 3. 倍音数（少/多）
+        let harmonicSum = 0;
+        for (let mult = 2; mult <= 10; mult++) {
+            let bin = f0Bin * mult;
+            if (bin < len) harmonicSum += dataArr[bin];
+        }
+        let harmonicAmountType = (harmonicSum > totalVol * 0.08) ? 1 : 0; // 0:少, 1:多
 
-        state.rotation += 0.003 + (maxVal / 255) * 0.02;
-    } else {
-        state.pitch = state.pitch * 0.95 + 4 * 0.05;
-        state.richness = state.richness * 0.95 + 0.1 * 0.05;
-        state.husky = state.husky * 0.85 + 0.05 * 0.15;
-        state.rotation += 0.002;
+        // 4. ハスキー（低/高）
+        let noiseSum = 0;
+        for (let i = minF0Bin; i < len; i++) {
+            let isHarmonic = false;
+            for (let mult = 1; mult <= 20; mult++) {
+                let hBin = f0Bin * mult;
+                if (i >= hBin - 1 && i <= hBin + 1) {
+                    isHarmonic = true;
+                    break;
+                }
+            }
+            if (!isHarmonic) {
+                noiseSum += dataArr[i];
+            }
+        }
+        let huskyType = (noiseSum > totalVol * 0.35) ? 1 : 0; // 0:低, 1:高
+
+        // インデックスと状態の更新
+        state.pitchType = pitchType;
+        state.oddEvenType = oddEvenType;
+        state.harmonicAmountType = harmonicAmountType;
+        state.huskyType = huskyType;
+        state.currentIndex = (pitchType * 8) + (oddEvenType * 4) + (harmonicAmountType * 2) + huskyType;
+        state.lastUpdate = now;
+        state.isInitialized = true;
     }
 
-    // --- ② 画面中央配置の計算 ---
+    // 音量に応じて回転速度を上げる
+    state.rotation += 0.002 + (totalVol / (255 * len)) * 0.05;
+
     const W = targetCtx.canvas.width;
     const H = targetCtx.canvas.height;
-    const centerX = W / 2;
-    const centerY = H / 2;
-    const maxRadius = Math.min(W, H) * 0.8 / 2;
+    const activeCenterX = W / 2;
+    const activeCenterY = H / 2 - 20; // テキスト用に少し上にずらす
+    
+    // 家紋のサイズ（画面の60%程の大きさ）
+    const size = Math.min(W, H) * 0.6;
+    const maxRadius = size / 2;
 
     targetCtx.save();
-    targetCtx.translate(centerX, centerY);
+    targetCtx.translate(activeCenterX, activeCenterY);
 
-    // 【修正】中心（ローカル 0,0）から外側（maxRadius）へ向かう正確な放射状グラデーション
-    const bar3dGradient = targetCtx.createRadialGradient(
-        0, 0, 0,           
-        0, 0, maxRadius    
-    );
-    bar3dGradient.addColorStop(0, currentWaveColors[0]);
+    const kamonGradient = targetCtx.createLinearGradient(-maxRadius, -maxRadius, maxRadius, maxRadius);
+    kamonGradient.addColorStop(0, currentWaveColors[0]);
     if (currentWaveColors.length > 2) {
-        bar3dGradient.addColorStop(0.5, currentWaveColors[1]);
-        bar3dGradient.addColorStop(1, currentWaveColors[2]);
+        kamonGradient.addColorStop(0.5, currentWaveColors[1]);
+        kamonGradient.addColorStop(1, currentWaveColors[2]);
     } else {
-        bar3dGradient.addColorStop(1, currentWaveColors[1]);
+        kamonGradient.addColorStop(1, currentWaveColors[1]);
     }
 
-    // --- ③ ハスキー成分連動：円の外側へ噴き出す超発光粒子 ---
-    state.particleFrame = (state.particleFrame || 0) + 1;
-    const canSpawn = (state.particleFrame % 2 === 0); // 2フレームに1回に発生を間引く
-    const spawnCount = Math.floor(state.husky * 6);
-
-    if (spawnCount > 0 && canSpawn && state.particles.length < 100) {
-        for (let k = 0; k < spawnCount; k++) {
-            if (state.particles.length >= 100) break; // 最大数100の制限
-            const pAngle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 1.5 + 0.5;
-            state.particles.push({
-                x: Math.cos(pAngle) * maxRadius,
-                y: Math.sin(pAngle) * maxRadius,
-                vx: Math.cos(pAngle) * speed,
-                vy: Math.sin(pAngle) * speed,
-                alpha: 1.0,
-                size: Math.random() * 3 + 1
-            });
-        }
-    }
-
-    targetCtx.save();
-    if (currentBgColor === 'white') {
-        targetCtx.globalCompositeOperation = 'source-over'; 
-    } else {
-        targetCtx.globalCompositeOperation = 'lighter'; 
-    }
-    
-    state.particles.forEach((p, idx) => {
-        p.x += p.vx; 
-        p.y += p.vy; 
-        // 寿命を1秒にする（60fps換算で約1秒で消えるよう減衰量を「0.017」に設定）
-        p.alpha -= 0.017; 
-
-        if (p.alpha <= 0) {
-            state.particles.splice(idx, 1);
-            return;
-        }
-        
-        targetCtx.fillStyle = bar3dGradient; 
-        targetCtx.globalAlpha = opacity * p.alpha * 1.0;
-        targetCtx.beginPath();
-        targetCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        targetCtx.fill();
-
-        targetCtx.fillStyle = (currentBgColor === 'white') ? '#cccccc' : '#ffffff';
-        targetCtx.globalAlpha = opacity * p.alpha * 0.6;
-        targetCtx.beginPath();
-        targetCtx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
-        targetCtx.fill();
-    });
-    targetCtx.restore();
-
-    // --- ④ 魔法陣 本体の幾何学描画 ---
-    targetCtx.strokeStyle = bar3dGradient; 
+    targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
+    targetCtx.strokeStyle = kamonGradient;
+    targetCtx.fillStyle = kamonGradient;
     targetCtx.globalAlpha = opacity;
-    
-    const layers = 2 + Math.floor(state.richness * 2.5);
-    targetCtx.lineWidth = 1.8; 
-    for (let l = 0; l < layers; l++) {
-        const rFactor = 1.0 - (l * 0.08);
-        targetCtx.beginPath();
-        targetCtx.arc(0, 0, maxRadius * rFactor, 0, Math.PI * 2);
-        targetCtx.stroke();
-    }
-    
-    targetCtx.lineWidth = 1.8; 
-    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.4, 0, Math.PI * 2); targetCtx.stroke();
-    targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.36, 0, Math.PI * 2); targetCtx.stroke();
 
+    // ハスキー高の場合は破線
+    if (state.huskyType === 1) {
+        targetCtx.setLineDash([4, 6]);
+    } else {
+        targetCtx.setLineDash([]);
+    }
+
+    // 外枠（ピッチによる判定）
     targetCtx.save();
-    const ticks = Math.floor(40 + state.richness * 80);
-    targetCtx.lineWidth = 1.8; 
-    for (let i = 0; i < ticks; i++) {
-        targetCtx.rotate((Math.PI * 2) / ticks);
-        targetCtx.beginPath(); targetCtx.moveTo(maxRadius * 0.92, 0); targetCtx.lineTo(maxRadius * 0.85, 0); targetCtx.stroke();
+    targetCtx.rotate(state.rotation * 0.5);
+    if (state.pitchType === 0) {
+        // 低音域：角枠（八角形、太め）
+        targetCtx.lineWidth = 4;
+        targetCtx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            let angle = i * Math.PI * 2 / 8;
+            if (i === 0) targetCtx.moveTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
+            else targetCtx.lineTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
+        }
+        targetCtx.closePath(); targetCtx.stroke();
+    } else if (state.pitchType === 1) {
+        // 中音域：細丸や藤輪（細い二重丸）
+        targetCtx.lineWidth = 1.5;
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
+    } else {
+        // 高音域：雪輪や極細の多重丸
+        targetCtx.lineWidth = 0.5;
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.95, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
+        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); targetCtx.stroke();
     }
     targetCtx.restore();
 
-    // --- ⑤ 奇数倍音（星型） ＆ 偶数倍音（密度可変の波線）の描画 ---
+    // 中心モチーフ（奇数/偶数・倍音量による判定）
     targetCtx.save();
-    targetCtx.rotate(state.rotation);
-    
-    // 【奇数倍音検出】：目盛りの手前（約0.82付近）まで頂点が伸びる星型を描画
-    if (state.sharpness > 0.3) {
-        targetCtx.globalAlpha = opacity * state.sharpness;
-        targetCtx.lineWidth = 2.0; 
-        
-        const starLayers = (state.sharpness > 0.65) ? 2 : 1;
-        for (let l = 0; l < starLayers; l++) {
-            targetCtx.save();
-            if (l === 1) targetCtx.rotate(Math.PI / 6); // 2層目は少し角度をずらす
-            
-            const starRadius = maxRadius * (0.82 - l * 0.08);
-            
-            for (let t = 0; t < 2; t++) {
-                targetCtx.save();
-                if (t === 1) targetCtx.rotate(Math.PI);
-                targetCtx.beginPath();
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i * Math.PI * 2) / 3 - Math.PI / 2;
-                    const x = Math.cos(angle) * starRadius;
-                    const y = Math.sin(angle) * starRadius;
-                    if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
-                }
-                targetCtx.closePath();
-                targetCtx.stroke();
-                targetCtx.restore();
+    targetCtx.rotate(-state.rotation); // 逆回転
+    targetCtx.lineWidth = 2;
+    // 音量に応じてモチーフを拡縮させる
+    let innerBase = maxRadius * 0.5;
+    let innerRadius = innerBase + (totalVol / (255 * len)) * (maxRadius * 0.3);
+
+    if (state.oddEvenType === 0) {
+        // 奇数優位（シャープ、直線的）
+        let points = (state.harmonicAmountType === 0) ? 4 : 8; // 倍音少: 4, 多: 8
+        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
+        for (let l = 0; l < loops; l++) {
+            let r = innerRadius * (1 - l * 0.3);
+            targetCtx.beginPath();
+            for (let i = 0; i < points * 2; i++) {
+                let pr = (i % 2 === 0) ? r : r * 0.4;
+                let angle = i * Math.PI * 2 / (points * 2);
+                if (i === 0) targetCtx.moveTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
+                else targetCtx.lineTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
             }
-            targetCtx.restore();
+            targetCtx.closePath(); targetCtx.stroke();
+        }
+    } else {
+        // 偶数優位（マイルド、曲線的）
+        let petals = (state.harmonicAmountType === 0) ? 5 : 12; // 倍音少: 5, 多: 12
+        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
+        for (let l = 0; l < loops; l++) {
+            let r = innerRadius * (1 - l * 0.3);
+            targetCtx.beginPath();
+            for (let i = 0; i < petals; i++) {
+                let angle = i * Math.PI * 2 / petals;
+                let nextAngle = (i + 1) * Math.PI * 2 / petals;
+                let midAngle = (angle + nextAngle) / 2;
+                targetCtx.moveTo(Math.cos(angle) * (r * 0.2), Math.sin(angle) * (r * 0.2));
+                targetCtx.quadraticCurveTo(Math.cos(midAngle) * r * 1.5, Math.sin(midAngle) * r * 1.5, Math.cos(nextAngle) * (r * 0.2), Math.sin(nextAngle) * (r * 0.2));
+            }
+            targetCtx.stroke();
+        }
+    }
+    targetCtx.restore();
+
+    // ハスキー高の場合のテクスチャ表現（パーティクル）
+    if (state.huskyType === 1) {
+        targetCtx.fillStyle = kamonGradient;
+        for(let i = 0; i < 40; i++) {
+            let a = Math.random() * Math.PI * 2;
+            let r = Math.random() * maxRadius;
+            targetCtx.beginPath();
+            targetCtx.arc(Math.cos(a) * r, Math.sin(a) * r, 1.5, 0, Math.PI * 2);
+            targetCtx.fill();
         }
     }
 
-    // 【偶数倍音検出】：星型とバランスを合わせて、少し外側に波線を描画（密度可変）
-    const evenIntensity = 1.0 - state.sharpness;
-    if (evenIntensity > 0.2) {
-        targetCtx.globalAlpha = opacity * evenIntensity;
-        targetCtx.lineWidth = 1.8; 
-        
-        const waveDensity = Math.floor(12 + state.richness * 24); 
-        const baseWaveRadius = maxRadius * 0.75; 
-        const waveAmplitude = maxRadius * 0.06 * (0.5 + state.richness * 0.5); 
-        
-        targetCtx.beginPath();
-        const steps = 180;
-        for (let i = 0; i <= steps; i++) {
-            const theta = (i / steps) * Math.PI * 2;
-            const r = baseWaveRadius + Math.sin(theta * waveDensity) * waveAmplitude;
-            const x = Math.cos(theta) * r;
-            const y = Math.sin(theta) * r;
-            if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
+    targetCtx.setLineDash([]); // ダッシュをリセット
+
+    // テキスト表示（架空家紋の下部）
+    targetCtx.globalCompositeOperation = 'source-over';
+    
+    // 初期化（3秒経過）されている場合のみテキストを表示
+    if (state.isInitialized) {
+        const currentAttr = KAMON_ATTRIBUTES[state.currentIndex];
+        if (currentAttr) {
+            targetCtx.fillStyle = kamonGradient;
+            targetCtx.textAlign = 'center';
+            targetCtx.textBaseline = 'top';
+            
+            // 属性（30px）
+            targetCtx.font = "30px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
+            targetCtx.fillText(currentAttr.name, 0, maxRadius + 20);
+            
+            // 特徴（15px）
+            targetCtx.font = "15px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
+            targetCtx.fillText(currentAttr.desc, 0, maxRadius + 60);
         }
-        targetCtx.closePath();
-        targetCtx.stroke();
     }
-
-    targetCtx.restore();
-
-    // --- ⑥ 中心コア多角形 ---
-    targetCtx.save();
-    targetCtx.rotate(-state.rotation * 1.4);
-    targetCtx.lineWidth = 3.0; 
-    targetCtx.globalAlpha = opacity * 0.9;
-    
-    const sides = Math.round(state.pitch);
-    targetCtx.beginPath();
-    for (let i = 0; i < sides; i++) {
-        const angle = (i * Math.PI * 2) / sides;
-        const x = Math.cos(angle) * maxRadius * 0.36;
-        const y = Math.sin(angle) * maxRadius * 0.36;
-        if (i === 0) targetCtx.moveTo(x, y); else targetCtx.lineTo(x, y);
-    }
-    targetCtx.closePath(); targetCtx.stroke();
-    
-    targetCtx.lineWidth = 1.2; 
-    for (let i = 0; i < sides; i++) {
-        const angle = (i * Math.PI * 2) / sides;
-        targetCtx.beginPath(); targetCtx.moveTo(0, 0); targetCtx.lineTo(Math.cos(angle) * maxRadius * 0.36, Math.sin(angle) * maxRadius * 0.36); targetCtx.stroke();
-    }
-    targetCtx.restore();
 
     targetCtx.restore();
 }
@@ -1344,6 +1268,7 @@ playPauseImg.src = IMG_PLAY;
 function startBufferPlayback(offset) {
 if (!playbackAudioBuffer) return;
 stopBufferPlayback();
+window.kamonState = null; // 再生時に状態をリセット
 if (offset >= playbackAudioBuffer.duration) {
 offset = 0;
 }
@@ -1403,6 +1328,7 @@ isRecording = false; isRecordingPaused = false;
 pauseBtnImg.src = IMG_PAUSE;
 playbackAudioBuffer = null;
 playbackOffset = 0;
+window.kamonState = null; // 状態のリセット
 eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
 if (!keepBgm) {
 playbackBgmBuffer = null;
@@ -1705,6 +1631,7 @@ rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.conne
 const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
 let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
 if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 }; }
+window.kamonState = null; // 書き出し中も初期状態からスタート
 const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
 const movieChunks = [];
 movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
@@ -1900,7 +1827,7 @@ drawStaticWave();
         開いた動画の【画録】がオススメ！</p>
         <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
         
-        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone　SAVE　Btn</button>
+        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone SAVE Btn</button>
         
         <button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
     </div>
