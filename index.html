@@ -1,1932 +1,481 @@
-<!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice Wave Movie Maker</title>
-<style>
-@font-face {
-font-family: 'Cinecaption';
-src: url('https://dl.dropboxusercontent.com/scl/fi/gbyay8c3as3f0l2e2q2un/cinecaption_2.28.woff2?rlkey=pgaofit9g6699gsww2m3p9l7b&raw=1') format('woff2');
-font-display: swap;
-}
-* {
-box-sizing: border-box;
-margin: 0;
-padding: 0;
-}
-body {
-background: radial-gradient(circle at center, #0a1128 0%, #000411 100%);
-color: #ffffff;
-font-family: 'Cinecaption', 'Courier New', sans-serif;
-display: flex;
-flex-direction: column;
-align-items: center;
-min-height: 100vh;
-padding: 20px 5px;
-overflow-y: auto;
-overflow-x: hidden;
-}
-/* --- 🌌 宇宙の背景エフェクト --- */
-body::before, body::after {
-content: "";
-position: fixed;
-top: 0; left: 0; right: 0; bottom: 0;
-z-index: -1;
-pointer-events: none;
-}
-body::before {
-background-image:
-radial-gradient(1.5px 1.5px at 20% 30%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(2px 2px at 40% 70%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(1.5px 1.5px at 60% 20%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(2px 2px at 15% 85%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(1.5px 1.5px at 85% 15%, #ffffff, rgba(0,0,0,0));
-background-size: 350px 350px;
-animation: twinkleCSS 4s infinite alternate ease-in-out;
-}
-body::after {
-background-image:
-radial-gradient(1.5px 1.5px at 80% 50%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(2px 2px at 30% 80%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(1.5px 1.5px at 10% 40%, #ffffff, rgba(0,0,0,0)),
-radial-gradient(1.5px 1.5px at 90% 90%, #ffffff, rgba(0,0,0,0));
-background-size: 250px 250px;
-animation: twinkleCSS 3s infinite alternate-reverse ease-in-out;
-}
-@keyframes twinkleCSS {
-0% { opacity: 0.1; }
-100% { opacity: 1; }
-}
-.info-text-area {
-width: 100%;
-max-width: 420px;
-text-align: left;
-font-size: 0.70rem;
-line-height: 1.6;
-letter-spacing: 1px;
-opacity: 0.8;
-margin-bottom: 12px;
-padding: 0 12px;
-}
-.info-attention {
-margin-top: 10px;
-margin-bottom: 10px;
-opacity: 0.7;
-}
-.info-brand {
-margin-top: 10px;
-letter-spacing: 2px;
-text-align: right;
-}
-.header-zone {
-text-align: center;
-width: 100%;
-margin-bottom: 10px;
-}
-.title {
-font-size: 1.1rem;
-letter-spacing: 2px;
-margin-bottom: 5px;
-}
-.decoration-line {
-font-size: 0.65rem;
-opacity: 0.7;
-white-space: nowrap;
-line-height: 1.5;
-}
-.main-container {
-display: flex;
-width: 100%;
-max-width: 420px;
-background-color: transparent;
-align-items: stretch;
-justify-content: center;
-margin: 10px 0 15px 0;
-}
-.left-composite-zone {
-flex: 1.1;
-display: flex;
-flex-direction: column;
-justify-content: flex-start;
-}
-.player-panel {
-width: 100%;
-background-image: url('https://img1.mitemin.net/5w/l7/743p23lb79gz2d932ow21rxie5bm_16gl_35s_4gx_vrn3.jpg');
-background-color: white;
-padding: 12px;
-display: flex;
-flex-direction: column;
-align-items: center;
-background-size: cover;
-background-position: center;
-}
-.canvas-container {
-width: 100%;
-aspect-ratio: 1 / 1;
-background-color: #000000;
-border-radius: 30px;
-overflow: hidden;
-display: flex;
-align-items: center;
-justify-content: center;
-position: relative;
-}
-.canvas-container.theme-white {
-background-color: #ffffff;
-}
-canvas {
-width: 100%;
-height: 100%;
-display: block;
-}
-.timer-display {
-position: absolute;
-top: 15px;
-right: 15px;
-font-size: 0.9rem;
-color: #ff4488;
-display: none;
-z-index: 10;
-}
-.volume-row-zone {
-width: 100%;
-display: flex;
-align-items: center;
-margin-top: 10px;
-margin-bottom: 2px;
-padding: 0 4px;
-gap: 10px;
-}
-.volume-label {
-font-size: 0.75rem;
-color: #777777;
-width: 38px;
-flex-shrink: 0;
-letter-spacing: 1px;
-font-weight: bold;
-}
-.volume-slider-container {
-flex: 1;
-display: flex;
-align-items: center;
-}
-.top-icons {
-display: flex;
-justify-content: space-around;
-align-items: center;
-width: 100%;
-margin-top: 18px;
-margin-bottom: 6px;
-}
-.top-icons span {
-cursor: pointer;
-transition: transform 0.1s;
-display: inline-flex;
-align-items: center;
-justify-content: center;
-width: 23.75px;
-height: 23.75px;
-}
-.top-icons span:active { transform: scale(0.8); }
-.btn-img {
-width: 100%;
-height: 100%;
-object-fit: contain;
-pointer-events: none;
-}
-.control-bar-zone {
-width: 100%;
-display: flex;
-align-items: center;
-margin: 10px 0 8px 0;
-gap: 10px;
-}
-.mini-play-btn {
-width: 30.8px;
-height: 30.8px;
-cursor: pointer;
-transition: transform 0.1s;
-display: inline-flex;
-align-items: center;
-justify-content: center;
-flex-shrink: 0;
-}
-.mini-play-btn:active { transform: scale(0.8); }
-.seekbar-container {
-flex: 1;
-display: flex;
-align-items: center;
-}
-.seekbar {
-width: 100%;
-accent-color: #777777;
-cursor: pointer;
-}
-.compact-eq-container {
-width: 100%;
-background: rgba(0, 0, 0, 0.07);
-padding: 10px 12px;
-border-radius: 6px;
-margin-top: 4px;
-display: flex;
-gap: 12px;
-}
-.eq-main-label {
-font-size: 0.85rem;
-color: #777777;
-width: 28px;
-flex-shrink: 0;
-display: flex;
-align-items: top;
-margin-top: 2px;
-letter-spacing: 1px;
-font-weight: bold;
-}
-.eq-rows-wrapper {
-flex: 1;
-display: flex;
-flex-direction: column;
-gap: 6px;
-}
-.eq-item-row {
-display: flex;
-align-items: center;
-gap: 8px;
-}
-.eq-sub-label {
-font-size: 0.6rem;
-color: #777777;
-width: 36px;
-flex-shrink: 0;
-text-align: left;
-font-weight: bold;
-}
-.audio-slider {
--webkit-appearance: none;
-appearance: none;
-flex: 1;
-background: #cccccc;
-height: 4px;
-border-radius: 2px;
-cursor: pointer;
-outline: none;
-}
-.audio-slider::-webkit-slider-thumb {
--webkit-appearance: none;
-appearance: none;
-width: 10px;
-height: 10px;
-border-radius: 50%;
-background: #777777;
-cursor: pointer;
-}
-.audio-slider::-moz-range-thumb {
-width: 10px;
-height: 10px;
-border-radius: 50%;
-background: #777777;
-cursor: pointer;
-border: none;
-}
-.square-btn-zone {
-display: flex;
-justify-content: space-between;
-width: 100%;
-margin-top: 12px;
-padding: 0 2px;
-}
-.noise-cancel-btn, .audio-reset-btn, .bgm-import-btn {
-width: 72px;
-height: 72px;
-background: transparent;
-color: #777777;
-border: 1px solid rgba(119, 119, 119, 0.4);
-font-family: 'Cinecaption', 'Courier New', sans-serif;
-font-size: 0.7rem;
-line-height: 1.3;
-letter-spacing: 0.5px;
-text-align: center;
-cursor: pointer;
-transition: all 0.2s ease;
-border-radius: 8px;
-display: inline-flex;
-align-items: center;
-justify-content: center;
-flex-direction: column;
-}
-.noise-cancel-btn.active {
-color: #ffffff;
-background: rgba(119, 119, 119, 0.4);
-border-color: #ffffff;
-}
-.audio-reset-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
-.bgm-import-btn.loaded {
-color: #44bbff;
-border-color: rgba(68, 187, 255, 0.6);
-background: rgba(68, 187, 255, 0.05);
-}
-.bgm-import-btn:hover { color: #555555; border-color: rgba(119, 119, 119, 0.8); }
-.bgm-import-btn.loaded:hover { color: #66ccff; border-color: rgba(68, 187, 255, 0.9); }
-.noise-cancel-btn:active, .audio-reset-btn:active, .bgm-import-btn:active {
-transform: scale(0.95);
-}
-.bottom-info-zone {
-width: 100%;
-max-width: 420px;
-padding: 5px 12px 20px 12px;
-text-align: left;
-}
-.bottom-notice-text {
-font-size: 0.58rem;
-line-height: 1.6;
-letter-spacing: 0.5px;
-opacity: 0.6;
-}
-.side-panel {
-flex: 0.9;
-padding: 2px 0px 10px 12px;
-display: flex;
-flex-direction: column;
-font-size: 0.75rem;
-letter-spacing: 1px;
-justify-content: flex-start;
-overflow-y: auto;
-scrollbar-width: none;
-}
-.side-panel::-webkit-scrollbar { display: none; }
-.setting-section {
-margin-bottom: 15px;
-flex-shrink: 0;
-transition: opacity 0.3s;
-}
-.setting-title {
-margin-bottom: 8px;
-font-size: 0.75rem;
-border-bottom: 1px solid rgba(255,255,255,0.2);
-padding-bottom: 3px;
-}
-.color-option, .style-option {
-margin-bottom: 8px;
-cursor: pointer;
-display: flex;
-align-items: center;
-opacity: 0.6;
-transition: opacity 0.2s;
-position: relative;
-padding-left: 16px;
-transform: translateZ(0);
-will-change: transform;
-}
-.color-option.active, .style-option.active { opacity: 1; }
-.color-option::before, .style-option::before {
-content: "▶";
-position: absolute;
-left: 0;
-display: none;
-}
-.color-option.active::before, .style-option.active::before {
-display: inline !important;
-}
-.setting-section.locked {
-opacity: 0.3 !important;
-pointer-events: none !important;
-cursor: not-allowed !important;
-}
-.palette-grid {
-display: grid;
-grid-template-columns: repeat(4, 1fr);
-gap: 5px;
-max-width: 110px;
-}
-.palette-circle {
-width: 22px;
-height: 22px;
-border-radius: 50%;
-cursor: pointer;
- border: none; 
-    background-clip: padding-box; 
-transition: transform 0.2s;
-}
-.palette-circle.selected {
-box-shadow: inset 0 0 0 2px #ffffff; 
-transform: scale(1.1);
-}
-
-.hidden-file-input {
-position: absolute;
-width: 0;
-height: 0;
-opacity: 0;
-overflow: hidden;
-pointer-events: none;
-}
-.touka-slider-zone {
-display: flex;
-align-items: center;
-gap: 10px;
-margin-top: 5px;
-}
-#toukaSlider {
-max-width: 50px;
-}
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <meta charset="UTF-8">
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <title>BLEACH風 ポエムジェネレーター</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#121214',
+                        cardBg: '#1e1e24',
+                        accentRed: '#ff2d55'
+                    },
+                    fontFamily: {
+                        serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
+                        sans: ['"Inter"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts for BLEACH-like typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* 縦書きモード指定 */
+        .writing-vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #18181b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3f3f46;
+            border-radius: 3px;
+        }
+        /* スライダーカスタム */
+        input[type=range] {
+            accent-color: #ff2d55;
+        }
+    </style>
 </head>
-<body>
-<div class="info-text-area">
-<p class="info-brand">にふなみ ２分のあなたの音の波<br><a href="https://lit.link/mi11emint" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">鳳桜みれ（鳳月 眠人）@mi11emint</a><br></p><br>
-<p>声や音楽を視覚化した動画を作って保存できます</p>
-<p>歌みたや音声投稿をもっと気軽に自由に！</p>
-<p>使い方、ルール、仕様の詳細は <a href="https://note.com/mi11emint/n/n007660eab696" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline; opacity: 0.9;">［ こちら ］</a></p>
-<p class="info-attention">声が盗られるとか、そういうのはないです</p>
-</div>
-<div class="header-zone">
-<div class="title">2min VOICE & MUSIC WAVE MOVIE</div>
-<div class="decoration-line">。.：★*・゜꙳☄︎・✧.・☆.*Ø・*★*.✧.・☆.*Ø・.・。<br><br>録音中や保存中にブラウザを閉じると正常な動画が作れなくなります<br>
-</div>
-</div>
+<body class="bg-darkBg text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500 selection:text-white pb-12">
 
-<div class="main-container">
-<div class="left-composite-zone">
-<div class="player-panel" id="playerPanel">
-<div id="canvasBg" class="canvas-container">
-<canvas id="waveCanvas" width="600" height="600"></canvas>
-<div id="timer" class="timer-display">02:00</div>
-</div>
-<div class="top-icons">
-<span id="downloadBtn" title="ダウンロード"><img src="https://img1.mitemin.net/9q/sb/j891f1p8gqdrh6kl2j5zll2776u4_13w5_3c_3c_i38.png" class="btn-img" alt="DL"></span>
-<span id="resetBtn" title="最初からやり直す（リセット）"><img src="https://img1.mitemin.net/fq/w3/7rpk5nlhbp0y5ub81y3ra31w6eap_ymq_3c_3c_ity.png" class="btn-img" alt="リセット"></span>
-<span id="stopBtn" title="録音停止"><img src="https://img1.mitemin.net/aq/o0/hcbj1ot13v3khand2j5c6jbf3yan_ywe_3c_3c_g9i.png" class="btn-img" alt="停止"></span>
-<span id="pauseBtn" title="録音一時停止"><img src="https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png" id="pauseBtnImg" class="btn-img" alt="一時停止"></span>
-<span id="recBtn" title="録音開始"><img src="https://img1.mitemin.net/3b/lr/2ql3dcgbdt6s9skvmfdso1m8621_ema_3c_3c_jwr.png" class="btn-img" alt="録音"></span>
-</div>
-<div class="control-bar-zone">
-<span id="playPauseBtn" class="mini-play-btn" title="再生">
-<img src="https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png" id="playPauseImg" class="btn-img" alt="再生">
-</span>
-<div class="seekbar-container">
-<input type="range" id="seekBar" class="seekbar" value="0" min="0" max="100" step="0.1">
-</div>
-</div>
-<div class="volume-row-zone">
-<div class="volume-label">Vol</div>
-<div class="volume-slider-container">
-<input type="range" id="volSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="1.0">
-</div>
-</div>
-<div class="volume-row-zone">
-<div class="volume-label">BGM<br>vol</div>
-<div class="volume-slider-container">
-<input type="range" id="bgmVolSlider" class="audio-slider" min="0" max="2.0" step="0.05" value="0.5">
-</div>
-</div>
-<div class="volume-row-zone">
-<div class="volume-label">BGM<br>start</div>
-<div class="volume-slider-container" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-<button type="button" id="bgmStartMinusBtn" class="control-btn"
-style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">◀</button>
-<span id="bgmStartDisplay" style="font-size: 14px; min-width: 80px; text-align: center; color: #aaaaaa;">0.0 sec</span>
-<button type="button" id="bgmStartPlusBtn" class="control-btn"
-style="padding: 2px 10px; margin: 0; border: 1px solid #888888; color: #888888; background: transparent; cursor: pointer;">▶</button>
-</div>
-</div>
-<div class="compact-eq-container">
-<div class="eq-main-label">EQ</div>
-<div class="eq-rows-wrapper">
-<div class="eq-item-row">
-<div class="eq-sub-label">LOW</div>
-<input type="range" id="eqLowSlider" class="audio-slider" min="-12" max="12" step="1" value="-7">
-</div>
-<div class="eq-item-row">
-<div class="eq-sub-label">MID</div>
-<input type="range" id="eqMidSlider" class="audio-slider" min="-12" max="12" step="1" value="3">
-</div>
-<div class="eq-item-row">
-<div class="eq-sub-label">HIGH</div>
-<input type="range" id="eqHighSlider" class="audio-slider" min="-12" max="12" step="1" value="-4">
-</div>
-</div>
-</div>
-<div class="square-btn-zone">
-<button id="noiseCancelBtn" class="noise-cancel-btn">NOISE<br>CANCEL<br>✂</button>
-<button id="audioResetBtn" class="audio-reset-btn">RESET<br>AUDIO<br>↺</button>
-<button id="bgmImportBtn" class="bgm-import-btn">IMPORT<br>BGM<br>♬</button>
-</div>
-</div>
-</div>
-<div class="side-panel">
-<div class="setting-section" id="menuBg">
-<div class="setting-title">BACK COLOR</div>
-<div id="btnBlack" class="color-option active">BLACK</div>
-<div id="btnWhite" class="color-option">WHITE</div>
-<div id="btnPicture" class="color-option">PICTURE</div>
-</div>
-<div class="setting-section" id="menuStyle">
-<div class="setting-title">WAVE STYLE</div>
-<div id="styleCorona" class="style-option active" data-style="corona">CORONA</div>
-<div id="styleStar" class="style-option" data-style="star">STAR</div>
-<div id="styleAurora" class="style-option" data-style="aurora">AURORA</div>
-<div id="styleBuilding" class="style-option" data-style="building">BUILDING</div>
-<div id="styleBar3D" class="style-option" data-style="bar3d">ANALYZER</div>
-</div>
-<div class="setting-section" id="menuColor" style="margin-bottom: 0;">
-<div class="setting-title">WAVE COLOR</div>
-<div class="palette-grid" id="standardGrid"></div>
-</div>
+    <!-- Header Area -->
+    <header class="border-b border-zinc-800 bg-zinc-950/80 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="bg-accentRed text-white text-xs font-bold px-2.5 py-1 rounded-md tracking-wider">POEM</span>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold tracking-wider text-white flex items-center gap-2">
+                        BLEACH <span class="text-xs font-normal text-zinc-400">風 ポエムジェネレーター</span>
+                    </h1>
+                </div>
+            </div>
 
-<div class="setting-section" id="menuCustomPalette" style="margin-top: 15px;">
-    <div class="setting-title">YOUR PALETTE</div>
+            <!-- 背景色切り替えトグル (ポエムカード出力用) -->
+            <div class="bg-zinc-900 border border-zinc-700/80 p-1 rounded-xl flex items-center gap-1 shadow-inner">
+                <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-zinc-700 text-white shadow-sm">
+                    <span class="w-2.5 h-2.5 rounded-full bg-black border border-zinc-500 inline-block"></span> 黒背景
+                </button>
+                <button id="btnBgLight" onclick="setPreviewBg('light')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-zinc-400 hover:text-white">
+                    <span class="w-2.5 h-2.5 rounded-full bg-white inline-block"></span> 白背景
+                </button>
+            </div>
+        </div>
+    </header>
 
-    <div style="display: flex; align-items: center; gap: 2px; font-size: 1.0rem; color: rgba(255,255,255,0.7); user-select: none; margin-bottom: 12px;">
-        <!-- 左：完成形のグラデーション丸 -->
-        <div id="customPreviewCircle" class="palette-circle" style="background: linear-gradient(135deg, #fff0f5, #faf0e6); margin: 0; cursor: pointer;"></div>
-        <span>=</span>
-        <!-- 右1：1色目の丸（選択中なら枠線がつく） -->
-        <div id="customPickLabel1" class="palette-circle selected" style="background: #fff0f5; margin: 0; cursor: pointer;"></div>
-        <span>×</span>
-        <!-- 右2：2色目の丸 -->
-        <div id="customPickLabel2" class="palette-circle" style="background: #faf0e6; margin: 0; cursor: pointer;"></div>
-    </div>
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 pt-6 flex-1 w-full flex flex-col gap-8">
 
-    <!--  ここにGoogle風のカラーピッカーが自動生成されます -->
-    <div id="picker" style="display: flex; justify-content: center; margin-top: 8px;">
-      
-    </div>
-</div>
+        <!-- ③ プレビュー画面を上部に配置 -->
+        <section class="w-full flex flex-col items-center gap-4 border-b border-zinc-800 pb-8">
+            <div class="w-full flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    <h2 class="text-base font-bold text-white tracking-wide">リアルタイムプレビュー</h2>
+                </div>
+                <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-lg shadow-rose-950/50 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    画像を保存 (PNG)
+                </button>
+            </div>
 
-<div class="touka-slider-zone" id="menuTouka">
-<div style="font-size: 0.6rem; width: 25px; flex-shrink: 0; font-weight: bold; opacity: 0.7; letter-spacing: 1px;">WAVE<br>png</div>
-<input type="range" id="toukaSlider" class="audio-slider" min="0" max="100" value="0">
-</div>
-</div>
-</div>
-<div class="bottom-info-zone">
-<div class="bottom-notice-text">
-製作者はユーザーに発生したバグや不具合、動画作成失敗、
-<br>
-その他不利益があった場合の一切の責任を負いかねます。
-<br>2026.06.25
-</div>
-</div>
-<div id="renderOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 6vh; backdrop-filter: blur(5px);">
-<h2 style="color: #ff4488; margin-bottom: 5px; font-size: 1.2rem; letter-spacing: 2px; flex-shrink: 0;">MOVIE SAVING...</h2>
-<p style="margin-bottom: 15px; font-size: 0.75rem; opacity: 0.9; text-align: center; flex-shrink: 0;">⚠️ このタブを開いたままお待ちください<br>（別タブを開くとエラーになることがあります）</p>
-<iframe id="miniGameIframe" src="" style="width: 100%; max-width: 500px; flex: 1; border: none; background: transparent; margin-bottom: 4vh;"></iframe>
-</div>
-<input type="file" id="pictureInput" class="hidden-file-input" accept="image/*">
-<input type="file" id="bgmInput" class="hidden-file-input" accept="audio/*">
-<script>
-// ========================================
-// 1. 定数・設定データの定義
-// ========================================
+            <!-- BLEACH巻頭風ポエムカード本体 (プレビュー) -->
+            <div class="w-full flex justify-center overflow-x-auto py-2">
+                <div id="poemCard" class="w-[360px] sm:w-[400px] min-h-[600px] bg-black text-white p-6 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
+                    
+                    <!-- ① 横長モノクロ画像表示枠（細めに修正: h-16 sm:h-20） -->
+                    <div id="imageDisplayBox" class="w-full h-16 sm:h-20 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50">
+                        <img id="previewImg" src="" alt="ポエム用画像" class="absolute max-w-none w-full hidden object-cover filter grayscale contrast-[1.3]">
+                        <div id="imgPlaceholder" class="text-zinc-600 text-xs text-center px-4">
+                            [ 画像未選択 - 下記からアップロード ]
+                        </div>
+                    </div>
 
-// --- 新しい声質24属性と特徴 ---
-const KAMON_ATTRIBUTES = [
-  // ①〜⑧ 低音域
-  { name: "黒珈", desc: "輪郭のある引き締まった低音。無駄がなく、知的で落ち着いた苦味のある魅力。" }, // 0: 低, 奇, 少, 低
-  { name: "燻胡", desc: "乾いた低音と鋭い個性を持つ声。都会的で、少し刺激的な魅力。" }, // 1: 低, 奇, 少, 高
-  { name: "樽熟", desc: "厚みと奥行きのある声。成熟した安心感と品格。" }, // 2: 低, 奇, 多, 低
-  { name: "煙樹", desc: "濃厚な低音に渋みを持つ声。力強さと色気の共存。" }, // 3: 低, 奇, 多, 高
-  { name: "珀蜜", desc: "柔らかく穏やかな低音。安心感と優しい温度を感じさせる。" }, // 4: 低, 偶, 少, 低
-  { name: "琥霞", desc: "柔らかな低音に繊細な陰影を持つ声。静かな色気と余韻。" }, // 5: 低, 偶, 少, 高
-  { name: "芳樹", desc: "豊かな厚みと温かさを持つ声。包容力があり、自然と人を安心させる。" }, // 6: 低, 偶, 多, 低
-  { name: "黒蜜", desc: "深い艶と豊かな余韻を持つ声。成熟した魅力を感じさせる。" }, // 7: 低, 偶, 多, 高
-  
-  // ⑨〜⑯ 中音域
-  { name: "薄荷", desc: "透明感と芯を持つ声。清潔感と知性を感じさせる。" }, // 8: 中, 奇, 少, 低
-  { name: "碧椒", desc: "鋭さと爽快感を持つ声。洗練された個性が際立つ。" }, // 9: 中, 奇, 少, 高
-  { name: "果魅", desc: "芯の強さと豊かな奥行きを持つ声。説得力と存在感がある。" }, // 10: 中, 奇, 多, 低
-  { name: "焙香", desc: "熱量と複雑さを持つ声。情熱的で記憶に残る。" }, // 11: 中, 奇, 多, 高
-  { name: "花誘", desc: "柔らかく親しみやすい声。自然な優しさと温度感がある。" }, // 12: 中, 偶, 少, 低
-  { name: "梅霧", desc: "繊細で柔らかな声。上品で控えめな魅力。" }, // 13: 中, 偶, 少, 高
-  { name: "芳檀", desc: "複雑で豊かな声。深み、品格、表現力を感じさせる。" }, // 14: 中, 偶, 多, 低
-  { name: "艶葡", desc: "艶と奥行きを併せ持つ声。華やかさと色気の共存。" }, // 15: 中, 偶, 多, 高
-  
-  // ⑰〜㉔ 高音域
-  { name: "爽柑", desc: "透明感と鋭さを持つ高音。爽やかで洗練された印象。" }, // 16: 高, 奇, 少, 低
-  { name: "銀煙", desc: "透明感に陰影を持つ声。神秘的で個性的な魅力がある。" }, // 17: 高, 奇, 少, 高
-  { name: "金瑞", desc: "華やかで豊かな高音。明るさと存在感を兼ね備える。" }, // 18: 高, 奇, 多, 低
-  { name: "紅醇", desc: "情熱的で複雑な高音。強い個性と魅力を放つ。" }, // 19: 高, 奇, 多, 高
-  { name: "茶露", desc: "澄んだ柔らかな高音。清らかで自然な美しさ。" }, // 20: 高, 偶, 少, 低
-  { name: "霞桜", desc: "儚く繊細な高音。優雅で柔らかな余韻を残す。" }, // 21: 高, 偶, 少, 高
-  { name: "蜜泡", desc: "豊かな広がりと明るさを持つ声。華やかで心地よい魅力。" }, // 22: 高, 偶, 多, 低
-  { name: "月薫", desc: "透明感、奥行き、艶を併せ持つ声。幻想的で長い余韻を残す。" }  // 23: 高, 偶, 多, 高
-];
-  
-const STANDARD_PALETTES = [
-["#fff0f5", "#faf0e6"],//花朝露
-["#fddb92", "#d1fdff"],//菜花
-["#fff1eb", "#ace0f9"],//早朝
-["#FFF6B7", "#F6416C"],//薔薇
+                    <!-- 縦書きポエムテキスト領域 -->
+                    <div class="my-6 flex-1 flex justify-center items-start min-h-[260px] py-2">
+                        <div id="previewPoem" class="writing-vertical font-serif text-lg sm:text-xl tracking-[0.2em] leading-[2.2em] max-h-[340px] flex flex-row-reverse flex-wrap items-start whitespace-pre-wrap">
+                        </div>
+                    </div>
 
-["#bc8f8f", "#ffe4e1"],//テディベア
-["#2a6e6b", "#FFFCDB"],//月夜
-["#f0fff0", "#40e0d0"],//ラグーン
-["#800080", "#f08080"],//口紅
+                    <!-- ② 巻数＆詩タイトル枠（横幅をスリムにし高さを拡大、単語での自動改行に対応） -->
+                    <div class="pt-2 flex justify-center items-center">
+                        <div id="previewTitleBorder" class="border-[3.5px] border-white px-3 py-2.5 flex items-center gap-2.5 font-extrabold tracking-wider max-w-[280px] sm:max-w-[310px] min-h-[64px]">
+                            <span id="previewVolNum" class="text-lg sm:text-xl font-black leading-none shrink-0">1.</span>
+                            <span id="previewVolTitle" class="text-xs sm:text-sm font-extrabold uppercase tracking-widest leading-snug break-words uppercase">THE DEATH AND THE STRAWBERRY</span>
+                        </div>
+                    </div>
 
-["#a8caba", "#5d4157"],//鳩
-["#191970", "#fffacd"],//夜明
-["#00ffff", "#00008b"],//海中
-["#f107a3", "#7b2ff7"],//ネオン
+                </div>
+            </div>
+        </section>
 
+        <!-- 下部：デザイン・テキスト編集パネル -->
+        <section class="w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- 1. 横長画像設定 -->
+            <div class="bg-cardBg/80 border border-zinc-800 rounded-2xl p-5 shadow-lg space-y-4">
+                <h3 class="text-sm font-semibold text-zinc-300 flex items-center justify-between">
+                    <span>1. 横長画像設定 <span class="text-xs text-zinc-500 font-normal">(自動モノクロ化)</span></span>
+                </h3>
 
-];
-const IMG_PLAY = "https://img1.mitemin.net/li/cg/2jg2jml6ro43bl41msl7yqifog6_j3k_3u_3u_qb2.png";
-const IMG_PAUSE = "https://img1.mitemin.net/2x/kg/lqahh8j8bh15ecig6orfciq8ac4c_176u_3c_3c_hjh.png";
-// ========================================
-// 2. DOM要素の取得
-// ========================================
-const canvas = document.getElementById('waveCanvas');
-const ctx = canvas.getContext('2d');
-const recBtn = document.getElementById('recBtn');
-const stopBtn = document.getElementById('stopBtn');
-const pauseBtn = document.getElementById('pauseBtn');
-const pauseBtnImg = document.getElementById('pauseBtnImg');
-const downloadBtn = document.getElementById('downloadBtn');
-const resetBtn = document.getElementById('resetBtn');
-const timerDisplay = document.getElementById('timer');
-const canvasBg = document.getElementById('canvasBg');
-const btnBlack = document.getElementById('btnBlack');
-const btnWhite = document.getElementById('btnWhite');
-const btnPicture = document.getElementById('btnPicture');
-const pictureInput = document.getElementById('pictureInput');
-const styleOptions = document.querySelectorAll('.style-option');
-const menuBg = document.getElementById('menuBg');
-const menuStyle = document.getElementById('menuStyle');
-const menuColor = document.getElementById('menuColor');
-const playPauseBtn = document.getElementById('playPauseBtn');
-const playPauseImg = document.getElementById('playPauseImg');
-const seekBar = document.getElementById('seekBar');
-const volSlider = document.getElementById('volSlider');
-const bgmVolSlider = document.getElementById('bgmVolSlider');
-const eqLowSlider = document.getElementById('eqLowSlider');
-const eqMidSlider = document.getElementById('eqMidSlider');
-const eqHighSlider = document.getElementById('eqHighSlider');
-const noiseCancelBtn = document.getElementById('noiseCancelBtn');
-const audioResetBtn = document.getElementById('audioResetBtn');
-const bgmImportBtn = document.getElementById('bgmImportBtn');
-const bgmInput = document.getElementById('bgmInput');
-const toukaSlider = document.getElementById('toukaSlider');
-const bgmStartMinusBtn = document.getElementById('bgmStartMinusBtn');
-const bgmStartPlusBtn = document.getElementById('bgmStartPlusBtn');
-const bgmStartDisplay = document.getElementById('bgmStartDisplay');
-// ========================================
-// 3. アプリケーションの状態管理変数
-// ========================================
-let audioCtx = null;
-let analyser = null;
-let source = null;
-let dataArray = null;
-let stream = null;
-let animationId = null;
-let isMovieRendering = false;
-let mediaRecorder = null;
-let recordedChunks = [];
-let audioBlob = null;
-// 🛠️ モバイル対応: 100%確実に波形を出すため、確認再生はAudioタグではなくメモリ直接方式（AudioBufferSourceNode）に一本化
-let playbackAudioBuffer = null;
-let playbackBgmBuffer = null;
-let activeAudioNode = null;
-let activeBgmNode = null;
-// 再生位置管理変数群
-let playbackStartTime = 0;
-let playbackOffset = 0;
-let isPlayingRecorded = false;
-let timerInterval = null;
-let timeLeft = 120;
-let currentBgColor = 'black';
-let currentWaveColors = ["#fff0f5", "#faf0e6"];
-let currentWaveStyle = 'corona';
-let isUserChangingIndex = false;
-let isRecording = false;
-let isRecordingPaused = false;
-let isNoiseCancelOn = false;
-let currentOpacity = 0.9;
-let bgImage = null;
-let gainNode = null, eqLow = null, eqMid = null, eqHigh = null, ncFilter = null, recordDestination = null;
-// BGM関連
-let bgmBlob = null;
-let bgmStartOffset = 0.0;
-let bgmAnalyser = null;
-let bgmDataArray = null;
-let bgmGainNode = null;
-let monitorBgmSource = null; // 録音中のモニター演奏用
-// ========================================
-// 4. 関数の定義
-// ========================================
-function initStandardColors() {
-const grid = document.getElementById('standardGrid');
-grid.innerHTML = '';
-STANDARD_PALETTES.forEach((colors, index) => {
-const circle = document.createElement('div');
-circle.className = 'palette-circle';
-if (index === 0) circle.classList.add('selected');
-circle.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
-circle.dataset.colors = JSON.stringify(colors);
-grid.appendChild(circle);
-});
-}
-function setupPaletteEvents() {
-const allPalettes = document.querySelectorAll('.palette-circle');
-allPalettes.forEach(palette => {
-palette.addEventListener('click', () => {
-allPalettes.forEach(p => p.classList.remove('selected'));
-palette.classList.add('selected');
-currentWaveColors = JSON.parse(palette.dataset.colors);
-triggerUIRefresh();
-});
-});
-}
-function triggerUIRefresh() {
-if (!isRecording && !isPlayingRecorded) {
-drawStaticWave();
-}
-}
-function syncAudioParams() {
-if (gainNode) gainNode.gain.value = parseFloat(volSlider.value);
-if (bgmGainNode) bgmGainNode.gain.value = parseFloat(bgmVolSlider.value);
-if (eqLow) eqLow.gain.value = parseFloat(eqLowSlider.value);
-if (eqMid) eqMid.gain.value = parseFloat(eqMidSlider.value);
-if (eqHigh) eqHigh.gain.value = parseFloat(eqHighSlider.value);
-if (ncFilter) ncFilter.gain.value = isNoiseCancelOn ? 5.0 : 0.0;
-}
-function clearCanvas(targetCtx, w, h) {
-if (currentBgColor === 'picture' && bgImage) {
-targetCtx.clearRect(0, 0, w, h);
-const imgW = bgImage.width;
-const imgH = bgImage.height;
-const imgRatio = imgW / imgH;
-const canvasRatio = w / h;
-let renderW, renderH;
-let renderX, renderY;
-if (imgRatio > canvasRatio) {
-renderW = w;
-renderH = w / imgRatio;
-renderX = 0;
-renderY = (h - renderH) / 2;
-} else {
-renderH = h;
-renderW = h * imgRatio;
-renderX = (w - renderW) / 2;
-renderY = 0;
-}
-targetCtx.drawImage(bgImage, renderX, renderY, renderW, renderH);
-} else {
-targetCtx.fillStyle = currentBgColor === 'black' ? '#000000' : '#ffffff';
-targetCtx.fillRect(0, 0, w, h);
-}
-}
-function getBoostedValue(rawByteValue) {
-const threshold = 25;
-if (rawByteValue < threshold) return 0;
-const normalized = (rawByteValue - threshold) / (255 - threshold);
-return Math.pow(normalized, 1.5);
-}
-function drawStaticWave() {
-clearCanvas(ctx, canvas.width, canvas.height);
-const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-gradient.addColorStop(0, currentWaveColors[0]);
-if (currentWaveColors.length > 2) {
-gradient.addColorStop(0.5, currentWaveColors[1]);
-gradient.addColorStop(1, currentWaveColors[2]);
-} else {
-gradient.addColorStop(1, currentWaveColors[1]);
-}
-ctx.fillStyle = gradient;
-ctx.strokeStyle = gradient;
-ctx.lineWidth = 4;
-ctx.lineCap = 'round';
-if (currentWaveStyle === 'corona') {
-ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 140, 0, Math.PI * 2); ctx.stroke();
-} else if (currentWaveStyle === 'star') {
-const centerX = canvas.width / 2; const centerY = canvas.height / 2;
-const baseRadius = 140;
-for (let i = 0; i < 48; i++) {
-const angle = (i / 48) * Math.PI * 2;
-const startX = centerX + Math.cos(angle) * (baseRadius - 8);
-const startY = centerY + Math.sin(angle) * (baseRadius - 8);
-const endX = centerX + Math.cos(angle) * (baseRadius + 8);
-const endY = centerY + Math.sin(angle) * (baseRadius + 8);
-ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY); ctx.stroke();
-}
-} else if (currentWaveStyle === 'aurora') {
-const centerY = canvas.height / 2;
-ctx.beginPath(); ctx.moveTo(40, centerY); ctx.lineTo(canvas.width - 40, centerY); ctx.stroke();
-} else if (currentWaveStyle === 'building') {
-const baseLineY = canvas.height - 80;
-ctx.beginPath(); ctx.moveTo(40, baseLineY); ctx.lineTo(canvas.width - 40, baseLineY); ctx.stroke();
-} else if (currentWaveStyle === 'bar3d') {
-    // --- 待機中の表示（ANALYZERのみ） ---
-    const W = ctx.canvas.width;
-    const H = ctx.canvas.height;
-    const centerX = W / 2;
-    const centerY = H / 2;
+                <!-- アップロードエリア -->
+                <div id="dropZone" onclick="document.getElementById('imageInput').click()" 
+                     class="border-2 border-dashed border-zinc-700 hover:border-accentRed/70 bg-zinc-900/50 hover:bg-zinc-900 transition cursor-pointer rounded-xl p-4 text-center group flex flex-col items-center justify-center min-h-[90px]">
+                    <svg class="w-6 h-6 text-zinc-500 group-hover:text-accentRed transition mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <p class="text-xs text-zinc-400 group-hover:text-zinc-200">ファイルをドロップ または クリック</p>
+                    <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                </div>
 
-    // 中心から外側への放射状グラデーションに変更
-    const kamonGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 180);
-    kamonGradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) {
-        kamonGradient.addColorStop(0.5, currentWaveColors[1]);
-        kamonGradient.addColorStop(1, currentWaveColors[2]);
-    } else {
-        kamonGradient.addColorStop(1, currentWaveColors[1]);
-    }
+                <!-- スライダーコントロール群 -->
+                <div class="space-y-3 pt-1">
+                    <div>
+                        <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                            <span>画像位置 (上下移動)</span>
+                            <span id="posYVal">50%</span>
+                        </div>
+                        <input type="range" id="posY" min="0" max="100" value="50" class="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer" oninput="updateControls()">
+                    </div>
 
-    ctx.fillStyle = kamonGradient;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = "bold 30px 'Cinecaption', 'Courier New', sans-serif";
-    ctx.fillText("3seconds", centerX, centerY - 20);
-    ctx.fillText("ANALYZER", centerX, centerY + 20);
-}
-}
+                    <div>
+                        <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                            <span>ズーム (拡大率)</span>
+                            <span id="zoomVal">1.0x</span>
+                        </div>
+                        <input type="range" id="zoom" min="1" max="3" step="0.05" value="1" class="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer" oninput="updateControls()">
+                    </div>
 
-function drawWaveLogic(targetCtx, targetCanvas, dataArr, opacity) {
-const gradient = targetCtx.createLinearGradient(0, 0, targetCanvas.width, targetCanvas.height);
-gradient.addColorStop(0, currentWaveColors[0]);
-if (currentWaveColors.length > 2) {
-gradient.addColorStop(0.5, currentWaveColors[1]);
-gradient.addColorStop(1, currentWaveColors[2]);
-} else {
-gradient.addColorStop(1, currentWaveColors[1]);
-}
-targetCtx.strokeStyle = gradient;
-targetCtx.fillStyle = gradient;
-targetCtx.lineWidth = 4;
-targetCtx.lineCap = 'round';
-const centerX = targetCanvas.width / 2;
-const centerY = targetCanvas.height / 2;
-const startIdx = 2;
-const endIdx = 35;
-const dataRange = endIdx - startIdx;
-if (currentWaveStyle === 'corona') {
-const baseRadius = 140;
-targetCtx.save();
-targetCtx.globalAlpha = opacity;
-targetCtx.lineWidth = 2.5;
-const barCountCorona = 360;
-for (let i = 0; i < barCountCorona; i++) {
-const angle = (i / barCountCorona) * Math.PI * 2;
-const mapRatio = i / barCountCorona;
-const exactIdx = startIdx + mapRatio * dataRange;
-const idxLeft = Math.floor(exactIdx);
-const idxRight = Math.min(idxLeft + 1, endIdx);
-const fraction = exactIdx - idxLeft;
-const valueLeft = dataArr[idxLeft] || 0;
-const valueRight = dataArr[idxRight] || 0;
-const interpolatedValue = valueLeft + (valueRight - valueLeft) * fraction;
-const boosted = getBoostedValue(interpolatedValue);
-const waveLength = 6 + (boosted * 150);
-const startX = centerX + Math.cos(angle) * baseRadius;
-const startY = centerY + Math.sin(angle) * baseRadius;
-const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
-}
-targetCtx.restore();
-} else if (currentWaveStyle === 'star') {
-const baseRadius = 138;
-const barCount = 64;
-targetCtx.save();
-targetCtx.globalAlpha = opacity;
-for (let i = 0; i < barCount; i++) {
-const angle = (i / barCount) * Math.PI * 2;
-const mapRatio = i / barCount;
-const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
-const boosted = getBoostedValue(dataArr[dataIdx] || 0);
-const waveLength = 5 + (boosted * 150);
-const startX = centerX + Math.cos(angle) * (baseRadius - waveLength);
-const startY = centerY + Math.sin(angle) * (baseRadius - waveLength);
-const endX = centerX + Math.cos(angle) * (baseRadius + waveLength);
-const endY = centerY + Math.sin(angle) * (baseRadius + waveLength);
-targetCtx.beginPath(); targetCtx.moveTo(startX, startY); targetCtx.lineTo(endX, endY); targetCtx.stroke();
-}
-targetCtx.restore();
-} else if (currentWaveStyle === 'aurora') {
-const usedPoints = 32;
-const spacing = (targetCanvas.width - 80) / (usedPoints - 1);
-const activeCenterY = targetCanvas.height / 2;
-const coords = [];
-for (let i = 0; i < usedPoints; i++) {
-const mapRatio = i / usedPoints;
-const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
-const boosted = getBoostedValue(dataArr[dataIdx] || 0);
-const waveHeight = 3 + (boosted * 150);
-coords.push({x: 40 + i * spacing, waveHeight});
-}
-targetCtx.beginPath();
-targetCtx.moveTo(coords[0].x, activeCenterY - coords[0].waveHeight);
-for (let i = 1; i < usedPoints; i++) {
-const prev = coords[i - 1]; const curr = coords[i]; const cpX = (prev.x + curr.x) / 2;
-targetCtx.bezierCurveTo(cpX, activeCenterY - prev.waveHeight, cpX, activeCenterY - curr.waveHeight, curr.x, activeCenterY - curr.waveHeight);
-}
-targetCtx.lineTo(coords[usedPoints - 1].x, activeCenterY + coords[usedPoints - 1].waveHeight);
-for (let i = usedPoints - 1; i > 0; i--) {
-const curr = coords[i]; const next = coords[i - 1]; const cpX = (curr.x + next.x) / 2;
-targetCtx.bezierCurveTo(cpX, activeCenterY + curr.waveHeight, cpX, activeCenterY + curr.waveHeight, next.x, activeCenterY + next.waveHeight);
-}
-targetCtx.closePath();
-targetCtx.save(); targetCtx.globalAlpha = opacity; targetCtx.fill(); targetCtx.restore();
-} else if (currentWaveStyle === 'building') {
-const barCount = 30;
-const spacing = (targetCanvas.width - 80) / barCount;
-const baseLineY = targetCanvas.height - 80;
-targetCtx.save(); targetCtx.lineCap = 'butt'; targetCtx.beginPath(); targetCtx.moveTo(40, baseLineY); targetCtx.lineTo(targetCanvas.width - 40, baseLineY); targetCtx.stroke(); targetCtx.restore();
-targetCtx.save(); targetCtx.globalAlpha = opacity; const barWidth = spacing * 0.7;
-for (let i = 0; i < barCount; i++) {
-const mapRatio = i / barCount;
-const dataIdx = startIdx + Math.floor(mapRatio * dataRange);
-const boosted = getBoostedValue(dataArr[dataIdx] || 0);
-const barHeight = boosted * 250;
-if (barHeight > 0) {
-const x = 40 + i * spacing + (spacing - barWidth) / 2;
-targetCtx.fillRect(x, baseLineY - barHeight, barWidth, barHeight);
-}
-}
-targetCtx.restore();
+                    <div>
+                        <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                            <span>コントラスト (白黒強弱)</span>
+                            <span id="contrastVal">130%</span>
+                        </div>
+                        <input type="range" id="contrast" min="50" max="250" value="130" class="w-full h-1.5 bg-zinc-700 rounded-lg appearance-none cursor-pointer" oninput="updateControls()">
+                    </div>
+                </div>
+            </div>
 
-} else if (currentWaveStyle === 'bar3d') {
-    // --- 録音・再生中の家紋描画と3秒判定（声質24属性） ---
-    if (!window.kamonState) {
-        window.kamonState = { 
-            startTime: performance.now(),
-            lastUpdate: performance.now(), 
-            currentIndex: 0, 
-            rotation: 0,
-            pitchType: 1, 
-            oddEvenType: 0, 
-            harmonicAmountType: 0, 
-            huskyType: 0,
-            noiseRatio: 0,
-            isInitialized: false
+            <!-- 2. 詩 (ポエム) 本文 -->
+            <div class="bg-cardBg/80 border border-zinc-800 rounded-2xl p-5 shadow-lg space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-semibold text-zinc-300">2. 詩 (ポエム) 本文</h3>
+                    <button onclick="applySamplePoem()" class="text-xs text-accentRed hover:text-rose-400 underline transition">
+                        サンプル適用
+                    </button>
+                </div>
+                <textarea id="poemInput" rows="6" placeholder="ここに詩を入力（改行で縦列が変わります）"
+                    class="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed"
+                    oninput="updateControls()"></textarea>
+            </div>
+
+            <!-- 3. 巻数数字 & 詩タイトル -->
+            <div class="bg-cardBg/80 border border-zinc-800 rounded-2xl p-5 shadow-lg space-y-4">
+                <h3 class="text-sm font-semibold text-zinc-300">3. 巻数数字 & 詩タイトル</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1">巻数数字</label>
+                        <input type="text" id="volNumInput" value="1." placeholder="例: 1."
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-accentRed"
+                            oninput="updateControls()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-zinc-400 mb-1">詩タイトル (自動折り返し対応)</label>
+                        <input type="text" id="volTitleInput" value="THE DEATH AND THE STRAWBERRY" placeholder="例: THE DEATH AND..."
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-2.5 text-sm text-zinc-100 focus:outline-none focus:border-accentRed"
+                            oninput="updateControls()">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Canvas (画像生成用非表示キャンバス) -->
+    <canvas id="exportCanvas" class="hidden"></canvas>
+
+    <!-- App Main Script -->
+    <script>
+        // App State
+        let currentTheme = 'dark'; // 'dark' | 'light'
+        let uploadedImage = null;
+
+        // Default Sample Poem
+        const defaultPoem = "僕たちは 伸ばす手に\n駆ける髪に\n背中に届く まぶしい光に\n似た何かを夢見ている";
+
+        // DOM Elements
+        const poemInput = document.getElementById('poemInput');
+        const volNumInput = document.getElementById('volNumInput');
+        const volTitleInput = document.getElementById('volTitleInput');
+        
+        const previewPoem = document.getElementById('previewPoem');
+        const previewVolNum = document.getElementById('previewVolNum');
+        const previewVolTitle = document.getElementById('previewVolTitle');
+        const previewImg = document.getElementById('previewImg');
+        const imgPlaceholder = document.getElementById('imgPlaceholder');
+        const poemCard = document.getElementById('poemCard');
+        const previewTitleBorder = document.getElementById('previewTitleBorder');
+
+        // Initialize App
+        window.onload = () => {
+            poemInput.value = defaultPoem;
+            updateControls();
+            
+            // Drag and drop setup
+            const dropZone = document.getElementById('dropZone');
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-accentRed');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-accentRed');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-accentRed');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    loadImageFile(e.dataTransfer.files[0]);
+                }
+            });
         };
-    }
-    // パーティクル管理用配列の初期化
-    if (!window.kamonParticles) {
-        window.kamonParticles = [];
-    }
 
-    const state = window.kamonState;
-    const now = performance.now();
-    let totalVol = 0;
-    const len = dataArr.length;
-
-    for (let i = 0; i < len; i++) {
-        totalVol += dataArr[i] || 0;
-    }
-
-    const elapsed = now - state.startTime;
-    const sampleRate = (window.audioCtx && window.audioCtx.sampleRate) ? window.audioCtx.sampleRate : 44100;
-    const freqPerBin = sampleRate / 1024; 
-    
-    // 0〜60Hzのノイズを無視するための最小ビン
-    const minEffectiveBin = Math.max(1, Math.ceil(60 / freqPerBin));
-
-    // 属性更新を行う関数（0〜60Hz除外・厳格なハスキー判定）
-    const updateAttributes = () => {
-        let minF0Bin = Math.max(minEffectiveBin, Math.floor(80 / freqPerBin));
-        let maxF0Bin = Math.min(len - 1, Math.ceil(1000 / freqPerBin));
-        let maxVal = 0;
-        let f0Bin = minF0Bin;
-        for (let i = minF0Bin; i <= maxF0Bin; i++) {
-            if (dataArr[i] > maxVal) {
-                maxVal = dataArr[i];
-                f0Bin = i;
+        // Handle Image Upload
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                loadImageFile(file);
             }
         }
-        let f0Hz = f0Bin * freqPerBin;
 
-        let pitchType = 0; 
-        if (f0Hz <= 170) pitchType = 0;
-        else if (f0Hz <= 340) pitchType = 1;
-        else pitchType = 2;
+        function loadImageFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImage = new Image();
+                uploadedImage.onload = () => {
+                    previewImg.src = e.target.result;
+                    previewImg.classList.remove('hidden');
+                    imgPlaceholder.classList.add('hidden');
+                    updateControls();
+                };
+                uploadedImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
-        let evenSum = 0;
-        let oddSum = 0;
-        for (let mult = 2; mult <= 8; mult++) {
-            let bin = f0Bin * mult;
-            if (bin < len) {
-                if (mult % 2 === 0) evenSum += dataArr[bin];
-                else oddSum += dataArr[bin];
+        // Apply Sample Poem
+        function applySamplePoem() {
+            poemInput.value = defaultPoem;
+            volNumInput.value = "1.";
+            volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
+            updateControls();
+        }
+
+        // Toggle Preview Theme (Dark/Light)
+        function setPreviewBg(mode) {
+            currentTheme = mode;
+            const btnDark = document.getElementById('btnBgDark');
+            const btnLight = document.getElementById('btnBgLight');
+
+            if (mode === 'dark') {
+                poemCard.style.backgroundColor = '#000000';
+                poemCard.style.color = '#ffffff';
+                previewTitleBorder.style.borderColor = '#ffffff';
+
+                btnDark.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-zinc-700 text-white shadow-sm";
+                btnLight.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-zinc-400 hover:text-white";
+            } else {
+                poemCard.style.backgroundColor = '#ffffff';
+                poemCard.style.color = '#000000';
+                previewTitleBorder.style.borderColor = '#000000';
+
+                btnLight.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-zinc-200 text-zinc-900 font-bold shadow-sm";
+                btnDark.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-zinc-400 hover:text-white";
             }
         }
-        let oddEvenType = (oddSum >= evenSum) ? 0 : 1;
 
-        let harmonicSum = 0;
-        for (let mult = 2; mult <= 10; mult++) {
-            let bin = f0Bin * mult;
-            if (bin < len) harmonicSum += dataArr[bin];
+        // Realtime update preview elements and image transforms
+        function updateControls() {
+            // Slider Values
+            const posY = document.getElementById('posY').value;
+            const zoom = document.getElementById('zoom').value;
+            const contrast = document.getElementById('contrast').value;
+
+            document.getElementById('posYVal').innerText = `${posY}%`;
+            document.getElementById('zoomVal').innerText = `${zoom}x`;
+            document.getElementById('contrastVal').innerText = `${contrast}%`;
+
+            // Image Styling
+            if (uploadedImage) {
+                previewImg.style.transform = `scale(${zoom})`;
+                previewImg.style.objectPosition = `center ${posY}%`;
+                previewImg.style.filter = `grayscale(100%) contrast(${contrast}%)`;
+            }
+
+            // Text Updating
+            previewPoem.innerText = poemInput.value || " ";
+            previewVolNum.innerText = volNumInput.value || "";
+            previewVolTitle.innerText = volTitleInput.value || "";
         }
-        let harmonicRatio = harmonicSum / (totalVol || 1);
-        let harmonicAmountType = (harmonicRatio > 0.08) ? 1 : 0;
 
-        let noiseSum = 0;
-        let validVol = 0;
-        for (let i = minEffectiveBin; i < len; i++) {
-            validVol += dataArr[i];
-            let isHarmonic = false;
-            for (let mult = 1; mult <= 20; mult++) {
-                let hBin = f0Bin * mult;
-                if (i >= hBin - 1 && i <= hBin + 1) {
-                    isHarmonic = true;
-                    break;
+        // Download HTML Card as High Quality PNG using HTML5 Canvas
+        function downloadImage() {
+            const canvas = document.getElementById('exportCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // High-res canvas dimensions
+            const width = 800;
+            const height = 1200;
+            canvas.width = width;
+            canvas.height = height;
+
+            const isDark = currentTheme === 'dark';
+            const bgColor = isDark ? '#000000' : '#ffffff';
+            const textColor = isDark ? '#ffffff' : '#000000';
+
+            // 1. Fill Background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. Render Image Area (① 細めの横長形状 h=140px)
+            const imgBoxX = 60;
+            const imgBoxY = 60;
+            const imgBoxWidth = width - 120;
+            const imgBoxHeight = 140;
+
+            if (uploadedImage) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+                ctx.clip();
+
+                const contrast = document.getElementById('contrast').value;
+                ctx.filter = `grayscale(100%) contrast(${contrast}%)`;
+
+                const zoom = parseFloat(document.getElementById('zoom').value);
+                const posY = parseFloat(document.getElementById('posY').value) / 100;
+
+                const renderW = imgBoxWidth * zoom;
+                const renderH = (uploadedImage.height * (imgBoxWidth / uploadedImage.width)) * zoom;
+
+                const drawX = imgBoxX + (imgBoxWidth - renderW) / 2;
+                const drawY = imgBoxY + (imgBoxHeight - renderH) * posY;
+
+                ctx.drawImage(uploadedImage, drawX, drawY, renderW, renderH);
+                ctx.restore();
+            } else {
+                ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+            }
+
+            // 3. Render Vertical Poem Text
+            ctx.fillStyle = textColor;
+            ctx.font = '700 34px "Shippori Mincho", "Noto Serif JP", serif';
+            ctx.textBaseline = 'top';
+
+            const lines = poemInput.value.split('\n');
+            const lineSpacing = 65;
+            const startX = width - 120;
+            const startY = 260;
+
+            lines.forEach((line, lineIndex) => {
+                const currentX = startX - (lineIndex * lineSpacing);
+                let currentY = startY;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (['、', '。'].includes(char)) {
+                        ctx.fillText(char, currentX + 15, currentY - 15);
+                    } else if (['ー', '―', '-'].includes(char)) {
+                        ctx.save();
+                        ctx.translate(currentX + 15, currentY + 15);
+                        ctx.rotate(Math.PI / 2);
+                        ctx.fillText(char, 0, 0);
+                        ctx.restore();
+                    } else {
+                        ctx.fillText(char, currentX, currentY);
+                    }
+                    currentY += 42;
                 }
-            }
-            if (!isHarmonic) {
-                noiseSum += dataArr[i];
-            }
-        }
-        let noiseRatio = noiseSum / (validVol || 1);
-        state.noiseRatio = noiseRatio;
+            });
 
-        // 声にハスキーな魅力がある場合のみ（閾値を厳格化）
-        let huskyType = (noiseRatio > 0.62) ? 1 : 0;
+            // 4. Render Bottom Title Box (② 横幅スリム＆高さを増やし、複数行自動折り返し対応)
+            const volNum = volNumInput.value || "";
+            const volTitle = (volTitleInput.value || "").toUpperCase();
 
-        state.pitchType = pitchType;
-        state.oddEvenType = oddEvenType;
-        state.harmonicAmountType = harmonicAmountType;
-        state.huskyType = huskyType;
-        state.currentIndex = (pitchType * 8) + (oddEvenType * 4) + (harmonicAmountType * 2) + huskyType;
-    };
-
-    // 3秒経過時の判定処理
-    if (!state.isInitialized) {
-        if (elapsed >= 3000) {
-            updateAttributes();
-            state.lastUpdate = now;
-            state.isInitialized = true;
-        }
-    } else {
-        if (totalVol > 100 && now - state.lastUpdate >= 3000) {
-            updateAttributes();
-            state.lastUpdate = now;
-        }
-    }
-
-    state.rotation += 0.002 + (totalVol / (255 * len)) * 0.05;
-
-    const W = targetCtx.canvas.width;
-    const H = targetCtx.canvas.height;
-    const activeCenterX = W / 2;
-    const activeCenterY = H / 2 - 20;
-    
-    const size = Math.min(W, H) * 0.6;
-    const maxRadius = size / 2;
-
-    targetCtx.save();
-    targetCtx.translate(activeCenterX, activeCenterY);
-
-    // 中心(0, 0)から外側(maxRadius)へ向かう円形グラデーションに変更
-    const kamonGradient = targetCtx.createRadialGradient(0, 0, 0, 0, 0, maxRadius);
-    kamonGradient.addColorStop(0, currentWaveColors[0]);
-    if (currentWaveColors.length > 2) {
-        kamonGradient.addColorStop(0.5, currentWaveColors[1]);
-        kamonGradient.addColorStop(1, currentWaveColors[2]);
-    } else {
-        kamonGradient.addColorStop(1, currentWaveColors[1]);
-    }
-
-    // --- 🌟 最初の3秒間の待機・フェードアウト演出（パーティクルなし） ---
-    if (!state.isInitialized) {
-        let fadeAlpha = 1.0;
-        if (elapsed > 2000) {
-            fadeAlpha = Math.max(0, 1.0 - (elapsed - 2000) / 1000);
-        }
-
-        targetCtx.globalAlpha = opacity * fadeAlpha;
-        targetCtx.strokeStyle = kamonGradient;
-        targetCtx.fillStyle = kamonGradient;
-        targetCtx.lineWidth = 1.5;
-
-        // 3seconds ANALYZER テキスト表示（待機中と同一のフォントサイズ・スタイル・位置）
-        targetCtx.textAlign = 'center';
-        targetCtx.textBaseline = 'middle';
-        targetCtx.font = "bold 30px 'Cinecaption', 'Courier New', sans-serif";
-        targetCtx.fillText("3seconds", 0, 0);
-        targetCtx.fillText("ANALYZER", 0, 40);
-
-        targetCtx.restore();
-        return;
-    }
-
-    // --- 🌟 非整数次倍音（ノイズ）検知時にパーティクルを生成（最大50個） ---
-    let currentNoiseRatio = state.noiseRatio || 0;
-    const isNoiseActive = (currentNoiseRatio > 0.25 && totalVol > 50);
-    if (isNoiseActive && window.kamonParticles.length < 50) {
-        const angle = Math.random() * Math.PI * 2;
-        const spawnRadius = maxRadius * (1.0 + Math.random() * 0.15);
-        window.kamonParticles.push({
-            x: Math.cos(angle) * spawnRadius,
-            y: Math.sin(angle) * spawnRadius,
-            vx: Math.cos(angle) * (0.8 + Math.random() * 1.5),
-            vy: Math.sin(angle) * (0.8 + Math.random() * 1.5),
-            radius: 2.0 + Math.random() * 2.5,
-            life: 1.0,
-            maxLife: 1.0
-        });
-    }
-
-    // --- 🪶 パーティクルの描画処理（軽量化・半透明重ね合わせ） ---
-    const dt = 1 / 60;
-    for (let i = window.kamonParticles.length - 1; i >= 0; i--) {
-        let p = window.kamonParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= dt;
-        let alpha = Math.max(0, p.life / p.maxLife);
-
-        if (p.life <= 0) {
-            window.kamonParticles.splice(i, 1);
-            continue;
-        }
-
-        targetCtx.save();
-        if (currentBgColor === 'white') {
-            targetCtx.fillStyle = currentWaveColors[0];
-            targetCtx.globalAlpha = alpha * 0.6;
-        } else {
-            targetCtx.fillStyle = kamonGradient;
-            targetCtx.globalAlpha = alpha * 0.8;
-            targetCtx.globalCompositeOperation = 'lighter';
-        }
-
-        targetCtx.beginPath();
-        targetCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        targetCtx.fill();
-        targetCtx.restore();
-    }
-
-    targetCtx.globalCompositeOperation = (currentBgColor === 'white') ? 'source-over' : 'lighter';
-    targetCtx.strokeStyle = kamonGradient;
-    targetCtx.fillStyle = kamonGradient;
-    targetCtx.globalAlpha = opacity;
-
-    // --- 描画の線：倍音が少ない時に波線、多い時に実線 ---
-    if (state.harmonicAmountType === 0) {
-        targetCtx.setLineDash([4, 6]); // 少ない：波線
-    } else {
-        targetCtx.setLineDash([]);     // 多い：実線
-    }
-
-    // 外枠の描画
-    targetCtx.save();
-    targetCtx.rotate(state.rotation * 0.5);
-    if (state.pitchType === 0) {
-        targetCtx.lineWidth = 4;
-        targetCtx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            let angle = i * Math.PI * 2 / 8;
-            if (i === 0) targetCtx.moveTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
-            else targetCtx.lineTo(Math.cos(angle) * maxRadius, Math.sin(angle) * maxRadius);
-        }
-        targetCtx.closePath(); targetCtx.stroke();
-    } else if (state.pitchType === 1) {
-        targetCtx.lineWidth = 1.5;
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
-    } else {
-        targetCtx.lineWidth = 0.5;
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius, 0, Math.PI * 2); targetCtx.stroke();
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.95, 0, Math.PI * 2); targetCtx.stroke();
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.9, 0, Math.PI * 2); targetCtx.stroke();
-        targetCtx.beginPath(); targetCtx.arc(0, 0, maxRadius * 0.85, 0, Math.PI * 2); targetCtx.stroke();
-    }
-    targetCtx.restore();
-
-    // --- 🌟 中心モチーフの描画 ---
-    targetCtx.save();
-    targetCtx.rotate(-state.rotation);
-    targetCtx.lineWidth = 2;
-    
-    let volRatio = Math.min(1.0, (totalVol / (255 * len)) * 6.0);
-    let innerBase = maxRadius * 0.25;
-    // 最大値を20%抑えて上品な広がりへ変更 (0.60 -> 0.48)
-    let innerRadius = innerBase + volRatio * (maxRadius * 0.48);
-
-    if (state.oddEvenType === 0) {
-        let points = (state.harmonicAmountType === 0) ? 4 : 8;
-        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
-        for (let l = 0; l < loops; l++) {
-            let r = innerRadius * (1 - l * 0.3);
-            targetCtx.beginPath();
-            for (let i = 0; i < points * 2; i++) {
-                let pr = (i % 2 === 0) ? r : r * 0.4;
-                let angle = i * Math.PI * 2 / (points * 2);
-                if (i === 0) targetCtx.moveTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
-                else targetCtx.lineTo(Math.cos(angle) * pr, Math.sin(angle) * pr);
-            }
-            targetCtx.closePath(); targetCtx.stroke();
-        }
-    } else {
-        // --- 偶数倍音時：より優美で立体的な花びら描画 ---
-        let petals = (state.harmonicAmountType === 0) ? 5 : 12;
-        let loops = (state.harmonicAmountType === 0) ? 1 : 2;
-        let petalWidthAngle = (Math.PI * 2 / petals) * 0.4; // 花びらの広がり角度
-
-        for (let l = 0; l < loops; l++) {
-            let r = innerRadius * (1 - l * 0.35);
-            for (let i = 0; i < petals; i++) {
-                let angle = i * Math.PI * 2 / petals;
-                let leftAngle = angle - petalWidthAngle;
-                let rightAngle = angle + petalWidthAngle;
-
-                let tipX = Math.cos(angle) * r;
-                let tipY = Math.sin(angle) * r;
-                
-                let cpLeftX = Math.cos(leftAngle) * (r * 0.85);
-                let cpLeftY = Math.sin(leftAngle) * (r * 0.85);
-                
-                let cpRightX = Math.cos(rightAngle) * (r * 0.85);
-                let cpRightY = Math.sin(rightAngle) * (r * 0.85);
-                
-                let baseLeftX = Math.cos(leftAngle) * (r * 0.15);
-                let baseLeftY = Math.sin(leftAngle) * (r * 0.15);
-                
-                let baseRightX = Math.cos(rightAngle) * (r * 0.15);
-                let baseRightY = Math.sin(rightAngle) * (r * 0.15);
-
-                targetCtx.beginPath();
-                targetCtx.moveTo(baseLeftX, baseLeftY);
-                // 根元から先端への柔らかな膨らみ
-                targetCtx.quadraticCurveTo(cpLeftX, cpLeftY, tipX, tipY);
-                // 先端から反対側の根元へ戻る曲線
-                targetCtx.quadraticCurveTo(cpRightX, cpRightY, baseRightX, baseRightY);
-                targetCtx.stroke();
-            }
-        }
-    }
-    targetCtx.restore();
-
-    targetCtx.setLineDash([]);
-    targetCtx.globalCompositeOperation = 'source-over';
-    
-    if (state.isInitialized) {
-        const currentAttr = KAMON_ATTRIBUTES[state.currentIndex];
-        if (currentAttr) {
-            targetCtx.fillStyle = kamonGradient;
-            targetCtx.textAlign = 'center';
-            targetCtx.textBaseline = 'top';
+            // 固定スリム幅と可変高さを設定
+            const boxWidth = 480; 
+            const maxTitleTextWidth = 360; // タイトル用領域幅
             
-            targetCtx.font = "30px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
-            targetCtx.fillText(currentAttr.name, 0, maxRadius + 20);
+            ctx.font = '800 22px "Noto Serif JP", sans-serif';
             
-            targetCtx.font = "15px 'Hiragino Mincho ProN', 'Yu Mincho', serif";
-            targetCtx.fillText(currentAttr.desc, 0, maxRadius + 60);
-        }
-    }
+            // 単語単位での折り返し計算
+            const words = volTitle.split(' ');
+            let titleLines = [];
+            let currentLine = '';
 
-    targetCtx.restore();
-}
-}
-
-async function startRecordingStream() {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
-});
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-source = audioCtx.createMediaStreamSource(stream);
-setupAudioNodes(source, true);
-recordDestination = audioCtx.createMediaStreamDestination();
-gainNode.connect(recordDestination);
-dataArray = new Uint8Array(analyser.frequencyBinCount);
-}
-async function restartRecordingStream() {
-if (!isRecording || !mediaRecorder) return;
-if (stream) stream.getTracks().forEach(track => track.stop());
-try {
-stream = await navigator.mediaDevices.getUserMedia({
-audio: { echoCancellation: isNoiseCancelOn, noiseSuppression: isNoiseCancelOn, autoGainControl: false }
-});
-const newSource = audioCtx.createMediaStreamSource(stream);
-eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-newSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-gainNode.connect(analyser); gainNode.connect(recordDestination);
-syncAudioParams();
-} catch (err) { console.error(err); }
-}
-function stopRecording() {
-if (!isRecording) return;
-isRecording = false;
-isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE;
-if (monitorBgmSource) { try { monitorBgmSource.stop(); } catch(e){} monitorBgmSource = null; }
-if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-if (stream) stream.getTracks().forEach(track => track.stop());
-if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-clearInterval(timerInterval);
-recBtn.classList.remove('recording');
-timerDisplay.style.display = 'none';
-drawStaticWave();
-}
-function setupAudioNodes(audioSource, isMuteSpeaker) {
-if (!audioCtx || !audioSource) return;
-eqLow = audioCtx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 320;
-eqMid = audioCtx.createBiquadFilter(); eqMid.type = 'peaking'; eqMid.Q.value = 1.0; eqMid.frequency.value = 1000;
-eqHigh = audioCtx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 3200;
-ncFilter = audioCtx.createBiquadFilter(); ncFilter.type = 'highpass'; ncFilter.frequency.value = isNoiseCancelOn ? 120 : 20; ncFilter.Q.value = 0.7;
-gainNode = audioCtx.createGain();
-analyser = audioCtx.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.75;
-audioSource.connect(eqLow); eqLow.connect(eqMid); eqMid.connect(eqHigh); eqHigh.connect(ncFilter); ncFilter.connect(gainNode);
-gainNode.connect(analyser);
-if (!isMuteSpeaker) gainNode.connect(audioCtx.destination);
-syncAudioParams();
-}
-function updateTimerText() {
-const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
-timerDisplay.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
-function lockMenus() {
-menuBg.classList.add('locked'); menuStyle.classList.add('locked'); menuColor.classList.add('locked'); menuCustomPalette.classList.add('locked');
-document.getElementById('menuTouka').classList.add('locked');
-}
-function unlockMenus() {
-menuBg.classList.remove('locked'); menuStyle.classList.remove('locked'); menuColor.classList.remove('locked'); menuCustomPalette.classList.remove('locked');
-document.getElementById('menuTouka').classList.remove('locked');
-}
-function stopBufferPlayback() {
-if (activeAudioNode) { try { activeAudioNode.stop(); } catch(e){} activeAudioNode = null; }
-if (activeBgmNode) { try { activeBgmNode.stop(); } catch(e){} activeBgmNode = null; }
-if (isPlayingRecorded) {
-playbackOffset += (audioCtx.currentTime - playbackStartTime);
-isPlayingRecorded = false;
-playPauseImg.src = IMG_PLAY;
-}
-}
-// 🛠️ モバイル専用のメモリ直流バッファ再生エンジン
-function startBufferPlayback(offset) {
-if (!playbackAudioBuffer) return;
-stopBufferPlayback();
-window.kamonState = null; // 再生時に状態をリセット
-if (offset >= playbackAudioBuffer.duration) {
-offset = 0;
-}
-playbackOffset = offset;
-playbackStartTime = audioCtx.currentTime;
-// 1. 録音データ用の音響ルーティングを構築
-activeAudioNode = audioCtx.createBufferSource();
-activeAudioNode.buffer = playbackAudioBuffer;
-setupAudioNodes(activeAudioNode, false);
-// 2. BGMが読み込まれている場合はBGM用の音響ルーティングを並列構築
-if (playbackBgmBuffer) {
-activeBgmNode = audioCtx.createBufferSource();
-activeBgmNode.buffer = playbackBgmBuffer;
-bgmAnalyser = audioCtx.createAnalyser();
-bgmAnalyser.fftSize = 1024;
-bgmAnalyser.smoothingTimeConstant = 0.75;
-bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-bgmGainNode = audioCtx.createGain();
-activeBgmNode.connect(bgmAnalyser);
-bgmAnalyser.connect(bgmGainNode);
-bgmGainNode.connect(audioCtx.destination);
-}
-syncAudioParams();
-// 3. 計算された正しいオフセット位置から再生
-activeAudioNode.start(0, offset);
-if (activeBgmNode) {
-let bgmTargetOffset = 0;
-let bgmDelayTime = 0;
-if (bgmStartOffset < 0) {
-bgmTargetOffset = offset + Math.abs(bgmStartOffset);
-} else {
-if (offset < bgmStartOffset) {
-bgmDelayTime = bgmStartOffset - offset;
-bgmTargetOffset = 0;
-} else {
-bgmTargetOffset = offset - bgmStartOffset;
-}
-}
-if (bgmTargetOffset < playbackBgmBuffer.duration) {
-if (bgmDelayTime > 0) {
-activeBgmNode.start(audioCtx.currentTime + bgmDelayTime, bgmTargetOffset);
-} else {
-activeBgmNode.start(0, bgmTargetOffset);
-}
-}
-}
-isPlayingRecorded = true;
-playPauseImg.src = IMG_PAUSE;
-draw();
-}
-function resetDataWithoutPrompt(keepBgm = false) {
-stopBufferPlayback();
-audioBlob = null; seekBar.value = 0; playPauseImg.src = IMG_PLAY; downloadBtn.classList.remove('ready');
-if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-isPlayingRecorded = false;
-isRecording = false; isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE;
-playbackAudioBuffer = null;
-playbackOffset = 0;
-window.kamonState = null; // 状態のリセット
-eqLow = null; eqMid = null; eqHigh = null; ncFilter = null; gainNode = null; source = null; analyser = null; dataArray = null;
-if (!keepBgm) {
-playbackBgmBuffer = null;
-bgmBlob = null; bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
-bgmImportBtn.classList.remove('loaded');
-bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
-bgmInput.value = "";
-} else {
-bgmGainNode = null; bgmAnalyser = null; bgmDataArray = null;
-}
-unlockMenus(); drawStaticWave();
-}
-function hideOverlayAndCleanup() {
-document.getElementById('renderOverlay').style.display = 'none';
-document.getElementById('miniGameIframe').src = 'about:blank';
-resetDataWithoutPrompt();
-}
-function draw() {
-if (!isRecording && !isPlayingRecorded) { animationId = null; return; }
-animationId = requestAnimationFrame(draw);
-if (isPlayingRecorded) {
-const currentProgress = playbackOffset + (audioCtx.currentTime - playbackStartTime);
-if (!isUserChangingIndex) {
-seekBar.value = currentProgress;
-}
-// 音声の長さを超えたら自動で停止処理
-if (currentProgress >= playbackAudioBuffer.duration) {
-stopBufferPlayback();
-playbackOffset = 0;
-seekBar.value = 0;
-drawStaticWave();
-return;
-}
-}
-if (isRecording && isRecordingPaused) {
-if (dataArray) dataArray.fill(0);
-if (bgmDataArray) bgmDataArray.fill(0);
-} else {
-if (analyser && dataArray) analyser.getByteFrequencyData(dataArray);
-if (bgmAnalyser && bgmDataArray) bgmAnalyser.getByteFrequencyData(bgmDataArray);
-}
-clearCanvas(ctx, canvas.width, canvas.height);
-if (bgmDataArray) {
-drawWaveLogic(ctx, canvas, bgmDataArray, 0.3);
-}
-if (dataArray) {
-drawWaveLogic(ctx, canvas, dataArray, currentOpacity);
-}
-}
-// ========================================
-// 5. イベントリスナーの登録
-// ========================================
-btnBlack.addEventListener('click', () => {
-currentBgColor = 'black'; btnBlack.classList.add('active'); btnWhite.classList.remove('active'); btnPicture.classList.remove('active');
-canvasBg.classList.remove('theme-white'); canvasBg.style.backgroundColor = ''; pictureInput.value = ""; triggerUIRefresh();
-});
-btnWhite.addEventListener('click', () => {
-currentBgColor = 'white'; btnWhite.classList.add('active'); btnBlack.classList.remove('active'); btnPicture.classList.remove('active');
-canvasBg.classList.add('theme-white'); canvasBg.style.backgroundColor = ''; pictureInput.value = ""; triggerUIRefresh();
-});
-btnPicture.addEventListener('click', () => { pictureInput.click(); });
-pictureInput.addEventListener('change', (e) => {
-const file = e.target.files[0];
-if (file) {
-const reader = new FileReader();
-reader.onload = function(event) {
-const img = new Image();
-img.onload = function() {
-bgImage = img; currentBgColor = 'picture'; btnPicture.classList.add('active'); btnBlack.classList.remove('active'); btnWhite.classList.remove('active');
-canvasBg.style.backgroundColor = 'transparent'; triggerUIRefresh();
-};
-img.src = event.target.result;
-};
-reader.readAsDataURL(file);
-}
-});
-toukaSlider.addEventListener('input', () => {
-const sliderRatio = parseFloat(toukaSlider.value) / 100;
-currentOpacity = 1.0 - (sliderRatio * 0.6); triggerUIRefresh();
-});
-styleOptions.forEach(opt => {
-opt.addEventListener('click', () => {
-styleOptions.forEach(o => o.classList.remove('active')); opt.classList.add('active');
-currentWaveStyle = opt.dataset.style; triggerUIRefresh();
-});
-});
-volSlider.addEventListener('input', syncAudioParams);
-bgmVolSlider.addEventListener('input', syncAudioParams);
-bgmStartMinusBtn.addEventListener('click', () => { bgmStartOffset -= 0.1; updateBgmStartDisplay(); });
-bgmStartPlusBtn.addEventListener('click', () => { bgmStartOffset += 0.1; updateBgmStartDisplay(); });
-function updateBgmStartDisplay() {
-if (bgmStartOffset > 0) { bgmStartDisplay.innerText = `+${bgmStartOffset.toFixed(1)} sec`; }
-else { bgmStartDisplay.innerText = `${bgmStartOffset.toFixed(1)} sec`; }
-}
-eqLowSlider.addEventListener('input', syncAudioParams);
-eqMidSlider.addEventListener('input', syncAudioParams);
-eqHighSlider.addEventListener('input', syncAudioParams);
-noiseCancelBtn.addEventListener('click', () => {
-isNoiseCancelOn = !isNoiseCancelOn;
-if (isNoiseCancelOn) { noiseCancelBtn.classList.add('active'); noiseCancelBtn.innerText = "NOISE\nCANCEL\nON"; }
-else { noiseCancelBtn.classList.remove('active'); noiseCancelBtn.innerText = "NOISE\nCANCEL\nOFF"; }
-if (isRecording) { restartRecordingStream(); }
-else if (isPlayingRecorded) { syncAudioParams(); }
-});
-audioResetBtn.addEventListener('click', () => {
-    // 1. 再生中だった場合は一度安全に停止させる
-    stopBufferPlayback();
-
-    // 2. 音量やイコライザーなどのスライダー設定を初期化
-    volSlider.value = 1.0; 
-    bgmVolSlider.value = 0.5; 
-    eqLowSlider.value = -7; 
-    eqMidSlider.value = 3; 
-    eqHighSlider.value = -4;
-    bgmStartOffset = 0.0; 
-    updateBgmStartDisplay(); 
-    syncAudioParams();
-
-    // 3. 🔥【ここが重要】録音データには触れず、BGMデータだけをクリアする
-    playbackBgmBuffer = null;
-    bgmBlob = null; 
-    bgmGainNode = null; 
-    bgmAnalyser = null; 
-    bgmDataArray = null;
-    
-    // BGMボタンの見た目を未選択の状態に戻す
-    bgmImportBtn.classList.remove('loaded');
-    bgmImportBtn.innerHTML = "IMPORT<br>BGM<br>♬";
-    bgmInput.value = "";
-
-    // 4. 画面の波形表示をリフレッシュする
-    drawStaticWave();
-
-    alert("各種音量・EQ設定を初期化！\nBGMもクリアしました^.ˬ.^ฅ\n録音データは残っています");
-});
-bgmImportBtn.addEventListener('click', () => { bgmInput.click(); });
-bgmInput.addEventListener('change', async (e) => {
-const file = e.target.files[0];
-if (file) {
-bgmBlob = file;
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-try {
-const bgmArrayBuffer = await bgmBlob.arrayBuffer();
-playbackBgmBuffer = await audioCtx.decodeAudioData(bgmArrayBuffer);
-bgmImportBtn.classList.add('loaded');
-bgmImportBtn.innerText = "BGM\nLOADED\n♬.*";
-alert("BGMの読み込みに成功しました^.ˬ.^ฅ");
-} catch(e) {
-console.error("BGM Decode Error:", e);
-alert("BGMの読み込みに失敗しました꙳☄︎ファイル形式をご確認ください");
-}
-}
-});
-// ========================================
-// 6. 録音コントロール系の処理
-// ========================================
-recBtn.addEventListener('click', async () => {
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-if (audioCtx.state === 'suspended') await audioCtx.resume();
-if (isRecording) {
-if (isRecordingPaused) {
-isRecordingPaused = false;
-pauseBtnImg.src = IMG_PAUSE;
-if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-// BGMモニターの一時停止解除はAudioContext全体のタイムラインに追従できないため録音時は簡易的なトリガー
-}
-return;
-}
-resetDataWithoutPrompt(true);
-try {
-unlockMenus();
-await startRecordingStream();
-isRecording = true;
-isRecordingPaused = false;
-recordedChunks = [];
-let options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 160000 };
-if (typeof MediaRecorder.isTypeSupported === 'function' && !MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-options = { audioBitsPerSecond: 160000 };
-}
-mediaRecorder = new MediaRecorder(recordDestination.stream, options);
-mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-mediaRecorder.onstop = async () => {
-audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-try {
-const arrayBuffer = await audioBlob.arrayBuffer();
-playbackAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-seekBar.max = playbackAudioBuffer.duration;
-seekBar.value = 0;
-} catch(e) { console.error("Audio Decode Error:", e); }
-downloadBtn.classList.add('ready');
-playPauseImg.src = IMG_PLAY;
-lockMenus();
-};
-// 録音中にヘッドホンでBGMを聞くためのルーティング（BGM波形も抽出）
-if (playbackBgmBuffer) {
-monitorBgmSource = audioCtx.createBufferSource();
-monitorBgmSource.buffer = playbackBgmBuffer;
-bgmAnalyser = audioCtx.createAnalyser();
-bgmAnalyser.fftSize = 1024;
-bgmAnalyser.smoothingTimeConstant = 0.75;
-bgmDataArray = new Uint8Array(bgmAnalyser.frequencyBinCount);
-bgmGainNode = audioCtx.createGain();
-monitorBgmSource.connect(bgmAnalyser);
-bgmAnalyser.connect(bgmGainNode);
-bgmGainNode.connect(audioCtx.destination);
-bgmGainNode.connect(recordDestination); // 録音ストリームにBGMを合成
-syncAudioParams();
-if (bgmStartOffset < 0) {
-monitorBgmSource.start(0, Math.abs(bgmStartOffset));
-} else {
-monitorBgmSource.start(audioCtx.currentTime + bgmStartOffset, 0);
-}
-}
-mediaRecorder.start();
-draw();
-recBtn.classList.add('recording'); timerDisplay.style.display = 'block'; timeLeft = 120; updateTimerText();
-timerInterval = setInterval(() => {
-if (!isRecordingPaused) {
-timeLeft--; updateTimerText();
-if (timeLeft <= 0) stopRecording();
-}
-}, 1000);
-} catch (err) {
-alert("マイクの起動に失敗しました꙳☄︎\n設定をご確認ください^.ˬ.^ฅ: " + err);
-}
-});
-pauseBtn.addEventListener('click', () => {
-if (!isRecording) return;
-if (!isRecordingPaused) {
-isRecordingPaused = true; pauseBtnImg.src = IMG_PLAY;
-if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.pause();
-} else {
-isRecordingPaused = false; pauseBtnImg.src = IMG_PAUSE;
-if (mediaRecorder && mediaRecorder.state === "paused") mediaRecorder.resume();
-}
-});
-stopBtn.addEventListener('click', () => { stopRecording(); });
-resetBtn.addEventListener('click', () => {
-if (confirm("これは録音リセットボタンです^.ˬ.^ฅ\nBGMは残したまま、現在の録音データをクリアして最初からやりなおしますか？")) {
-resetDataWithoutPrompt(true);
-alert("録音をリセットしました^.ˬ.^ฅ");
-}
-});
-// 確認再生ボタンの処理
-playPauseBtn.addEventListener('click', async () => {
-if (!playbackAudioBuffer) { alert("これは録音完了後に再生するボタンです。○の後□で音録を完了できます^.ˬ.^ฅⳊ"); return; }
-if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-if (audioCtx.state === 'suspended') await audioCtx.resume();
-if (isPlayingRecorded) {
-stopBufferPlayback();
-} else {
-startBufferPlayback(playbackOffset);
-}
-});
-// シークバーを指で動かしたときのリアルタイム音響位置の追従
-seekBar.addEventListener('input', () => {
-if (!playbackAudioBuffer) return;
-isUserChangingIndex = true;
-const targetTime = parseFloat(seekBar.value);
-if (isPlayingRecorded) {
-startBufferPlayback(targetTime);
-} else {
-playbackOffset = targetTime;
-}
-});
-seekBar.addEventListener('change', () => { isUserChangingIndex = false; });
-// 動画保存ロジック（内部処理は極めてクリーンにメモリからレンダー）
-downloadBtn.addEventListener('click', async () => {
-if (!audioBlob || !playbackAudioBuffer) { alert("保存する録音データがありません^.ˬ.^ฅⳊ"); return; }
-stopBufferPlayback();
-if (!confirm("動画の保存を開始します\n処理中は画面を開いたままお待ちください")) return;
-const renderAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-if (renderAudioCtx.state === 'suspended') await renderAudioCtx.resume();
-document.getElementById('renderOverlay').style.display = 'flex';
-document.getElementById('miniGameIframe').src = 'mini-game.html';
-downloadBtn.style.pointerEvents = 'none';
-const bufferSource = renderAudioCtx.createBufferSource();
-bufferSource.buffer = playbackAudioBuffer;
-const rEqLow = renderAudioCtx.createBiquadFilter(); rEqLow.type = 'lowshelf'; rEqLow.frequency.value = 320; rEqLow.gain.value = parseFloat(eqLowSlider.value);
-const rEqMid = renderAudioCtx.createBiquadFilter(); rEqMid.type = 'peaking'; rEqMid.Q.value = 1.0; rEqMid.frequency.value = 1000; rEqMid.gain.value = parseFloat(eqMidSlider.value);
-const rEqHigh = renderAudioCtx.createBiquadFilter(); rEqHigh.type = 'highshelf'; rEqHigh.frequency.value = 3200; rEqHigh.gain.value = parseFloat(eqHighSlider.value);
-const rNcFilter = renderAudioCtx.createBiquadFilter(); rNcFilter.type = 'highpass'; rNcFilter.frequency.value = isNoiseCancelOn ? 120 : 20; rNcFilter.Q.value = 0.7;
-const rGain = renderAudioCtx.createGain(); rGain.gain.value = parseFloat(volSlider.value);
-const rAnalyser = renderAudioCtx.createAnalyser(); rAnalyser.fftSize = 1024; rAnalyser.smoothingTimeConstant = 0.75;
-bufferSource.connect(rEqLow); rEqLow.connect(rEqMid); rEqMid.connect(rEqHigh); rEqHigh.connect(rNcFilter); rNcFilter.connect(rGain); rGain.connect(rAnalyser);
-const rDataArray = new Uint8Array(rAnalyser.frequencyBinCount);
-const captureCanvas = document.createElement('canvas'); captureCanvas.width = 600; captureCanvas.height = 600;
-const rCtx = captureCanvas.getContext('2d');
-const canvasStream = captureCanvas.captureStream(30);
-const renderDest = renderAudioCtx.createMediaStreamDestination();
-rGain.connect(renderDest);
-let rBgmSource = null; let rBgmAnalyser = null; let rBgmDataArray = null;
-if (playbackBgmBuffer) {
-rBgmSource = renderAudioCtx.createBufferSource(); rBgmSource.buffer = playbackBgmBuffer;
-rBgmAnalyser = renderAudioCtx.createAnalyser(); rBgmAnalyser.fftSize = 1024; rBgmAnalyser.smoothingTimeConstant = 0.75;
-rBgmDataArray = new Uint8Array(rBgmAnalyser.frequencyBinCount);
-const rBgmGain = renderAudioCtx.createGain(); rBgmGain.gain.value = parseFloat(bgmVolSlider.value);
-rBgmSource.connect(rBgmAnalyser); rBgmAnalyser.connect(rBgmGain); rBgmGain.connect(renderDest);
-}
-const combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...renderDest.stream.getAudioTracks()]);
-let videoOptions = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
-if (!MediaRecorder.isTypeSupported(videoOptions.mimeType)) { videoOptions = { videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 }; }
-window.kamonState = null; // 書き出し中も初期状態からスタート
-const movieRecorder = new MediaRecorder(combinedStream, videoOptions);
-const movieChunks = [];
-movieRecorder.ondataavailable = (e) => { if (e.data.size > 0) movieChunks.push(e.data); };
-movieRecorder.onstop = () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    const fileExtension = isIOS ? 'mov' : 'webm';
-    const mimeType = isIOS ? 'video/quicktime' : 'video/webm';
-
-    const finalBlob = new Blob(movieChunks, { type: mimeType });
-    const finalVideoUrl = URL.createObjectURL(finalBlob);
-    const fileName = `voice-wave-${Date.now()}.${fileExtension}`;
-    
-    // Android/PCは自動ダウンロード
-    if (!isIOS) {
-        const a = document.createElement('a'); a.href = finalVideoUrl; a.download = fileName;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }
-    
-    const videoPopup = document.getElementById('videoPopup');
-    const popupVideo = document.getElementById('popupVideo');
-    const downloadFileBtn = document.getElementById('downloadFileBtn');
-    const closePopupBtn = document.getElementById('closePopupBtn');
-    
-    popupVideo.src = finalVideoUrl;
-    videoPopup.style.display = 'flex';
-    
-    downloadBtn.style.pointerEvents = 'auto'; 
-    isMovieRendering = false;
-
-    // 💡 ボタンが押された時の処理を「共有メニュー」を出す仕組みに変更！
-    downloadFileBtn.onclick = async () => {
-        if (isIOS) {
-            try {
-                // Blobデータを、iPhoneが共有できる「Fileオブジェクト」に変換
-                const file = new File([finalBlob], fileName, { type: mimeType });
-                
-                // iPhoneの共有機能が使えるかチェック
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    //iPhone標準の共有メニューを強制的に引き出す！
-                    await navigator.share({
-                        files: [file],
-                        title: '動画の保存',
-                        text: '作成した動画を保存します'
-                    });
+            words.forEach(word => {
+                const testLine = currentLine ? currentLine + ' ' + word : word;
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxTitleTextWidth && currentLine) {
+                    titleLines.push(currentLine);
+                    currentLine = word;
                 } else {
-                    alert("このブラウザは動画の共有保存に対応していません。Safariで開き直してください。");
+                    currentLine = testLine;
                 }
-            } catch (error) {
-                console.error("共有エラー:", error);
-                // 万が一エラーが出た時のバックアップとして別窓を開く
-                window.open(finalVideoUrl, '_blank');
-            }
-        } else {
-            // AndroidやPCの場合は今まで通り一発保存
-            const a = document.createElement('a');
-            a.href = finalVideoUrl;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            });
+            if (currentLine) titleLines.push(currentLine);
+
+            const titleLineHeight = 28;
+            const computedHeight = Math.max(80, (titleLines.length * titleLineHeight) + 24);
+
+            const boxX = (width - boxWidth) / 2;
+            const boxY = height - computedHeight - 60;
+
+            // 枠の描画
+            ctx.strokeStyle = textColor;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
+
+            // 巻数の描画
+            ctx.fillStyle = textColor;
+            ctx.font = '900 32px "Noto Serif JP", sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
+
+            // タイトルの描画（複数行対応）
+            ctx.font = '800 22px "Noto Serif JP", sans-serif';
+            const titleStartX = boxX + 75;
+            const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
+
+            titleLines.forEach((tLine, index) => {
+                ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
+            });
+
+            // 5. Trigger Image Download
+            const link = document.createElement('a');
+            link.download = `bleach_poem_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         }
-    };
-    
-    closePopupBtn.onclick = () => {
-        videoPopup.style.display = 'none';
-        popupVideo.src = '';
-        const finishGame = confirm("ミニゲームを終わりますか？");
-        if (finishGame) { hideOverlayAndCleanup(); alert("録音データを自動リセットしました^.ˬ.^ฅ"); }
-    };
-};
-
-isMovieRendering = true; movieRecorder.start(); bufferSource.start(0);
-if (rBgmSource) {
-if (bgmStartOffset < 0) { rBgmSource.start(0, Math.abs(bgmStartOffset)); }
-else if (bgmStartOffset > 0) { rBgmSource.start(renderAudioCtx.currentTime + bgmStartOffset); }
-else { rBgmSource.start(0); }
-}
-const startTime = performance.now(); const duration = playbackAudioBuffer.duration * 1000;
-function renderFrame() {
-const now = performance.now(); const elapsed = now - startTime;
-rAnalyser.getByteFrequencyData(rDataArray);
-if (rBgmAnalyser && rBgmDataArray) rBgmAnalyser.getByteFrequencyData(rBgmDataArray);
-clearCanvas(rCtx, captureCanvas.width, captureCanvas.height);
-if (rBgmDataArray) { drawWaveLogic(rCtx, captureCanvas, rBgmDataArray, 0.3); }
-drawWaveLogic(rCtx, captureCanvas, rDataArray, currentOpacity);
-if (elapsed < duration) requestAnimationFrame(renderFrame);
-else {
-bufferSource.stop();
-if (rBgmSource) { try { rBgmSource.stop(); } catch(e){} }
-movieRecorder.stop(); renderAudioCtx.close();
-}
-}
-renderFrame();
-});
-window.addEventListener('message', (event) => {
-if (event.data === 'MINIGAME_FINISHED') {
-if (isMovieRendering) {
-const gameIframe = document.getElementById('miniGameIframe');
-if (gameIframe) gameIframe.src = 'mini-game.html';
-alert("動画を一所懸命に書き出し中です。もう一回遊べる丼！");
-} else { hideOverlayAndCleanup(); }
-}
-});
-// ========================================
-// 7. 初期化処理の実行
-// ========================================
-initStandardColors();
-setupPaletteEvents();
-
-// 新カスタムパレットの処理
-// 💡 ここから新しいiro.js用の処理に丸ごと差し替え
-const customPickLabel1 = document.getElementById('customPickLabel1');
-const customPickLabel2 = document.getElementById('customPickLabel2');
-const customPreviewCircle = document.getElementById('customPreviewCircle');
-
-// 現在どちらの丸（1色目か2色目か）を選択しているかを記録する変数（最初は1色目）
-let activeColorIndex = 1; 
-let color1 = "#fff0f5";
-let color2 = "#faf0e6";
-
-// 1. iro.js カラーピッカーの初期化（Google風のデザインに設定）
-const colorPicker = new iro.ColorPicker("#picker", {
-    width: 100, // パネル全体の幅（サイドパネルに収まるサイズ）
-    color: color1, // 初期色
-    display: "block",
-    layout: [
-        { component: iro.ui.Box },   // Google風のグラデーション四角形
-        { component: iro.ui.Slider, options: { sliderType: 'hue' } } // 色相（虹色）スライダー
-    ]
-});
-
-// 2. 画面の色と波形を更新する共通関数
-function updateCustomPalette() {
-    // 右側の単色丸の色を更新
-    customPickLabel1.style.background = color1;
-    customPickLabel2.style.background = color2;
-    
-    // 左側のプレビュー丸にグラデーションを適用
-    customPreviewCircle.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
-    
-    // 他の標準パレット等の選択枠（selected）を一度すべて外す
-    document.querySelectorAll('.palette-circle').forEach(p => p.classList.remove('selected'));
-    
-    // 完成形の丸を選択状態（枠線あり）にする
-    customPreviewCircle.classList.add('selected');
-    
-    // 波形に色を反映して再描画
-    currentWaveColors = [color1, color2];
-    triggerUIRefresh();
-}
-
-// 3. ピッカーをいじった（色を変えた）瞬間のイベント
-colorPicker.on('color:change', function(color) {
-    if (activeColorIndex === 1) {
-        color1 = color.hexString; // 1色目を更新
-    } else {
-        color2 = color.hexString; // 2色目を更新
-    }
-    updateCustomPalette();
-});
-
-// 4. 「右の○」をクリックした時、ピッカーの編集対象を切り替える処理
-customPickLabel1.addEventListener('click', () => {
-    activeColorIndex = 1;
-    customPickLabel1.classList.add('selected');
-    customPickLabel2.classList.remove('selected');
-    colorPicker.setColor(color1); // ピッカーのつまみを現在の1色目の位置に合わせる
-});
-
-customPickLabel2.addEventListener('click', () => {
-    activeColorIndex = 2;
-    customPickLabel2.classList.add('selected');
-    customPickLabel1.classList.remove('selected');
-    colorPicker.setColor(color2); // ピッカーのつまみを現在の2色目の位置に合わせる
-});
-
-// 5. 左の完成形の○がクリックされたときも再適応
-customPreviewCircle.addEventListener('click', () => {
-    updateCustomPalette();
-});
-// 💡 ここまで
-unlockMenus();
-drawStaticWave();
-</script>
-<div id="videoPopup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; padding: 20px;">
-    <div style="background: #111b35; border: 2px solid #00f0ff; padding: 20px; border-radius: 15px; max-width: 90%; width: 400px; text-align: center; box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);">
-        <p style="color: #fff; font-size: 16px; margin-bottom: 10px; font-weight: bold;"> 動画が完成しました！</p>
-        <p style="color: #fff; font-size: 12px; margin-bottom: 15px; background: #111b35; padding: 5px; border-radius: 5px; font-family: sans-serif;">
-        Android/PCは自動保存されます^.ˬ.^ฅⳊ<br><br>
-        iPhoneの方は下のiPhone SAVE Btnで<br>
-        開いた動画の【画録】がオススメ！</p>
-        <video id="popupVideo" controls playsinline style="width: 100%; max-height: 220px; border-radius: 8px; background: #000; margin-bottom: 15px;"></video>
-        
-        <button id="downloadFileBtn" style="background: #00f0ff; color: #111b35; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: bold; width: 100%; margin-bottom: 10px;">iPhone SAVE Btn</button>
-        
-        <button id="closePopupBtn" style="background: #111b35; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-family: inherit; font-size: 14px; width: 100%;">close</button>
-    </div>
-</div>
-
+    </script>
 </body>
 </html>
