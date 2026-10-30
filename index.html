@@ -66,15 +66,10 @@
                 </h1>
             </div>
 
-            <!-- 背景色切り替えトグル (ポエムカード出力用) -->
-            <div class="bg-zinc-900 border border-zinc-700/80 p-0.5 rounded-lg flex items-center gap-1 shadow-inner">
-                <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[32px]">
-                    <span class="w-2 h-2 rounded-full bg-black border border-zinc-500 inline-block"></span> 黒
-                </button>
-                <button id="btnBgLight" onclick="setPreviewBg('light')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[32px]">
-                    <span class="w-2 h-2 rounded-full bg-white inline-block"></span> 白
-                </button>
-            </div>
+            <!-- 利用規約を開くボタン (保存ボタンと同色: bg-accentRed) -->
+            <button onclick="openTermsModal()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-md min-h-[32px]">
+                利用規約
+            </button>
         </div>
     </header>
 
@@ -92,6 +87,15 @@
                     </svg>
                 </div>
                 <div class="flex items-center gap-1">
+                    <!-- 背景色切り替えトグル (下書復元の左に配置) -->
+                    <div class="bg-zinc-900 border border-zinc-700/80 p-0.5 rounded-lg flex items-center gap-1 shadow-inner">
+                        <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-2 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]">
+                            <span class="w-2 h-2 rounded-full bg-black border border-zinc-500 inline-block"></span> 黒
+                        </button>
+                        <button id="btnBgLight" onclick="setPreviewBg('light')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]">
+                            <span class="w-2 h-2 rounded-full bg-white inline-block"></span> 白
+                        </button>
+                    </div>
                     <!-- 下書復元ボタン -->
                     <button onclick="restoreDraft()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md flex items-center gap-0.5 min-h-[36px]">
                         下書復元
@@ -221,6 +225,38 @@
         </section>
     </main>
 
+    <!-- 利用規約モーダル -->
+    <div id="termsModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-3 select-none">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+                <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                    利用規約
+                </h3>
+                <button onclick="closeTermsModal()" class="text-zinc-400 hover:text-white p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="text-xs text-zinc-300 leading-relaxed space-y-3 whitespace-pre-wrap">このBLEACH風ポエムメーカーは、BLEACH公式と関わりのない非公式のメーカーです。
+
+使用する画像や詩は、知的財産権、著作権、脅迫罪、侮辱罪など各種法律に抵触してはなりません。
+
+このメーカーを政治的活動や扇動、暴言や誹謗中傷の為に使用することを禁じます。
+
+エモいオサレ詩以外にも、今日の心からの気持ちや、誰かに声を当ててもらいたいセリフ、オリジナルの歌詞、自作物語の一文、買い物メモなどを画像にしてSNSへアップしてみてください。
+#BPMったー
+
+作者：鳳月 眠人
+2026年11月1日</div>
+
+            <div class="pt-2 border-t border-zinc-800 flex justify-end">
+                <button onclick="closeTermsModal()" class="bg-accentRed hover:bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 画像トリミングモーダル -->
     <div id="cropModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-2 select-none">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-3 sm:p-4 flex flex-col gap-2 shadow-2xl max-h-[95vh] overflow-y-auto">
@@ -296,6 +332,15 @@
 混ざって融けてくれるだろうか`
         ];
         let currentSampleIndex = 0;
+
+        // 利用規約モーダルの開閉関数
+        function openTermsModal() {
+            document.getElementById('termsModal').classList.remove('hidden');
+        }
+
+        function closeTermsModal() {
+            document.getElementById('termsModal').classList.add('hidden');
+        }
 
         // 【下書保存】ボタン用関数
         function saveDraft() {
@@ -603,16 +648,16 @@
                 previewTitleBorder.style.borderColor = '#ffffff';
                 previewAuthorBorder.style.borderColor = '#ffffff';
 
-                btnDark.className = "px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-700 text-white shadow-sm min-h-[32px]";
-                btnLight.className = "px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[32px]";
+                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 bg-zinc-700 text-white shadow-sm min-h-[36px]";
+                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[36px]";
             } else {
                 poemCard.style.backgroundColor = '#ffffff';
                 poemCard.style.color = '#000000';
                 previewTitleBorder.style.borderColor = '#000000';
                 previewAuthorBorder.style.borderColor = '#000000';
 
-                btnLight.className = "px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[32px]";
-                btnDark.className = "px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[32px]";
+                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]";
+                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]";
             }
             updateControls();
         }
