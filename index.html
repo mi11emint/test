@@ -68,10 +68,10 @@
 
             <!-- 背景色切り替えトグル (ポエムカード出力用) -->
             <div class="bg-zinc-900 border border-zinc-700/80 p-0.5 rounded-lg flex items-center gap-1 shadow-inner">
-                <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-700 text-white shadow-sm min-h-[32px]">
+                <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[32px]">
                     <span class="w-2 h-2 rounded-full bg-black border border-zinc-500 inline-block"></span> 黒
                 </button>
-                <button id="btnBgLight" onclick="setPreviewBg('light')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[32px]">
+                <button id="btnBgLight" onclick="setPreviewBg('light')" class="px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[32px]">
                     <span class="w-2 h-2 rounded-full bg-white inline-block"></span> 白
                 </button>
             </div>
@@ -101,12 +101,12 @@
 
             <!-- BLEACH巻頭風ポエムカード本体 (プレビュー) -->
             <div class="w-full flex justify-center py-1">
-                <div id="poemCard" class="poem-card-container bg-black text-white p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
+                <div id="poemCard" class="poem-card-container bg-white text-black p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
                     
                     <!-- ① 横長モノクロ画像表示枠（タップで画像選択・トリミングモーダル起動） -->
                     <div id="imageDisplayBox" onclick="handleImageDisplayClick()" class="w-full h-14 sm:h-16 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer group z-0">
                         <img id="previewImg" src="" alt="ポエム用画像" class="absolute inset-0 w-full h-full object-cover hidden pointer-events-none transition-all">
-                        <div id="imgPlaceholder" class="text-zinc-500 text-[11px] text-center px-2 flex items-center gap-1 group-hover:text-zinc-300">
+                        <div id="imgPlaceholder" class="text-zinc-400 text-[11px] text-center px-2 flex items-center gap-1 group-hover:text-zinc-200">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             タップして画像を選択・編集
                         </div>
@@ -120,13 +120,13 @@
 
                     <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5">
-                        <div id="previewTitleBorder" class="border-[3px] border-white px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
+                        <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
                             <span id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words whitespace-pre-line">THE DEATH AND THE STRAWBERRY</span>
                         </div>
                         
                         <!-- 下部の作者名枠（固定表示: BLEACH POEM MAKER） -->
-                        <div id="previewAuthorBorder" class="border-[3px] border-white px-2 py-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px] min-h-[26px]">
+                        <div id="previewAuthorBorder" class="border-[3px] border-black px-2 py-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px] min-h-[26px]">
                             <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words">BLEACH POEM MAKER</span>
                         </div>
                     </div>
@@ -259,8 +259,8 @@
 
     <!-- App Main Script -->
     <script>
-        // App State
-        let currentTheme = 'dark';
+        // App State (デフォルトを白に変更)
+        let currentTheme = 'light';
         let rawImageObj = null;
         let croppedDataUrl = null;
 
@@ -298,6 +298,7 @@
 
         window.onload = () => {
             poemInput.value = defaultPoem;
+            setPreviewBg('light'); // 初期表示を白に設定
             updateControls();
             setupBoxCropInteractions();
             setupOverlayPointerEvents();
@@ -546,7 +547,7 @@
             });
         }
 
-        // Canvas描画ロジック
+        // Canvas描画ロジック (画像潰れ防止対応)
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
@@ -573,7 +574,30 @@
             if (croppedDataUrl) {
                 const croppedImg = new Image();
                 croppedImg.onload = () => {
-                    ctx.drawImage(croppedImg, imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+                    // アスペクト比を保ったobject-coverクロップ描画（潰れバグ修正）
+                    const imgAspect = croppedImg.width / croppedImg.height;
+                    const boxAspect = imgBoxWidth / imgBoxHeight;
+                    let drawW, drawH, drawX, drawY;
+
+                    if (imgAspect > boxAspect) {
+                        drawH = imgBoxHeight;
+                        drawW = imgBoxHeight * imgAspect;
+                        drawX = imgBoxX + (imgBoxWidth - drawW) / 2;
+                        drawY = imgBoxY;
+                    } else {
+                        drawW = imgBoxWidth;
+                        drawH = imgBoxWidth / imgAspect;
+                        drawX = imgBoxX;
+                        drawY = imgBoxY + (imgBoxHeight - drawH) / 2;
+                    }
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+                    ctx.clip();
+                    ctx.drawImage(croppedImg, drawX, drawY, drawW, drawH);
+                    ctx.restore();
+
                     renderTextAndTitle(ctx, width, height, textColor);
                     if (callback) callback(canvas);
                 };
@@ -637,7 +661,6 @@
             
             ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
             
-            // 改行コード（\n）で分割後、必要に応じて自動折り返し処理
             const rawTitleLines = volTitleRaw.split('\n');
             let titleLines = [];
 
@@ -684,12 +707,12 @@
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（「BLEACH POEM MAKER」固定）描画
+            // 5. 作者名枠（隙間を倍の28pxに調整）
             const authorBoxWidth = 240;
             const aSize = Math.round(parseInt(authorFontSize.value) * 1.9);
             const authorBoxHeight = aSize + 20;
             const authorBoxX = (width - authorBoxWidth) / 2;
-            const authorBoxY = boxY + computedHeight + 14;
+            const authorBoxY = boxY + computedHeight + 28;
 
             ctx.strokeStyle = textColor;
             ctx.lineWidth = 6;
