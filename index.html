@@ -36,8 +36,8 @@
         }
         /* カスタムスクロールバー */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 5px;
+            height: 5px;
         }
         ::-webkit-scrollbar-track {
             background: #18181b;
@@ -54,7 +54,7 @@
         }
     </style>
 </head>
-<body class="bg-darkBg text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500 selection:text-white pb-8">
+<body class="bg-darkBg text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500 selection:text-white pb-6">
 
     <!-- Header Area -->
     <header class="border-b border-zinc-800 bg-zinc-950/90 sticky top-0 z-50 backdrop-blur-md">
@@ -81,18 +81,18 @@
     <!-- Main Container -->
     <main class="max-w-6xl mx-auto px-3 pt-2 flex-1 w-full flex flex-col gap-4">
 
-        <!-- プレビュー画面 -->
-        <section class="w-full flex flex-col items-center gap-2 border-b border-zinc-800/80 pb-4 pt-1">
-            <div class="w-full flex items-center justify-between px-1">
+        <!-- リアルタイムプレビュー画面 -->
+        <section class="w-full flex flex-col items-center gap-2 border-b border-zinc-800/80 pb-3 pt-1">
+            <div class="w-full max-w-[380px] flex items-center justify-between px-1">
                 <div class="flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
-                    <h2 class="text-xs sm:text-sm font-bold text-white tracking-wide">リアルタイムプレビュー <span class="text-[10px] text-zinc-400 font-normal ml-1">(長押し/右クリックで画像保存可能)</span></h2>
+                    <h2 class="text-xs sm:text-sm font-bold text-white tracking-wide">リアルタイムプレビュー</h2>
                 </div>
                 <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1.5 min-h-[36px]">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                     </svg>
                     保存 (JPEG)
@@ -101,92 +101,88 @@
 
             <!-- BLEACH巻頭風ポエムカード本体 (プレビュー) -->
             <div class="w-full flex justify-center py-1">
-                <div id="poemCard" class="poem-card-container bg-black text-white p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none overflow-hidden">
+                <div id="poemCard" class="poem-card-container bg-black text-white p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
                     
-                    <!-- 横長モノクロ画像表示枠 -->
-                    <div id="imageDisplayBox" onclick="onDisplayBoxClick()" class="w-full h-14 sm:h-16 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer hover:border-accentRed transition z-0">
-                        <img id="previewImg" src="" alt="ポエム用画像" class="absolute max-w-none w-full hidden object-cover filter grayscale pointer-events-none">
-                        <div id="imgPlaceholder" class="text-zinc-600 text-[11px] text-center px-2">
-                            [ クリックして画像を編集・トリミング ]
+                    <!-- ① 横長モノクロ画像表示枠 -->
+                    <div id="imageDisplayBox" onclick="openCropModal()" class="w-full h-14 sm:h-16 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer group">
+                        <img id="previewImg" src="" alt="ポエム用画像" class="absolute max-w-none hidden pointer-events-none transition-all">
+                        <div id="imgPlaceholder" class="text-zinc-500 text-[11px] text-center px-2 flex items-center gap-1 group-hover:text-zinc-300">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            タップして画像を選択・編集
                         </div>
                     </div>
 
                     <!-- 縦書きポエムテキスト領域 -->
-                    <div class="my-2 flex-1 flex justify-center items-start min-h-[180px] py-1 z-0">
-                        <div id="previewPoem" class="writing-vertical font-serif text-base sm:text-lg tracking-[0.2em] leading-[2em] max-h-[260px] flex flex-row-reverse flex-wrap items-start whitespace-pre-wrap">
+                    <div class="my-2 flex-1 flex justify-center items-center min-h-[180px] py-1 overflow-hidden">
+                        <div id="previewPoem" class="writing-vertical font-serif text-base sm:text-lg tracking-[0.2em] leading-[2em] max-h-[260px] flex flex-row-reverse flex-wrap items-center justify-center whitespace-pre-wrap">
                         </div>
                     </div>
 
-                    <!-- 巻数＆詩タイトル枠 -->
-                    <div class="pt-1 flex justify-center items-center z-0">
-                        <div id="previewTitleBorder" class="border-[3px] border-white px-2.5 py-1.5 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[50px]">
+                    <!-- ② 巻数＆詩タイトル枠 -->
+                    <div class="pt-1 flex justify-center items-center">
+                        <div id="previewTitleBorder" class="border-[3px] border-white px-2.5 py-1.5 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[52px]">
                             <span id="previewVolNum" class="text-base sm:text-lg font-black leading-none shrink-0">1.</span>
-                            <span id="previewVolTitle" class="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest leading-tight break-words uppercase">THE DEATH AND THE STRAWBERRY</span>
+                            <span id="previewVolTitle" class="text-[11px] sm:text-xs font-extrabold uppercase tracking-widest leading-tight break-words">THE DEATH AND THE STRAWBERRY</span>
                         </div>
                     </div>
 
-                    <!-- 長押し / 右クリック保存用 透明オーバーレイ画像 -->
-                    <img id="longPressOverlay" alt="Bleach Poem Preview Image" class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer" title="長押しまたは右クリックで画像を保存">
+                    <!-- 長押し保存用リアルタイムオーバーレイ画像 -->
+                    <img id="longPressOverlay" alt="Long press to save" class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer pointer-events-auto" title="長押しまたは右クリックで画像を保存">
                 </div>
             </div>
+            <p class="text-[10px] text-zinc-500 text-center">※ プレビュー画像を長押し / 右クリックで直接保存も可能です</p>
         </section>
 
-        <!-- 下部：コンパクト3カラムデザイン・テキスト編集パネル -->
+        <!-- 下部：コンパクト3カラム編集パネル -->
         <section class="w-full grid grid-cols-1 md:grid-cols-3 gap-3">
             
             <!-- 1. 横長画像設定 -->
-            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between gap-2">
+            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
                 <h3 class="text-xs font-semibold text-zinc-300 flex items-center justify-between">
-                    <span>1. 画像設定 <span class="text-[10px] text-zinc-500 font-normal">(自動モノクロ)</span></span>
+                    <span>1. 画像設定 <span class="text-[10px] text-zinc-500 font-normal">(モノクロ)</span></span>
                 </h3>
-
-                <!-- アップロードエリア -->
-                <div id="dropZone" onclick="document.getElementById('imageInput').click()" 
-                     class="border-2 border-dashed border-zinc-700 hover:border-accentRed/70 bg-zinc-900/50 hover:bg-zinc-900 transition cursor-pointer rounded-lg p-2 text-center group flex flex-col items-center justify-center min-h-[70px]">
-                    <svg class="w-5 h-5 text-zinc-500 group-hover:text-accentRed transition mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                
+                <div id="dropZone" onclick="openCropModal()" 
+                     class="border-2 border-dashed border-zinc-700 hover:border-accentRed/70 bg-zinc-900/50 hover:bg-zinc-900 transition cursor-pointer rounded-lg p-2.5 text-center group flex flex-col items-center justify-center flex-1 min-h-[70px]">
+                    <svg class="w-5 h-5 text-zinc-500 group-hover:text-accentRed transition mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
-                    <p class="text-[11px] text-zinc-400 group-hover:text-zinc-200 font-medium">タップして画像を選択</p>
+                    <p class="text-[11px] text-zinc-400 group-hover:text-zinc-200">画像をアップロード / 再編集</p>
                     <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
                 </div>
 
-                <div id="editTriggerBtn" class="hidden">
-                    <button onclick="openCropModal()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold py-1.5 rounded-lg transition border border-zinc-700 flex items-center justify-center gap-1">
-                        <svg class="w-3.5 h-3.5 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        位置・トリミング調整
-                    </button>
-                </div>
+                <button onclick="openCropModal()" id="btnEditCrop" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs py-1.5 rounded transition hidden">
+                    トリミング位置・拡大を再調整
+                </button>
             </div>
 
             <!-- 2. 詩 (ポエム) 本文 -->
-            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between gap-1.5">
+            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col space-y-2">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-xs font-semibold text-zinc-300">2. 詩 (ポエム) 本文</h3>
-                    <button onclick="applySamplePoem()" class="text-[11px] text-accentRed hover:text-rose-400 underline transition py-0.5">
-                        サンプル適用
+                    <h3 class="text-xs font-semibold text-zinc-300">2. 詩本文</h3>
+                    <button onclick="applySamplePoem()" class="text-[11px] text-accentRed hover:text-rose-400 underline transition">
+                        サンプル
                     </button>
                 </div>
-                <textarea id="poemInput" rows="3" placeholder="ここに詩を入力（改行で縦列が変わります）"
-                    class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none"
+                <textarea id="poemInput" rows="3" placeholder="ここに詩を入力（改行で列変更）"
+                    class="w-full flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none min-h-[70px]"
                     oninput="updateControls()"></textarea>
             </div>
 
-            <!-- 3. 巻数＆タイトル（自動折り返し） -->
-            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between gap-1.5">
-                <h3 class="text-xs font-semibold text-zinc-300">3. 巻数＆タイトル <span class="text-[10px] text-zinc-500 font-normal">(自動折り返し)</span></h3>
+            <!-- 3. 巻数数字 & 詩タイトル -->
+            <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
+                <h3 class="text-xs font-semibold text-zinc-300">3. 巻数＆タイトル</h3>
                 <div class="space-y-1.5">
                     <div>
                         <label class="block text-[10px] text-zinc-400 mb-0.5">巻数数字</label>
                         <input type="text" id="volNumInput" value="1." placeholder="例: 1."
-                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[34px]"
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
                             oninput="updateControls()">
                     </div>
                     <div>
-                        <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル</label>
+                        <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル (自動折り返し)</label>
                         <input type="text" id="volTitleInput" value="THE DEATH AND THE STRAWBERRY" placeholder="例: THE DEATH AND..."
-                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[34px]"
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
                             oninput="updateControls()">
                     </div>
                 </div>
@@ -194,74 +190,63 @@
         </section>
     </main>
 
-    <!-- 画像トリミング・調整モーダル (画面上に重ねる方式) -->
-    <div id="cropModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl">
-            <!-- Modal Header -->
-            <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/50">
-                <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-accentRed inline-block"></span>
-                    画像の切り抜き・位置調整
+    <!-- 画像トリミング・位置調整用モーダル -->
+    <div id="cropModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex items-center justify-center p-3">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-4 flex flex-col gap-3 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    画像のトリミング＆調整
                 </h3>
-                <button onclick="closeCropModal()" class="text-zinc-400 hover:text-white transition p-1">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
+                <button onclick="closeCropModal()" class="text-zinc-400 hover:text-white p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
 
-            <!-- Modal Body: Interactive Editing Area -->
-            <div class="p-4 flex flex-col items-center gap-3">
-                <p class="text-xs text-zinc-400 text-center">
-                    画像をドラッグして移動 / ホイール・ピンチで拡大縮小できます
-                </p>
+            <p class="text-[11px] text-zinc-400 text-center">枠内をドラッグで移動 / ホイール・ピンチ操作で拡大縮小</p>
 
-                <!-- プレビューと同一比率の編集ビューポート -->
-                <div id="cropViewport" class="w-full h-24 sm:h-28 bg-black relative overflow-hidden rounded-lg border-2 border-accentRed/70 cursor-grab active:cursor-grabbing touch-none flex items-center justify-center shadow-inner">
-                    <canvas id="cropCanvas" class="absolute pointer-events-none"></canvas>
-                    <div class="absolute inset-0 border border-white/20 pointer-events-none flex items-center justify-center">
-                        <span class="text-[10px] text-white/40 font-mono tracking-widest uppercase">CROP AREA</span>
-                    </div>
+            <!-- プレビューと完全同等のアスペクト比 (6:1) のビューポート -->
+            <div id="cropViewport" class="w-full aspect-[6/1] bg-black relative overflow-hidden border-2 border-accentRed/80 rounded touch-none cursor-grab active:cursor-grabbing flex items-center justify-center">
+                <img id="cropImg" src="" alt="Crop image" class="absolute max-w-none pointer-events-none select-none origin-top-left">
+            </div>
+
+            <!-- 操作コントロール -->
+            <div class="space-y-3 pt-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-zinc-400 w-16 shrink-0">ズーム</span>
+                    <button onclick="adjustZoom(-0.1)" class="bg-zinc-800 hover:bg-zinc-700 text-white w-7 h-7 rounded flex items-center justify-center font-bold text-sm shrink-0">-</button>
+                    <input type="range" id="cropZoomRange" min="1" max="4" step="0.02" value="1" class="w-full accent-rose-500" oninput="onCropZoomInput(this.value)">
+                    <button onclick="adjustZoom(0.1)" class="bg-zinc-800 hover:bg-zinc-700 text-white w-7 h-7 rounded flex items-center justify-center font-bold text-sm shrink-0">+</button>
                 </div>
 
-                <!-- 簡易操作ボタン群 -->
-                <div class="w-full flex items-center justify-between gap-2 pt-1">
-                    <div class="flex items-center gap-1">
-                        <span class="text-[11px] text-zinc-400 mr-1">ズーム:</span>
-                        <button onclick="adjustCropZoom(-0.1)" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold flex items-center justify-center text-sm active:scale-95 transition border border-zinc-700">-</button>
-                        <button onclick="adjustCropZoom(0.1)" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold flex items-center justify-center text-sm active:scale-95 transition border border-zinc-700">+</button>
-                    </div>
-
-                    <div class="flex items-center gap-1">
-                        <span class="text-[11px] text-zinc-400 mr-1">コントラスト:</span>
-                        <button onclick="adjustCropContrast(-10)" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold flex items-center justify-center text-sm active:scale-95 transition border border-zinc-700">-</button>
-                        <button onclick="adjustCropContrast(10)" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-bold flex items-center justify-center text-sm active:scale-95 transition border border-zinc-700">+</button>
-                    </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-zinc-400 w-16 shrink-0">コントラスト</span>
+                    <input type="range" id="cropContrastRange" min="50" max="250" value="130" class="w-full accent-rose-500" oninput="onCropContrastInput(this.value)">
+                    <span id="cropContrastVal" class="text-xs text-zinc-400 w-10 text-right shrink-0">130%</span>
                 </div>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="px-4 py-2.5 border-t border-zinc-800 bg-zinc-950/50 flex justify-end gap-2">
-                <button onclick="closeCropModal()" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition">
-                    キャンセル
+            <div class="flex gap-2 pt-2 border-t border-zinc-800">
+                <button onclick="document.getElementById('imageInput').click()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-3 py-2 rounded-lg transition min-h-[38px]">
+                    別の画像を選択
                 </button>
-                <button onclick="applyCrop()" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-accentRed hover:bg-rose-600 text-white transition active:scale-95 shadow-md shadow-rose-950/50">
-                    決定・反映
+                <button onclick="applyCrop()" class="flex-1 bg-accentRed hover:bg-rose-600 text-white text-xs font-bold py-2 rounded-lg transition min-h-[38px] shadow-lg shadow-rose-950/50">
+                    完了（適用する）
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Canvas (非表示エクスポート用) -->
+    <!-- Canvas (画像生成用非表示キャンバス) -->
     <canvas id="exportCanvas" class="hidden"></canvas>
 
-    <!-- App Script Logic -->
+    <!-- App Main Script -->
     <script>
-        // State Variables
-        let currentTheme = 'dark'; // 'dark' | 'light'
-        let sourceImage = null;    // 原本Imageオブジェクト
-        
-        // トリミング／クロップ状態パラメータ
+        // State
+        let currentTheme = 'dark';
+        let rawImageObj = null;
+
+        // Image crop transform state
         let cropState = {
             x: 0,
             y: 0,
@@ -269,12 +254,6 @@
             contrast: 130
         };
 
-        // タッチ・ドラッグ用変数
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let lastPinchDist = null;
-
-        // Default Sample Poem
         const defaultPoem = "僕たちは 伸ばす手に\n駆ける髪に\n背中に届く まぶしい光に\n似た何かを夢見ている";
 
         // DOM Elements
@@ -289,16 +268,19 @@
         const imgPlaceholder = document.getElementById('imgPlaceholder');
         const poemCard = document.getElementById('poemCard');
         const previewTitleBorder = document.getElementById('previewTitleBorder');
-        const cropViewport = document.getElementById('cropViewport');
-        const cropCanvas = document.getElementById('cropCanvas');
-        const longPressOverlay = document.getElementById('longPressOverlay');
+        const imageDisplayBox = document.getElementById('imageDisplayBox');
 
-        // Initialize App
+        const cropModal = document.getElementById('cropModal');
+        const cropViewport = document.getElementById('cropViewport');
+        const cropImg = document.getElementById('cropImg');
+        const cropZoomRange = document.getElementById('cropZoomRange');
+        const cropContrastRange = document.getElementById('cropContrastRange');
+
         window.onload = () => {
             poemInput.value = defaultPoem;
             updateControls();
-            setupInteractiveCrop();
-
+            setupCropInteractions();
+            
             // Drag and drop setup
             const dropZone = document.getElementById('dropZone');
             dropZone.addEventListener('dragover', (e) => {
@@ -317,16 +299,20 @@
             });
         };
 
-        // 画像枠タップ時の挙動
-        function onDisplayBoxClick() {
-            if (sourceImage) {
-                openCropModal();
-            } else {
+        // Open/Close Modal
+        function openCropModal() {
+            if (!rawImageObj) {
                 document.getElementById('imageInput').click();
+                return;
             }
+            cropModal.classList.remove('hidden');
+            initCropTransform();
         }
 
-        // 画像選択時のコールバック
+        function closeCropModal() {
+            cropModal.classList.add('hidden');
+        }
+
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (file) {
@@ -339,20 +325,9 @@
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    sourceImage = img;
-                    // クロップ初期位置の調整（アスペクト比に基づき中央配置）
-                    const vpW = cropViewport.clientWidth || 300;
-                    const vpH = cropViewport.clientHeight || 70;
-                    
-                    const scaleW = vpW / img.width;
-                    const scaleH = vpH / img.height;
-                    cropState.scale = Math.max(scaleW, scaleH);
-                    
-                    cropState.x = (vpW - img.width * cropState.scale) / 2;
-                    cropState.y = (vpH - img.height * cropState.scale) / 2;
-                    cropState.contrast = 130;
-
-                    document.getElementById('editTriggerBtn').classList.remove('hidden');
+                    rawImageObj = img;
+                    cropImg.src = e.target.result;
+                    cropState = { x: 0, y: 0, scale: 1, contrast: 130 };
                     openCropModal();
                 };
                 img.src = e.target.result;
@@ -360,166 +335,189 @@
             reader.readAsDataURL(file);
         }
 
-        // トリミングモーダルの開閉
-        function openCropModal() {
-            if (!sourceImage) return;
-            const modal = document.getElementById('cropModal');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                renderCropCanvas();
-            }, 50);
+        // Initialize crop image size and fit inside cropViewport
+        function initCropTransform() {
+            if (!rawImageObj) return;
+            const vw = cropViewport.clientWidth;
+            const vh = cropViewport.clientHeight;
+
+            // Compute default cover scale
+            const scaleX = vw / rawImageObj.width;
+            const scaleY = vh / rawImageObj.height;
+            const baseCoverScale = Math.max(scaleX, scaleY);
+
+            // Keep base dimension
+            cropState.baseW = rawImageObj.width * baseCoverScale;
+            cropState.baseH = rawImageObj.height * baseCoverScale;
+            
+            cropZoomRange.value = cropState.scale;
+            cropContrastRange.value = cropState.contrast;
+            document.getElementById('cropContrastVal').innerText = `${cropState.contrast}%`;
+
+            clampCropPosition();
+            renderCropModalImage();
         }
 
-        function closeCropModal() {
-            document.getElementById('cropModal').classList.add('hidden');
+        function clampCropPosition() {
+            const vw = cropViewport.clientWidth;
+            const vh = cropViewport.clientHeight;
+            const currentW = cropState.baseW * cropState.scale;
+            const currentH = cropState.baseH * cropState.scale;
+
+            const minX = vw - currentW;
+            const maxX = 0;
+            const minY = vh - currentH;
+            const maxY = 0;
+
+            cropState.x = Math.min(maxX, Math.max(minX, cropState.x));
+            cropState.y = Math.min(maxY, Math.max(minY, cropState.y));
         }
 
-        // モーダル用キャンバスのリアルタイム描画
-        function renderCropCanvas() {
-            if (!sourceImage) return;
-            const vpW = cropViewport.clientWidth;
-            const vpH = cropViewport.clientHeight;
+        function renderCropModalImage() {
+            if (!rawImageObj) return;
+            const currentW = cropState.baseW * cropState.scale;
+            const currentH = cropState.baseH * cropState.scale;
 
-            cropCanvas.width = vpW;
-            cropCanvas.height = vpH;
-
-            const ctx = cropCanvas.getContext('2d');
-            ctx.clearRect(0, 0, vpW, vpH);
-
-            ctx.save();
-            ctx.filter = `grayscale(100%) contrast(${cropState.contrast}%)`;
-            ctx.drawImage(
-                sourceImage, 
-                cropState.x, 
-                cropState.y, 
-                sourceImage.width * cropState.scale, 
-                sourceImage.height * cropState.scale
-            );
-            ctx.restore();
+            cropImg.style.width = `${currentW}px`;
+            cropImg.style.height = `${currentH}px`;
+            cropImg.style.transform = `translate3d(${cropState.x}px, ${cropState.y}px, 0px)`;
+            cropImg.style.filter = `grayscale(100%) contrast(${cropState.contrast}%)`;
         }
 
-        // 直感操作（ドラッグ・ホイール・ピンチ）のリスナー設定
-        function setupInteractiveCrop() {
-            // Drag Mouse/Touch
-            const startDrag = (clientX, clientY) => {
+        // Touch & Mouse Drag / Pinch Zoom handlers in Modal
+        function setupCropInteractions() {
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let initialCropX = 0, initialCropY = 0;
+            let initialPinchDist = 0;
+            let startScale = 1;
+
+            const getTouchDist = (e) => {
+                return Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            };
+
+            const onStart = (clientX, clientY) => {
                 isDragging = true;
-                startX = clientX - cropState.x;
-                startY = clientY - cropState.y;
+                startX = clientX;
+                startY = clientY;
+                initialCropX = cropState.x;
+                initialCropY = cropState.y;
             };
 
-            const moveDrag = (clientX, clientY) => {
+            const onMove = (clientX, clientY) => {
                 if (!isDragging) return;
-                cropState.x = clientX - startX;
-                cropState.y = clientY - startY;
-                renderCropCanvas();
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+                cropState.x = initialCropX + dx;
+                cropState.y = initialCropY + dy;
+                clampCropPosition();
+                renderCropModalImage();
             };
 
-            const stopDrag = () => {
+            const onEnd = () => {
                 isDragging = false;
             };
 
-            cropViewport.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
-            window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
-            window.addEventListener('mouseup', stopDrag);
+            cropViewport.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
+            window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', onEnd);
 
             cropViewport.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 1) {
-                    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+                    onStart(e.touches[0].clientX, e.touches[0].clientY);
                 } else if (e.touches.length === 2) {
                     isDragging = false;
-                    lastPinchDist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
+                    initialPinchDist = getTouchDist(e);
+                    startScale = cropState.scale;
                 }
             }, { passive: true });
 
             window.addEventListener('touchmove', (e) => {
                 if (isDragging && e.touches.length === 1) {
-                    moveDrag(e.touches[0].clientX, e.touches[0].clientY);
-                } else if (e.touches.length === 2 && lastPinchDist) {
-                    const dist = Math.hypot(
-                        e.touches[0].clientX - e.touches[1].clientX,
-                        e.touches[0].clientY - e.touches[1].clientY
-                    );
-                    const factor = dist / lastPinchDist;
-                    adjustCropZoom((factor - 1) * 0.5);
-                    lastPinchDist = dist;
+                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                } else if (e.touches.length === 2 && initialPinchDist > 0) {
+                    const dist = getTouchDist(e);
+                    const factor = dist / initialPinchDist;
+                    cropState.scale = Math.max(1, Math.min(4, startScale * factor));
+                    cropZoomRange.value = cropState.scale;
+                    clampCropPosition();
+                    renderCropModalImage();
                 }
             }, { passive: true });
 
-            window.addEventListener('touchend', () => {
-                stopDrag();
-                lastPinchDist = null;
-            });
+            window.addEventListener('touchend', onEnd);
 
             // Wheel Zoom
             cropViewport.addEventListener('wheel', (e) => {
                 e.preventDefault();
-                const delta = e.deltaY < 0 ? 0.05 : -0.05;
-                adjustCropZoom(delta);
+                const delta = e.deltaY < 0 ? 0.08 : -0.08;
+                cropState.scale = Math.max(1, Math.min(4, cropState.scale + delta));
+                cropZoomRange.value = cropState.scale;
+                clampCropPosition();
+                renderCropModalImage();
             }, { passive: false });
         }
 
-        // ズーム・コントラスト微調整関数
-        function adjustCropZoom(delta) {
-            const vpW = cropViewport.clientWidth;
-            const vpH = cropViewport.clientHeight;
-            const oldScale = cropState.scale;
-            let newScale = oldScale + delta;
-            
-            // 最小縮小制限
-            const minScale = Math.max(vpW / sourceImage.width, vpH / sourceImage.height) * 0.5;
-            newScale = Math.max(minScale, Math.min(newScale, 5.0));
-
-            // 中心基準で拡大縮小
-            const centerX = vpW / 2;
-            const centerY = vpH / 2;
-            
-            cropState.x = centerX - (centerX - cropState.x) * (newScale / oldScale);
-            cropState.y = centerY - (centerY - cropState.y) * (newScale / oldScale);
-            cropState.scale = newScale;
-
-            renderCropCanvas();
+        function adjustZoom(delta) {
+            cropState.scale = Math.max(1, Math.min(4, cropState.scale + delta));
+            cropZoomRange.value = cropState.scale;
+            clampCropPosition();
+            renderCropModalImage();
         }
 
-        function adjustCropContrast(delta) {
-            cropState.contrast = Math.max(30, Math.min(300, cropState.contrast + delta));
-            renderCropCanvas();
+        function onCropZoomInput(val) {
+            cropState.scale = parseFloat(val);
+            clampCropPosition();
+            renderCropModalImage();
         }
 
-        // クロップ結果の確定とプレビューへの反映
+        function onCropContrastInput(val) {
+            cropState.contrast = parseInt(val);
+            document.getElementById('cropContrastVal').innerText = `${val}%`;
+            renderCropModalImage();
+        }
+
+        // Apply crop settings to Main Preview
         function applyCrop() {
-            if (!sourceImage) return;
+            closeCropModal();
+            document.getElementById('btnEditCrop').classList.remove('hidden');
 
-            // クロップした枠のイメージデータURLを作成
-            const tempCanvas = document.createElement('canvas');
-            const vpW = cropViewport.clientWidth || 300;
-            const vpH = cropViewport.clientHeight || 70;
-            
-            tempCanvas.width = vpW * 2; // 高解像度化
-            tempCanvas.height = vpH * 2;
-
-            const ctx = tempCanvas.getContext('2d');
-            ctx.scale(2, 2);
-            ctx.filter = `grayscale(100%) contrast(${cropState.contrast}%)`;
-            ctx.drawImage(
-                sourceImage, 
-                cropState.x, 
-                cropState.y, 
-                sourceImage.width * cropState.scale, 
-                sourceImage.height * cropState.scale
-            );
-
-            previewImg.src = tempCanvas.toDataURL('image/png');
+            previewImg.src = rawImageObj.src;
             previewImg.classList.remove('hidden');
             imgPlaceholder.classList.add('hidden');
 
-            closeCropModal();
+            // Apply transformed style onto preview box
+            const vw = imageDisplayBox.clientWidth;
+            const vh = imageDisplayBox.clientHeight;
+
+            const scaleX = vw / rawImageObj.width;
+            const scaleY = vh / rawImageObj.height;
+            const baseCoverScale = Math.max(scaleX, scaleY);
+
+            const baseW = rawImageObj.width * baseCoverScale;
+            const baseH = rawImageObj.height * baseCoverScale;
+
+            const modalVW = cropViewport.clientWidth || 1;
+            const ratio = vw / modalVW;
+
+            const renderW = baseW * cropState.scale * ratio;
+            const renderH = baseH * cropState.scale * ratio;
+            const renderX = cropState.x * ratio;
+            const renderY = cropState.y * ratio;
+
+            previewImg.style.width = `${renderW}px`;
+            previewImg.style.height = `${renderH}px`;
+            previewImg.style.left = `0px`;
+            previewImg.style.top = `0px`;
+            previewImg.style.transform = `translate3d(${renderX}px, ${renderY}px, 0px)`;
+            previewImg.style.filter = `grayscale(100%) contrast(${cropState.contrast}%)`;
+
             updateControls();
         }
 
-        // サンプルポエムの適用
         function applySamplePoem() {
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
@@ -527,7 +525,6 @@
             updateControls();
         }
 
-        // プレビューテーマ（黒/白）の切り替え
         function setPreviewBg(mode) {
             currentTheme = mode;
             const btnDark = document.getElementById('btnBgDark');
@@ -551,22 +548,20 @@
             updateControls();
         }
 
-        // リアルタイムテキスト更新 & 長押し保存用画像の更新
         function updateControls() {
             previewPoem.innerText = poemInput.value || " ";
             previewVolNum.innerText = volNumInput.value || "";
             previewVolTitle.innerText = volTitleInput.value || "";
 
-            // 長押し保存用の透過オーバーレイ画像の生成
-            generateOverlayImage();
+            // リアルタイムオーバーレイ画像を非同期生成（長押し保存対応）
+            updateOverlayImage();
         }
 
-        // Canvas描画関数（共通）
-        function generateCanvas() {
+        // Canvas描画ロジック (位置ズレ皆無・アスペクト比完全同期)
+        function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
 
-            // 800x1200 の高画質キャンバス
             const width = 800;
             const height = 1200;
             canvas.width = width;
@@ -576,17 +571,17 @@
             const bgColor = isDark ? '#000000' : '#ffffff';
             const textColor = isDark ? '#ffffff' : '#000000';
 
-            // 1. 背景色の塗りつぶし
+            // 1. 背景色
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 上部画像のレンダリング
+            // 2. 画像描画 (プレビューとアスペクト比完全同一)
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
-            const imgBoxHeight = 140;
+            const imgBoxHeight = 133; // 6:1 のアスペクト比に完全適合
 
-            if (sourceImage) {
+            if (rawImageObj) {
                 ctx.save();
                 ctx.beginPath();
                 ctx.rect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
@@ -594,16 +589,19 @@
 
                 ctx.filter = `grayscale(100%) contrast(${cropState.contrast}%)`;
 
-                // 編集枠の比率をエクスポート用キャンバスにスケール展開
-                const vpW = cropViewport.clientWidth || 300;
-                const scaleRatio = imgBoxWidth / vpW;
+                const modalVW = cropViewport.clientWidth || 300;
+                const ratio = imgBoxWidth / modalVW;
 
-                const drawX = imgBoxX + cropState.x * scaleRatio;
-                const drawY = imgBoxY + cropState.y * scaleRatio;
-                const drawW = sourceImage.width * cropState.scale * scaleRatio;
-                const drawH = sourceImage.height * cropState.scale * scaleRatio;
+                const baseCoverScale = Math.max(modalVW / rawImageObj.width, (modalVW / 6) / rawImageObj.height);
+                const baseW = rawImageObj.width * baseCoverScale;
+                const baseH = rawImageObj.height * baseCoverScale;
 
-                ctx.drawImage(sourceImage, drawX, drawY, drawW, drawH);
+                const renderW = baseW * cropState.scale * ratio;
+                const renderH = baseH * cropState.scale * ratio;
+                const drawX = imgBoxX + (cropState.x * ratio);
+                const drawY = imgBoxY + (cropState.y * ratio);
+
+                ctx.drawImage(rawImageObj, drawX, drawY, renderW, renderH);
                 ctx.restore();
             } else {
                 ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
@@ -611,18 +609,18 @@
                 ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
             }
 
-            // 3. 縦書きポエムテキストの精密描画（左右中央寄せ計算）
+            // 3. 縦書きポエムテキスト領域（完全に左右中央寄せ配置）
             ctx.fillStyle = textColor;
             ctx.font = '700 34px "Shippori Mincho", "Noto Serif JP", serif';
             ctx.textBaseline = 'top';
 
-            const lines = poemInput.value.split('\n');
-            const lineSpacing = 65;
-            const startY = 260;
+            const lines = (poemInput.value || " ").split('\n');
+            const lineSpacing = 60;
+            const charHeight = 42;
 
-            // 全体のポエム列幅を計算してCanvasの中央に配置
             const totalPoemWidth = (lines.length - 1) * lineSpacing;
-            const startX = (width + totalPoemWidth) / 2;
+            const startX = (width / 2) + (totalPoemWidth / 2);
+            const startY = 250;
 
             lines.forEach((line, lineIndex) => {
                 const currentX = startX - (lineIndex * lineSpacing);
@@ -641,11 +639,11 @@
                     } else {
                         ctx.fillText(char, currentX, currentY);
                     }
-                    currentY += 42;
+                    currentY += charHeight;
                 }
             });
 
-            // 4. 下部タイトル＆巻数枠の描画（自動折り返し対応）
+            // 4. 下部タイトルボックス（自動折り返し対応）
             const volNum = volNumInput.value || "";
             const volTitle = (volTitleInput.value || "").toUpperCase();
 
@@ -693,24 +691,28 @@
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            return canvas;
+            if (callback) callback(canvas);
         }
 
-        // 長押し保存用オーバーレイのデータ生成
-        function generateOverlayImage() {
-            setTimeout(() => {
-                const canvas = generateCanvas();
-                longPressOverlay.src = canvas.toDataURL('image/jpeg', 0.92);
-            }, 50);
+        let overlayTimer = null;
+        function updateOverlayImage() {
+            clearTimeout(overlayTimer);
+            overlayTimer = setTimeout(() => {
+                renderCardToCanvas((canvas) => {
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                    document.getElementById('longPressOverlay').src = dataUrl;
+                });
+            }, 100);
         }
 
-        // プレビューの見た目を再現した高精度 JPEG 画像ダウンロード
+        // JPEG画像ダウンロード
         function downloadImage() {
-            const canvas = generateCanvas();
-            const link = document.createElement('a');
-            link.download = `bleach_poem_${Date.now()}.jpg`;
-            link.href = canvas.toDataURL('image/jpeg', 0.92);
-            link.click();
+            renderCardToCanvas((canvas) => {
+                const link = document.createElement('a');
+                link.download = `bleach_poem_${Date.now()}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            });
         }
     </script>
 </body>
