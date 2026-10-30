@@ -159,13 +159,13 @@
                         サンプル適用
                     </button>
                 </div>
-                <textarea id="poemInput" rows="4" placeholder="ここに詩を入力（改行で列変更）"
+                <textarea id="poemInput" rows="4" placeholder="ここに詩を入力（改行で列変更）" onfocus="saveState()"
                     class="w-full flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none min-h-[85px]"
                     oninput="updateControls()"></textarea>
 
                 <div class="pt-1.5 border-t border-zinc-800 flex items-center justify-between">
                     <label class="text-[10px] text-zinc-400">詩のフォントサイズ</label>
-                    <select id="poemFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-2 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                    <select id="poemFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-2 py-1 focus:outline-none focus:border-accentRed" onchange="saveState(); updateControls()">
                         <option value="14">小 (14px)</option>
                         <option value="16" selected>標準 (16px)</option>
                         <option value="18">大 (18px)</option>
@@ -180,14 +180,14 @@
                 <div class="space-y-2">
                     <div>
                         <label class="block text-[10px] text-zinc-400 mb-0.5">巻数・名前（例: KOJI 1. / 1.）</label>
-                        <input type="text" id="volNumInput" value="1." placeholder="例: KOJI 1. または 1."
+                        <input type="text" id="volNumInput" value="1." placeholder="例: KOJI 1. または 1." onfocus="saveState()"
                             class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
                             oninput="updateControls()">
                     </div>
 
                     <div>
                         <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル（改行可）</label>
-                        <textarea id="volTitleInput" rows="2" placeholder="例: THE DEATH AND&#10;THE STRAWBERRY"
+                        <textarea id="volTitleInput" rows="2" placeholder="例: THE DEATH AND&#10;THE STRAWBERRY" onfocus="saveState()"
                             class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed resize-none"
                             oninput="updateControls()">THE DEATH AND THE STRAWBERRY</textarea>
                     </div>
@@ -195,7 +195,7 @@
                     <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-2 gap-2">
                         <div class="flex flex-col gap-0.5">
                             <label class="text-[10px] text-zinc-400">巻数サイズ</label>
-                            <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                            <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="saveState(); updateControls()">
                                 <option value="14">小 (14px)</option>
                                 <option value="18" selected>標準 (18px)</option>
                                 <option value="22">大 (22px)</option>
@@ -204,7 +204,7 @@
                         </div>
                         <div class="flex flex-col gap-0.5">
                             <label class="text-[10px] text-zinc-400">タイトルサイズ</label>
-                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="saveState(); updateControls()">
                                 <option value="10">小 (10px)</option>
                                 <option value="12" selected>標準 (12px)</option>
                                 <option value="14">大 (14px)</option>
@@ -568,6 +568,7 @@
         }
 
         function setPreviewBg(mode) {
+            saveState(); // 背景切り替え前の状態を保存
             currentTheme = mode;
             const btnDark = document.getElementById('btnBgDark');
             const btnLight = document.getElementById('btnBgLight');
