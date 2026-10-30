@@ -122,10 +122,10 @@
                     <div class="pt-0.5 flex flex-col items-center gap-1.5">
                         <div id="previewTitleBorder" class="border-[3px] border-white px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
-                            <span id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words">THE DEATH AND THE STRAWBERRY</span>
+                            <span id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words whitespace-pre-line">THE DEATH AND THE STRAWBERRY</span>
                         </div>
                         
-                        <!-- 下部の作者名枠（幅約半分） -->
+                        <!-- 下部の作者名枠（固定表示: BLEACH POEM MAKER） -->
                         <div id="previewAuthorBorder" class="border-[3px] border-white px-2 py-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px] min-h-[26px]">
                             <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words">BLEACH POEM MAKER</span>
                         </div>
@@ -152,11 +152,11 @@
                         サンプル適用
                     </button>
                 </div>
-                <textarea id="poemInput" rows="3" placeholder="ここに詩を入力（改行で列変更）"
-                    class="w-full flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none min-h-[65px]"
+                <textarea id="poemInput" rows="4" placeholder="ここに詩を入力（改行で列変更）"
+                    class="w-full flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none min-h-[85px]"
                     oninput="updateControls()"></textarea>
 
-                <div class="pt-1 border-t border-zinc-800 flex items-center justify-between">
+                <div class="pt-1.5 border-t border-zinc-800 flex items-center justify-between">
                     <label class="text-[10px] text-zinc-400">詩のフォントサイズ</label>
                     <select id="poemFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-2 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                         <option value="14">小 (14px)</option>
@@ -167,44 +167,46 @@
                 </div>
             </div>
 
-            <!-- 2. 巻数 & タイトル & 作者名 ＆ フォントサイズ -->
+            <!-- 2. 巻数 & 詩タイトル（自由改行可）＆ サイズ調整 -->
             <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
-                <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆タイトル＆作者名</h3>
-                <div class="space-y-1.5">
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <div class="col-span-1">
-                            <label class="block text-[10px] text-zinc-400 mb-0.5">巻数数字</label>
-                            <input type="text" id="volNumInput" value="1." placeholder="例: 1."
-                                class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
-                                oninput="updateControls()">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル</label>
-                            <input type="text" id="volTitleInput" value="THE DEATH AND THE STRAWBERRY" placeholder="例: THE DEATH AND..."
-                                class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
-                                oninput="updateControls()">
-                        </div>
-                    </div>
-
+                <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆詩タイトル</h3>
+                <div class="space-y-2">
                     <div>
-                        <label class="block text-[10px] text-zinc-400 mb-0.5">作者名</label>
-                        <input type="text" id="authorInput" value="BLEACH POEM MAKER" placeholder="例: BLEACH POEM MAKER"
+                        <label class="block text-[10px] text-zinc-400 mb-0.5">巻数・名前（例: KOJI 1. / 1.）</label>
+                        <input type="text" id="volNumInput" value="1." placeholder="例: KOJI 1. または 1."
                             class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed min-h-[32px]"
                             oninput="updateControls()">
                     </div>
 
-                    <div class="pt-1 border-t border-zinc-800 grid grid-cols-2 gap-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] text-zinc-400">タイトルサイズ</label>
-                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1.5 py-0.5 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル（改行可）</label>
+                        <textarea id="volTitleInput" rows="2" placeholder="例: THE DEATH AND&#10;THE STRAWBERRY"
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed resize-none"
+                            oninput="updateControls()">THE DEATH AND THE STRAWBERRY</textarea>
+                    </div>
+
+                    <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-3 gap-1.5">
+                        <div class="flex flex-col gap-0.5">
+                            <label class="text-[9px] text-zinc-400">巻数サイズ</label>
+                            <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                                <option value="14">小 (14px)</option>
+                                <option value="18" selected>標準 (18px)</option>
+                                <option value="22">大 (22px)</option>
+                                <option value="28">特大 (28px)</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <label class="text-[9px] text-zinc-400">タイトルサイズ</label>
+                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="10">小 (10px)</option>
                                 <option value="12" selected>標準 (12px)</option>
                                 <option value="14">大 (14px)</option>
+                                <option value="16">特大 (16px)</option>
                             </select>
                         </div>
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] text-zinc-400">作者名サイズ</label>
-                            <select id="authorFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1.5 py-0.5 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                        <div class="flex flex-col gap-0.5">
+                            <label class="text-[9px] text-zinc-400">作者名サイズ</label>
+                            <select id="authorFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="8">小 (8px)</option>
                                 <option value="10" selected>標準 (10px)</option>
                                 <option value="12">大 (12px)</option>
@@ -271,9 +273,9 @@
         const poemInput = document.getElementById('poemInput');
         const volNumInput = document.getElementById('volNumInput');
         const volTitleInput = document.getElementById('volTitleInput');
-        const authorInput = document.getElementById('authorInput');
         
         const poemFontSize = document.getElementById('poemFontSize');
+        const volNumFontSize = document.getElementById('volNumFontSize');
         const titleFontSize = document.getElementById('titleFontSize');
         const authorFontSize = document.getElementById('authorFontSize');
 
@@ -486,7 +488,6 @@
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
             volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
-            authorInput.value = "BLEACH POEM MAKER";
             updateControls();
         }
 
@@ -519,15 +520,12 @@
             previewPoem.innerText = poemInput.value || " ";
             previewVolNum.innerText = volNumInput.value || "";
             previewVolTitle.innerText = volTitleInput.value || "";
-            previewAuthor.innerText = authorInput.value || "";
+            previewAuthor.innerText = "BLEACH POEM MAKER";
 
             // フォントサイズ更新
             previewPoem.style.fontSize = `${poemFontSize.value}px`;
-            
-            const titlePx = `${titleFontSize.value}px`;
-            previewVolNum.style.fontSize = `${parseInt(titleFontSize.value) + 4}px`;
-            previewVolTitle.style.fontSize = titlePx;
-
+            previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
+            previewVolTitle.style.fontSize = `${titleFontSize.value}px`;
             previewAuthor.style.fontSize = `${authorFontSize.value}px`;
 
             updateOverlayImage();
@@ -626,35 +624,42 @@
                 }
             });
 
-            // 4. 下部タイトルボックス（自動折り返し対応）
+            // 4. 下部タイトルボックス（手動改行および自動折り返し対応）
             const volNum = volNumInput.value || "";
-            const volTitle = (volTitleInput.value || "").toUpperCase();
-            const author = (authorInput.value || "").toUpperCase();
+            const volTitleRaw = (volTitleInput.value || "").toUpperCase();
+            const author = "BLEACH POEM MAKER";
 
             const boxWidth = 480; 
-            const maxTitleTextWidth = 360;
+            const maxTitleTextWidth = 350;
             
+            const vnSize = Math.round(parseInt(volNumFontSize.value) * 1.9);
             const tSize = Math.round(parseInt(titleFontSize.value) * 1.9);
+            
             ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
             
-            const words = volTitle.split(' ');
+            // 改行コード（\n）で分割後、必要に応じて自動折り返し処理
+            const rawTitleLines = volTitleRaw.split('\n');
             let titleLines = [];
-            let currentLine = '';
 
-            words.forEach(word => {
-                const testLine = currentLine ? currentLine + ' ' + word : word;
-                const metrics = ctx.measureText(testLine);
-                if (metrics.width > maxTitleTextWidth && currentLine) {
-                    titleLines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    currentLine = testLine;
-                }
+            rawTitleLines.forEach(rawLine => {
+                const words = rawLine.split(' ');
+                let currentLine = '';
+
+                words.forEach(word => {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > maxTitleTextWidth && currentLine) {
+                        titleLines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                if (currentLine) titleLines.push(currentLine);
             });
-            if (currentLine) titleLines.push(currentLine);
 
-            const titleLineHeight = tSize * 1.3;
-            const computedHeight = Math.max(76, (titleLines.length * titleLineHeight) + 20);
+            const titleLineHeight = tSize * 1.35;
+            const computedHeight = Math.max(80, (titleLines.length * titleLineHeight) + 20);
 
             const boxX = (width - boxWidth) / 2;
             const boxY = height - computedHeight - 110;
@@ -664,20 +669,22 @@
             ctx.lineWidth = 6;
             ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
 
+            // 巻数数字を描画
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${tSize + 8}px "Noto Serif JP", sans-serif`;
+            ctx.font = `900 ${vnSize}px "Noto Serif JP", sans-serif`;
             ctx.textBaseline = 'middle';
             ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
 
+            // タイトルテキストを描画
             ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
-            const titleStartX = boxX + 75;
+            const titleStartX = boxX + (volNum ? 110 : 25);
             const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
 
             titleLines.forEach((tLine, index) => {
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（半分の幅）描画
+            // 5. 作者名枠（「BLEACH POEM MAKER」固定）描画
             const authorBoxWidth = 240;
             const aSize = Math.round(parseInt(authorFontSize.value) * 1.9);
             const authorBoxHeight = aSize + 20;
