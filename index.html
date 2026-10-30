@@ -123,7 +123,7 @@
                     </div>
 
                     <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
-                    <div class="pt-0.5 flex flex-col items-center gap-1.5">
+                    <div class="pt-0.5 flex flex-col items-center gap-1.5 font-serif">
                         <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
                             <span id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words whitespace-pre-line">THE DEATH AND THE STRAWBERRY</span>
@@ -131,7 +131,7 @@
                         
                         <!-- 下部の作者名枠（固定表示: BLEACH POEM MAKER） -->
                         <div id="previewAuthorBorder" class="border-[3px] border-black px-2 py-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px] min-h-[26px]">
-                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words">BLEACH POEM MAKER</span>
+                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[10px]">BLEACH POEM MAKER</span>
                         </div>
                     </div>
 
@@ -189,10 +189,10 @@
                             oninput="updateControls()">THE DEATH AND THE STRAWBERRY</textarea>
                     </div>
 
-                    <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-3 gap-1.5">
+                    <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-2 gap-2">
                         <div class="flex flex-col gap-0.5">
-                            <label class="text-[9px] text-zinc-400">巻数サイズ</label>
-                            <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                            <label class="text-[10px] text-zinc-400">巻数サイズ</label>
+                            <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="14">小 (14px)</option>
                                 <option value="18" selected>標準 (18px)</option>
                                 <option value="22">大 (22px)</option>
@@ -200,20 +200,12 @@
                             </select>
                         </div>
                         <div class="flex flex-col gap-0.5">
-                            <label class="text-[9px] text-zinc-400">タイトルサイズ</label>
-                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
+                            <label class="text-[10px] text-zinc-400">タイトルサイズ</label>
+                            <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="10">小 (10px)</option>
                                 <option value="12" selected>標準 (12px)</option>
                                 <option value="14">大 (14px)</option>
                                 <option value="16">特大 (16px)</option>
-                            </select>
-                        </div>
-                        <div class="flex flex-col gap-0.5">
-                            <label class="text-[9px] text-zinc-400">作者名サイズ</label>
-                            <select id="authorFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-[11px] text-zinc-200 px-1 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
-                                <option value="8">小 (8px)</option>
-                                <option value="10" selected>標準 (10px)</option>
-                                <option value="12">大 (12px)</option>
                             </select>
                         </div>
                     </div>
@@ -289,7 +281,6 @@
         const poemFontSize = document.getElementById('poemFontSize');
         const volNumFontSize = document.getElementById('volNumFontSize');
         const titleFontSize = document.getElementById('titleFontSize');
-        const authorFontSize = document.getElementById('authorFontSize');
 
         const previewPoem = document.getElementById('previewPoem');
         const previewVolNum = document.getElementById('previewVolNum');
@@ -541,7 +532,6 @@
             previewPoem.style.fontSize = `${poemFontSize.value}px`;
             previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
             previewVolTitle.style.fontSize = `${titleFontSize.value}px`;
-            previewAuthor.style.fontSize = `${authorFontSize.value}px`;
 
             updateOverlayImage();
         }
@@ -650,7 +640,7 @@
             const vnSize = Math.round(parseInt(volNumFontSize.value) * 1.9);
             const tSize = Math.round(parseInt(titleFontSize.value) * 1.9);
             
-            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `800 ${tSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             
             const rawTitleLines = volTitleRaw.split('\n');
             let titleLines = [];
@@ -685,12 +675,12 @@
 
             // 巻数数字を描画
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${vnSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `900 ${vnSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'middle';
             ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
 
             // タイトルテキストを描画
-            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `800 ${tSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             const titleStartX = boxX + (volNum ? 110 : 25);
             const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
 
@@ -698,9 +688,9 @@
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（隙間28px）
+            // 5. 作者名枠（隙間28px、フォント統一、サイズ固定）
             const authorBoxWidth = 240;
-            const aSize = Math.round(parseInt(authorFontSize.value) * 1.9);
+            const aSize = 19; // 10px * 1.9
             const authorBoxHeight = aSize + 20;
             const authorBoxX = (width - authorBoxWidth) / 2;
             const authorBoxY = boxY + computedHeight + 28;
@@ -709,7 +699,7 @@
             ctx.lineWidth = 6;
             ctx.strokeRect(authorBoxX, authorBoxY, authorBoxWidth, authorBoxHeight);
 
-            ctx.font = `800 ${aSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `800 ${aSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
