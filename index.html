@@ -176,9 +176,9 @@
                 <div class="pt-1.5 border-t border-zinc-800 flex items-center justify-between">
                     <label class="text-[10px] text-zinc-400">詩のフォントサイズ</label>
                     <select id="poemFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-2 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
-                        <option value="14">小 (14px)</option>
-                        <option value="16" selected>標準 (16px)</option>
-                        <option value="18">大 (18px)</option>
+                        <option value="12">小 (12px)</option>
+                        <option value="14" selected>標準 (14px)</option>
+                        <option value="16">大 (16px)</option>
                         <option value="20">特大 (20px)</option>
                     </select>
                 </div>
@@ -314,11 +314,14 @@
 
         // --- 詩本文のサンプルリスト（ここで自由に追加・編集できます） ---
         const poemSamples = [
+           `霞む視界
+けぶる雨だと
+言い聞かせ`,
+
             `廃人になるな
 目を逸らすな
 力は常に己の中
-夜露を撥け
-誇りをもて
+夜露を撥け、誇りをもて
 たった一つの魂を
 捨てるくらいなら生を撰べ`,
 
@@ -327,10 +330,8 @@
 
             `過去と未来と現在が
 一緒くたに存在するのなら
-あの夜や
-あの痛みはいつか
-今の私の平穏の中に
-混ざって融けてくれるだろうか`
+あの夜はいつか今の私の平穏の中に
+融けてくれるだろうか`
         ];
         let currentSampleIndex = 0;
 
