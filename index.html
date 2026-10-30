@@ -52,10 +52,6 @@
             max-width: 380px;
             aspect-ratio: 1 / 1.5;
         }
-        /* アスペクト比 6:1 */
-        .aspect-crop-box {
-            aspect-ratio: 6 / 1;
-        }
     </style>
 </head>
 <body class="bg-darkBg text-gray-200 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-500 selection:text-white pb-6">
@@ -107,8 +103,8 @@
             <div class="w-full flex justify-center py-1">
                 <div id="poemCard" class="poem-card-container bg-white text-black p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
                     
-                    <!-- ① 横長モノクロ画像表示枠（プレビュー用アスペクト比 6:1） -->
-                    <div id="imageDisplayBox" onclick="handleImageDisplayClick()" class="w-full aspect-crop-box bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer group z-0">
+                    <!-- ① 横長モノクロ画像表示枠（細め: h-14 sm:h-16） -->
+                    <div id="imageDisplayBox" onclick="handleImageDisplayClick()" class="w-full h-14 sm:h-16 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer group z-0">
                         <img id="previewImg" src="" alt="ポエム用画像" class="absolute inset-0 w-full h-full object-cover hidden pointer-events-none transition-all">
                         <div id="imgPlaceholder" class="text-zinc-400 text-[11px] text-center px-2 flex items-center gap-1 group-hover:text-zinc-200">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -122,8 +118,8 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
-                    <div class="pt-0.5 flex flex-col items-center gap-1.5 font-serif">
+                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（元のゴシック系フォント・デザイン） -->
+                    <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
                             <span id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words whitespace-pre-line">THE DEATH AND THE STRAWBERRY</span>
@@ -214,7 +210,7 @@
         </section>
     </main>
 
-    <!-- 画像トリミングモーダル（画像全体表示 ＋ 枠移動・リサイズ方式） -->
+    <!-- 画像トリミングモーダル -->
     <div id="cropModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-2 select-none">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-3 sm:p-4 flex flex-col gap-2 shadow-2xl max-h-[95vh] overflow-y-auto">
             
@@ -243,11 +239,11 @@
 
             <p class="text-[10px] text-zinc-400 text-center">赤枠内をドラッグして移動 / 四隅の丸をドラッグしてサイズ変更</p>
 
-            <!-- 画像全体を表示し、その上でアスペクト比 6:1 の枠を動かすコンテナ -->
+            <!-- 画像全体を表示し、その上でプレビュー枠とミリ単位で一致する枠を動かすコンテナ -->
             <div id="cropContainer" class="w-full relative bg-black overflow-hidden border border-zinc-800 rounded flex items-center justify-center touch-none">
                 <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale">
                 
-                <!-- プレビューと同じアスペクト比 6:1 の動かせるトリミング枠 -->
+                <!-- 動かせるトリミング枠 -->
                 <div id="cropBox" class="absolute border-2 border-accentRed shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move touch-none flex items-center justify-center">
                     <div class="crop-handle absolute -top-2 -left-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nwse-resize" data-handle="tl"></div>
                     <div class="crop-handle absolute -top-2 -right-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nesw-resize" data-handle="tr"></div>
@@ -268,8 +264,16 @@
         let rawImageObj = null;
         let croppedDataUrl = null;
 
-        const CROP_ASPECT = 6 / 1;
-        let boxNorm = { x: 0, y: 0, w: 1, h: 1 / CROP_ASPECT };
+        // プレビューの実際の枠から動的にアスペクト比を取得
+        function getPreviewAspect() {
+            const box = document.getElementById('imageDisplayBox');
+            if (box && box.clientWidth && box.clientHeight) {
+                return box.clientWidth / box.clientHeight;
+            }
+            return 340 / 56; // フォールバック値（約6.07）
+        }
+
+        let boxNorm = { x: 0, y: 0, w: 1, h: 1 };
 
         const defaultPoem = "僕たちは 伸ばす手に\n駆ける髪に\n背中に届く まぶしい光に\n似た何かを夢見ている";
 
@@ -348,8 +352,9 @@
         }
 
         function resetBoxNorm() {
+            const aspect = getPreviewAspect();
             boxNorm.w = 0.9;
-            boxNorm.h = boxNorm.w / CROP_ASPECT;
+            boxNorm.h = boxNorm.w / aspect;
             boxNorm.x = (1 - boxNorm.w) / 2;
             boxNorm.y = (1 - boxNorm.h) / 2;
         }
@@ -369,7 +374,7 @@
             cropBox.style.height = `${boxNorm.h * ch}px`;
         }
 
-        // 枠の移動・四隅リサイズ操作のハンドリング
+        // 枠の移動・四隅リサイズ操作のハンドリング（リアルタイムのプレビュー比率と完全連動）
         function setupBoxCropInteractions() {
             let mode = null;
             let activeHandle = null;
@@ -404,6 +409,7 @@
                 const ch = cropImg.clientHeight;
                 if (!cw || !ch) return;
 
+                const aspect = getPreviewAspect();
                 const dxNorm = (pos.x - startX) / cw;
                 const dyNorm = (pos.y - startY) / ch;
 
@@ -420,12 +426,12 @@
                         newW = startNorm.w - dxNorm;
                     }
 
-                    newW = Math.max(0.2, Math.min(1, newW));
-                    let newH = newW / CROP_ASPECT;
+                    newW = Math.max(0.15, Math.min(1, newW));
+                    let newH = (newW * cw) / aspect / ch;
 
                     if (newH > 1) {
                         newH = 1;
-                        newW = newH * CROP_ASPECT;
+                        newW = (newH * ch * aspect) / cw;
                     }
 
                     let newX = startNorm.x;
@@ -440,8 +446,8 @@
 
                     if (newX < 0) newX = 0;
                     if (newY < 0) newY = 0;
-                    if (newX + newW > 1) { newW = 1 - newX; newH = newW / CROP_ASPECT; }
-                    if (newY + newH > 1) { newH = 1 - newY; newW = newH * CROP_ASPECT; }
+                    if (newX + newW > 1) { newW = 1 - newX; newH = (newW * cw) / aspect / ch; }
+                    if (newY + newH > 1) { newH = 1 - newY; newW = (newH * ch * aspect) / cw; }
 
                     boxNorm.x = newX;
                     boxNorm.y = newY;
@@ -551,7 +557,7 @@
             });
         }
 
-        // Canvas描画ロジック（プレビューと100%完全に一致）
+        // Canvas描画ロジック（ゴシック系デザインとプレビュー枠のアスペクト比に完全一致）
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
@@ -569,17 +575,18 @@
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（アスペクト比 6:1）
+            // 2. 画像描画（プレビューと同じ比率）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
-            const imgBoxHeight = imgBoxWidth / CROP_ASPECT;
+            const aspect = getPreviewAspect();
+            const imgBoxHeight = imgBoxWidth / aspect;
 
             if (croppedDataUrl) {
                 const croppedImg = new Image();
                 croppedImg.onload = () => {
                     ctx.drawImage(croppedImg, imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
-                    renderTextAndTitle(ctx, width, height, textColor);
+                    renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight);
                     if (callback) callback(canvas);
                 };
                 croppedImg.src = croppedDataUrl;
@@ -587,15 +594,15 @@
                 ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
-                renderTextAndTitle(ctx, width, height, textColor);
+                renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight);
                 if (callback) callback(canvas);
             }
         }
 
-        function renderTextAndTitle(ctx, width, height, textColor) {
+        function renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight) {
             ctx.fillStyle = textColor;
             
-            // 3. 縦書きポエムテキスト
+            // 3. 縦書きポエムテキスト (明朝体)
             const pSize = Math.round(parseInt(poemFontSize.value) * 2.1);
             ctx.font = `700 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
@@ -606,7 +613,7 @@
 
             const totalPoemWidth = (lines.length - 1) * lineSpacing;
             const startX = (width / 2) + (totalPoemWidth / 2);
-            const startY = 240;
+            const startY = 60 + imgBoxHeight + 50;
 
             lines.forEach((line, lineIndex) => {
                 const currentX = startX - (lineIndex * lineSpacing);
@@ -629,7 +636,7 @@
                 }
             });
 
-            // 4. 下部タイトルボックス（手動改行および自動折り返し対応）
+            // 4. 下部タイトルボックス（元のゴシック・太字デザイン: Noto Serif JP / sans-serif）
             const volNum = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
@@ -640,7 +647,7 @@
             const vnSize = Math.round(parseInt(volNumFontSize.value) * 1.9);
             const tSize = Math.round(parseInt(titleFontSize.value) * 1.9);
             
-            ctx.font = `800 ${tSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
             
             const rawTitleLines = volTitleRaw.split('\n');
             let titleLines = [];
@@ -675,12 +682,12 @@
 
             // 巻数数字を描画
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${vnSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.font = `900 ${vnSize}px "Noto Serif JP", sans-serif`;
             ctx.textBaseline = 'middle';
             ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
 
             // タイトルテキストを描画
-            ctx.font = `800 ${tSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
             const titleStartX = boxX + (volNum ? 110 : 25);
             const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
 
@@ -688,7 +695,7 @@
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（隙間28px、フォント統一、サイズ固定）
+            // 5. 作者名枠（元のゴシック・太字デザイン、隙間28px、サイズ10px相当）
             const authorBoxWidth = 240;
             const aSize = 19; // 10px * 1.9
             const authorBoxHeight = aSize + 20;
@@ -699,7 +706,7 @@
             ctx.lineWidth = 6;
             ctx.strokeRect(authorBoxX, authorBoxY, authorBoxWidth, authorBoxHeight);
 
-            ctx.font = `800 ${aSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.font = `800 ${aSize}px "Noto Serif JP", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
