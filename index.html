@@ -222,7 +222,7 @@
         </section>
     </main>
 
-    <!-- 画像トリミングモーダル（編集窓自体がプレビューと同じ 6:1 の横長枠） -->
+    <!-- 画像トリミングモーダル（画像全体表示 ＋ 枠移動・リサイズ方式） -->
     <div id="cropModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-2 select-none">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-3 sm:p-4 flex flex-col gap-2 shadow-2xl max-h-[95vh] overflow-y-auto">
             
@@ -231,7 +231,7 @@
                 <div class="flex items-center justify-between">
                     <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                         <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        画像の切り抜き＆位置調整
+                        切り抜き範囲の指定
                     </h3>
                     <button onclick="closeCropModal()" class="text-zinc-400 hover:text-white p-1">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -249,11 +249,19 @@
                 </div>
             </div>
 
-            <p class="text-[10px] text-zinc-400 text-center">窓内をドラッグして移動 / ホイール・ピンチで拡大縮小</p>
+            <p class="text-[10px] text-zinc-400 text-center">赤枠内をドラッグして移動 / 四隅の丸をドラッグしてサイズ変更</p>
 
-            <!-- プレビューと同じ 6:1 比率の切り抜きビューポート -->
-            <div id="cropViewport" class="w-full aspect-crop-box bg-black relative overflow-hidden border-2 border-accentRed/90 rounded touch-none cursor-grab active:cursor-grabbing flex items-center justify-center">
-                <img id="cropImg" src="" alt="Crop target" class="absolute max-w-none pointer-events-none select-none origin-top-left filter grayscale contrast-[1.2]">
+            <!-- 画像全体を表示し、その上でアスペクト比 6:1 の枠を動かすコンテナ -->
+            <div id="cropContainer" class="w-full relative bg-black overflow-hidden border border-zinc-800 rounded flex items-center justify-center touch-none">
+                <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale">
+                
+                <!-- プレビューと同じアスペクト比 6:1 の動かせるトリミング枠 -->
+                <div id="cropBox" class="absolute border-2 border-accentRed shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move touch-none flex items-center justify-center">
+                    <div class="crop-handle absolute -top-2 -left-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nwse-resize" data-handle="tl"></div>
+                    <div class="crop-handle absolute -top-2 -right-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nesw-resize" data-handle="tr"></div>
+                    <div class="crop-handle absolute -bottom-2 -left-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nesw-resize" data-handle="bl"></div>
+                    <div class="crop-handle absolute -bottom-2 -right-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nwse-resize" data-handle="br"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -269,7 +277,7 @@
         let croppedDataUrl = null;
 
         const CROP_ASPECT = 6 / 1;
-        let cropState = { x: 0, y: 0, scale: 1, baseW: 0, baseH: 0 };
+        let boxNorm = { x: 0, y: 0, w: 1, h: 1 / CROP_ASPECT };
 
         const defaultPoem = "僕たちは 伸ばす手に\n駆ける髪に\n背中に届く まぶしい光に\n似た何かを夢見ている";
 
@@ -296,14 +304,15 @@
         const imageDisplayBox = document.getElementById('imageDisplayBox');
 
         const cropModal = document.getElementById('cropModal');
-        const cropViewport = document.getElementById('cropViewport');
+        const cropContainer = document.getElementById('cropContainer');
         const cropImg = document.getElementById('cropImg');
+        const cropBox = document.getElementById('cropBox');
 
         window.onload = () => {
             poemInput.value = defaultPoem;
             setPreviewBg('light');
             updateControls();
-            setupCropInteractions();
+            setupBoxCropInteractions();
             setupOverlayPointerEvents();
         };
 
@@ -318,7 +327,7 @@
         function openCropModal() {
             if (!rawImageObj) return;
             cropModal.classList.remove('hidden');
-            setTimeout(initCropTransform, 50);
+            setTimeout(initCropBox, 50);
         }
 
         function closeCropModal() {
@@ -339,6 +348,7 @@
                 img.onload = () => {
                     rawImageObj = img;
                     cropImg.src = e.target.result;
+                    resetBoxNorm();
                     openCropModal();
                 };
                 img.src = e.target.result;
@@ -346,152 +356,138 @@
             reader.readAsDataURL(file);
         }
 
-        // トリミングビューポート内での初期配置とスケール計算
-        function initCropTransform() {
-            if (!rawImageObj) return;
-            const vw = cropViewport.clientWidth;
-            const vh = cropViewport.clientHeight;
-            if (!vw || !vh) return;
-
-            const scaleX = vw / rawImageObj.width;
-            const scaleY = vh / rawImageObj.height;
-            const baseCoverScale = Math.max(scaleX, scaleY);
-
-            cropState.baseW = rawImageObj.width * baseCoverScale;
-            cropState.baseH = rawImageObj.height * baseCoverScale;
-            cropState.scale = 1;
-            cropState.x = (vw - cropState.baseW) / 2;
-            cropState.y = (vh - cropState.baseH) / 2;
-
-            clampCropPosition();
-            renderCropModalImage();
+        function resetBoxNorm() {
+            boxNorm.w = 0.9;
+            boxNorm.h = boxNorm.w / CROP_ASPECT;
+            boxNorm.x = (1 - boxNorm.w) / 2;
+            boxNorm.y = (1 - boxNorm.h) / 2;
         }
 
-        function clampCropPosition() {
-            const vw = cropViewport.clientWidth;
-            const vh = cropViewport.clientHeight;
-            const currentW = cropState.baseW * cropState.scale;
-            const currentH = cropState.baseH * cropState.scale;
-
-            const minX = vw - currentW;
-            const maxX = 0;
-            const minY = vh - currentH;
-            const maxY = 0;
-
-            cropState.x = Math.min(maxX, Math.max(minX, cropState.x));
-            cropState.y = Math.min(maxY, Math.max(minY, cropState.y));
+        function initCropBox() {
+            renderCropBox();
         }
 
-        function renderCropModalImage() {
-            if (!rawImageObj) return;
-            const currentW = cropState.baseW * cropState.scale;
-            const currentH = cropState.baseH * cropState.scale;
+        function renderCropBox() {
+            const cw = cropImg.clientWidth;
+            const ch = cropImg.clientHeight;
+            if (!cw || !ch) return;
 
-            cropImg.style.width = `${currentW}px`;
-            cropImg.style.height = `${currentH}px`;
-            cropImg.style.transform = `translate3d(${cropState.x}px, ${cropState.y}px, 0px)`;
+            cropBox.style.left = `${boxNorm.x * cw}px`;
+            cropBox.style.top = `${boxNorm.y * ch}px`;
+            cropBox.style.width = `${boxNorm.w * cw}px`;
+            cropBox.style.height = `${boxNorm.h * ch}px`;
         }
 
-        // ドラッグ移動・ピンチ＆ホイールズーム操作
-        function setupCropInteractions() {
-            let isDragging = false;
+        // 枠の移動・四隅リサイズ操作のハンドリング
+        function setupBoxCropInteractions() {
+            let mode = null;
+            let activeHandle = null;
             let startX = 0, startY = 0;
-            let initialCropX = 0, initialCropY = 0;
-            let initialPinchDist = 0;
-            let startScale = 1;
+            let startNorm = { ...boxNorm };
 
-            const getTouchDist = (e) => {
-                return Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+            const getEventPos = (e) => {
+                const touch = e.touches ? e.touches[0] : e;
+                return { x: touch.clientX, y: touch.clientY };
             };
 
-            const onStart = (clientX, clientY) => {
-                isDragging = true;
-                startX = clientX;
-                startY = clientY;
-                initialCropX = cropState.x;
-                initialCropY = cropState.y;
+            const onStart = (e) => {
+                const pos = getEventPos(e);
+                startX = pos.x;
+                startY = pos.y;
+                startNorm = { ...boxNorm };
+
+                if (e.target.classList.contains('crop-handle')) {
+                    mode = 'handle';
+                    activeHandle = e.target.getAttribute('data-handle');
+                    e.stopPropagation();
+                } else if (e.target === cropBox || cropBox.contains(e.target)) {
+                    mode = 'move';
+                    e.stopPropagation();
+                }
             };
 
-            const onMove = (clientX, clientY) => {
-                if (!isDragging) return;
-                const dx = clientX - startX;
-                const dy = clientY - startY;
-                cropState.x = initialCropX + dx;
-                cropState.y = initialCropY + dy;
-                clampCropPosition();
-                renderCropModalImage();
+            const onMove = (e) => {
+                if (!mode) return;
+                const pos = getEventPos(e);
+                const cw = cropImg.clientWidth;
+                const ch = cropImg.clientHeight;
+                if (!cw || !ch) return;
+
+                const dxNorm = (pos.x - startX) / cw;
+                const dyNorm = (pos.y - startY) / ch;
+
+                if (mode === 'move') {
+                    let newX = Math.max(0, Math.min(1 - startNorm.w, startNorm.x + dxNorm));
+                    let newY = Math.max(0, Math.min(1 - startNorm.h, startNorm.y + dyNorm));
+                    boxNorm.x = newX;
+                    boxNorm.y = newY;
+                } else if (mode === 'handle') {
+                    let newW = startNorm.w;
+                    if (activeHandle === 'br' || activeHandle === 'tr') {
+                        newW = startNorm.w + dxNorm;
+                    } else if (activeHandle === 'bl' || activeHandle === 'tl') {
+                        newW = startNorm.w - dxNorm;
+                    }
+
+                    newW = Math.max(0.2, Math.min(1, newW));
+                    let newH = newW / CROP_ASPECT;
+
+                    if (newH > 1) {
+                        newH = 1;
+                        newW = newH * CROP_ASPECT;
+                    }
+
+                    let newX = startNorm.x;
+                    let newY = startNorm.y;
+
+                    if (activeHandle === 'tl' || activeHandle === 'bl') {
+                        newX = startNorm.x + (startNorm.w - newW);
+                    }
+                    if (activeHandle === 'tl' || activeHandle === 'tr') {
+                        newY = startNorm.y + (startNorm.h - newH);
+                    }
+
+                    if (newX < 0) newX = 0;
+                    if (newY < 0) newY = 0;
+                    if (newX + newW > 1) { newW = 1 - newX; newH = newW / CROP_ASPECT; }
+                    if (newY + newH > 1) { newH = 1 - newY; newW = newH * CROP_ASPECT; }
+
+                    boxNorm.x = newX;
+                    boxNorm.y = newY;
+                    boxNorm.w = newW;
+                    boxNorm.h = newH;
+                }
+                renderCropBox();
             };
 
-            const onEnd = () => { isDragging = false; };
+            const onEnd = () => { mode = null; activeHandle = null; };
 
-            cropViewport.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
-            window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+            cropContainer.addEventListener('mousedown', onStart);
+            window.addEventListener('mousemove', onMove);
             window.addEventListener('mouseup', onEnd);
 
-            cropViewport.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    onStart(e.touches[0].clientX, e.touches[0].clientY);
-                } else if (e.touches.length === 2) {
-                    isDragging = false;
-                    initialPinchDist = getTouchDist(e);
-                    startScale = cropState.scale;
-                }
-            }, { passive: true });
-
-            window.addEventListener('touchmove', (e) => {
-                if (isDragging && e.touches.length === 1) {
-                    onMove(e.touches[0].clientX, e.touches[0].clientY);
-                } else if (e.touches.length === 2 && initialPinchDist > 0) {
-                    const dist = getTouchDist(e);
-                    const factor = dist / initialPinchDist;
-                    cropState.scale = Math.max(1, Math.min(3.5, startScale * factor));
-                    clampCropPosition();
-                    renderCropModalImage();
-                }
-            }, { passive: true });
-
+            cropContainer.addEventListener('touchstart', onStart, { passive: true });
+            window.addEventListener('touchmove', onMove, { passive: true });
             window.addEventListener('touchend', onEnd);
-
-            cropViewport.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const delta = e.deltaY < 0 ? 0.08 : -0.08;
-                cropState.scale = Math.max(1, Math.min(3.5, cropState.scale + delta));
-                clampCropPosition();
-                renderCropModalImage();
-            }, { passive: false });
         }
 
-        // トリミング適用（窓の中に見えている状態をそのまま高解像度画像として生成）
+        // 切り抜き実行＆プレビュー反映
         function applyCrop() {
             if (!rawImageObj) return;
 
-            const vw = cropViewport.clientWidth || 300;
-            const vh = cropViewport.clientHeight || 50;
-
-            const outW = 800;
-            const outH = 800 / CROP_ASPECT;
-
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = outW;
-            tempCanvas.height = outH;
             const tempCtx = tempCanvas.getContext('2d');
 
-            // 窓枠に対する元画像の切り抜き座標を算出
-            const scaleX = vw / rawImageObj.width;
-            const scaleY = vh / rawImageObj.height;
-            const baseCoverScale = Math.max(scaleX, scaleY);
-            const actualScale = baseCoverScale * cropState.scale;
+            const sx = boxNorm.x * rawImageObj.width;
+            const sy = boxNorm.y * rawImageObj.height;
+            const sw = boxNorm.w * rawImageObj.width;
+            const sh = boxNorm.h * rawImageObj.height;
 
-            const srcX = -cropState.x / actualScale;
-            const srcY = -cropState.y / actualScale;
-            const srcW = vw / actualScale;
-            const srcH = vh / actualScale;
+            tempCanvas.width = sw;
+            tempCanvas.height = sh;
 
             tempCtx.filter = 'grayscale(100%) contrast(120%)';
-            tempCtx.drawImage(rawImageObj, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+            tempCtx.drawImage(rawImageObj, sx, sy, sw, sh, 0, 0, sw, sh);
 
             croppedDataUrl = tempCanvas.toDataURL('image/png');
 
