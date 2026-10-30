@@ -27,7 +27,7 @@
     <!-- Google Fonts for BLEACH-like typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
     <style>
         /* 縦書きモード指定 */
         .writing-vertical {
@@ -118,7 +118,7 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（元のゴシック系フォント・デザイン） -->
+                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（フォント・デザイン） -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
@@ -270,7 +270,7 @@
             if (box && box.clientWidth && box.clientHeight) {
                 return box.clientWidth / box.clientHeight;
             }
-            return 340 / 56; // フォールバック値（約6.07）
+            return 340 / 56;
         }
 
         let boxNorm = { x: 0, y: 0, w: 1, h: 1 };
@@ -374,7 +374,6 @@
             cropBox.style.height = `${boxNorm.h * ch}px`;
         }
 
-        // 枠の移動・四隅リサイズ操作のハンドリング（リアルタイムのプレビュー比率と完全連動）
         function setupBoxCropInteractions() {
             let mode = null;
             let activeHandle = null;
@@ -468,7 +467,6 @@
             window.addEventListener('touchend', onEnd);
         }
 
-        // 切り抜き実行＆プレビュー反映
         function applyCrop() {
             if (!rawImageObj) return;
 
@@ -557,7 +555,7 @@
             });
         }
 
-        // Canvas描画ロジック（ゴシック系デザインとプレビュー枠のアスペクト比に完全一致）
+        // Canvas描画ロジック（プレビューのゴシック系フォント・レイアウトに完全一致）
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
@@ -575,7 +573,7 @@
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（プレビューと同じ比率）
+            // 2. 画像描画
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -636,7 +634,7 @@
                 }
             });
 
-            // 4. 下部タイトルボックス（元のゴシック・太字デザイン: Noto Serif JP / sans-serif）
+            // 4. 下部タイトルボックス（プレビューと同じゴシック系太字フォント: Inter, sans-serif）
             const volNum = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
@@ -647,7 +645,7 @@
             const vnSize = Math.round(parseInt(volNumFontSize.value) * 1.9);
             const tSize = Math.round(parseInt(titleFontSize.value) * 1.9);
             
-            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `800 ${tSize}px "Inter", sans-serif`;
             
             const rawTitleLines = volTitleRaw.split('\n');
             let titleLines = [];
@@ -680,22 +678,27 @@
             ctx.lineWidth = 6;
             ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
 
-            // 巻数数字を描画
+            // 巻数数字を描画（動的幅測定により重なりを完全防止）
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${vnSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `900 ${vnSize}px "Inter", sans-serif`;
             ctx.textBaseline = 'middle';
-            ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
+            
+            let titleStartX = boxX + 25;
+            if (volNum) {
+                ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
+                const volNumWidth = ctx.measureText(volNum).width;
+                titleStartX = boxX + 20 + volNumWidth + 15; // 巻数とタイトルの間に適切な間隔を確保
+            }
 
             // タイトルテキストを描画
-            ctx.font = `800 ${tSize}px "Noto Serif JP", sans-serif`;
-            const titleStartX = boxX + (volNum ? 110 : 25);
+            ctx.font = `800 ${tSize}px "Inter", sans-serif`;
             const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
 
             titleLines.forEach((tLine, index) => {
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（元のゴシック・太字デザイン、隙間28px、サイズ10px相当）
+            // 5. 作者名枠（プレビューと同じゴシック系太字フォント、サイズ固定10px相当）
             const authorBoxWidth = 240;
             const aSize = 19; // 10px * 1.9
             const authorBoxHeight = aSize + 20;
@@ -706,7 +709,7 @@
             ctx.lineWidth = 6;
             ctx.strokeRect(authorBoxX, authorBoxY, authorBoxWidth, authorBoxHeight);
 
-            ctx.font = `800 ${aSize}px "Noto Serif JP", sans-serif`;
+            ctx.font = `800 ${aSize}px "Inter", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
