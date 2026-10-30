@@ -270,11 +270,10 @@
         let currentTheme = 'light';
         let rawImageObj = null;
         let croppedDataUrl = null;
-        let previousState = null; // 直前の編集データを保持する変数
 
-        // 直前のデータを保存する関数
+        // LocalStorageを使用して端末内に直前の編集データを保存・保持する関数
         function saveState() {
-            previousState = {
+            const currentState = {
                 poem: poemInput.value,
                 volNum: volNumInput.value,
                 volTitle: volTitleInput.value,
@@ -285,35 +284,47 @@
                 croppedDataUrl: croppedDataUrl,
                 boxNorm: { ...boxNorm }
             };
+            try {
+                localStorage.setItem('bleach_poem_previous_state', JSON.stringify(currentState));
+            } catch (e) {
+                console.error("ストレージへの保存に失敗しました", e);
+            }
         }
 
-        // 直前のデータを呼び戻す関数
+        // 端末のLocalStorageから直前のデータを呼び戻す関数
         function restorePreviousData() {
-            if (!previousState) {
+            const saved = localStorage.getItem('bleach_poem_previous_state');
+            if (!saved) {
                 alert("復元できる直前のデータがありません。");
                 return;
             }
-            poemInput.value = previousState.poem;
-            volNumInput.value = previousState.volNum;
-            volTitleInput.value = previousState.volTitle;
-            poemFontSize.value = previousState.poemFontSize;
-            volNumFontSize.value = previousState.volNumFontSize;
-            titleFontSize.value = previousState.titleFontSize;
-            setPreviewBg(previousState.theme);
+            try {
+                const previousState = JSON.parse(saved);
+                poemInput.value = previousState.poem;
+                volNumInput.value = previousState.volNum;
+                volTitleInput.value = previousState.volTitle;
+                poemFontSize.value = previousState.poemFontSize;
+                volNumFontSize.value = previousState.volNumFontSize;
+                titleFontSize.value = previousState.titleFontSize;
+                setPreviewBg(previousState.theme);
 
-            if (previousState.croppedDataUrl) {
-                croppedDataUrl = previousState.croppedDataUrl;
-                previewImg.src = croppedDataUrl;
-                previewImg.classList.remove('hidden');
-                imgPlaceholder.classList.add('hidden');
-            } else {
-                croppedDataUrl = null;
-                previewImg.src = '';
-                previewImg.classList.add('hidden');
-                imgPlaceholder.classList.remove('hidden');
+                if (previousState.croppedDataUrl) {
+                    croppedDataUrl = previousState.croppedDataUrl;
+                    previewImg.src = croppedDataUrl;
+                    previewImg.classList.remove('hidden');
+                    imgPlaceholder.classList.add('hidden');
+                } else {
+                    croppedDataUrl = null;
+                    previewImg.src = '';
+                    previewImg.classList.add('hidden');
+                    imgPlaceholder.classList.remove('hidden');
+                }
+                boxNorm = { ...previousState.boxNorm };
+                updateControls();
+            } catch (e) {
+                console.error("データの復元に失敗しました", e);
+                alert("データの復元中にエラーが発生しました。");
             }
-            boxNorm = { ...previousState.boxNorm };
-            updateControls();
         }
 
         // プレビューの実際の枠から動的にアスペクト比を取得
@@ -389,7 +400,7 @@
         }
 
         function loadImageFile(file) {
-            saveState(); // 画像変更前の状態を保存
+            saveState(); // 画像変更前の状態を端末内に保存
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -522,7 +533,7 @@
 
         function applyCrop() {
             if (!rawImageObj) return;
-            saveState(); // トリミング適用前の状態を保存
+            saveState(); // トリミング適用前の状態を端末内に保存
 
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
@@ -549,7 +560,7 @@
         }
 
         function applySamplePoem() {
-            saveState(); // サンプル適用前の状態を保存
+            saveState(); // サンプル適用前の状態を端末内に保存
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
             volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
@@ -610,7 +621,7 @@
             });
         }
 
-        // Canvas描画ロジック（プレビューのゴシック系フォント・レイアウトに完全一致）
+        // Canvas描画ロジック
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
@@ -689,7 +700,7 @@
                 }
             });
 
-            // 4. 下部タイトルボックス（プレビューと同じゴシック系太字フォント: Inter, sans-serif）
+            // 4. 下部タイトルボックス
             const volNum = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
@@ -728,12 +739,10 @@
             const boxX = (width - boxWidth) / 2;
             const boxY = height - computedHeight - 110;
 
-            // 巻数・タイトル枠描画
             ctx.strokeStyle = textColor;
             ctx.lineWidth = 6;
             ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
 
-            // 巻数数字を描画（動的幅測定により重なりを完全防止）
             ctx.fillStyle = textColor;
             ctx.font = `900 ${vnSize}px "Inter", sans-serif`;
             ctx.textBaseline = 'middle';
@@ -745,7 +754,6 @@
                 titleStartX = boxX + 20 + volNumWidth + 15;
             }
 
-            // タイトルテキストを描画
             ctx.font = `800 ${tSize}px "Inter", sans-serif`;
             const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
 
@@ -753,9 +761,9 @@
                 ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
             });
 
-            // 5. 作者名枠（プレビューと同じゴシック系太字フォント、サイズ固定10px相当）
+            // 5. 作者名枠
             const authorBoxWidth = 240;
-            const aSize = 19; // 10px * 1.9
+            const aSize = 19;
             const authorBoxHeight = aSize + 20;
             const authorBoxX = (width - authorBoxWidth) / 2;
             const authorBoxY = boxY + computedHeight + 28;
@@ -768,7 +776,7 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
-            ctx.textAlign = 'left'; // reset
+            ctx.textAlign = 'left';
         }
 
         let overlayTimer = null;
