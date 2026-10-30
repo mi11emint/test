@@ -85,23 +85,27 @@
         <section class="w-full flex flex-col items-center gap-2 border-b border-zinc-800/80 pb-3 pt-1">
             <div class="w-full max-w-[380px] flex items-center justify-between px-1">
                 <div class="flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- 目のアイコンのみ -->
+                    <svg class="w-5 h-5 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
-                    <h2 class="text-xs sm:text-sm font-bold text-white tracking-wide">プレビューのみ</h2>
                 </div>
-                <div class="flex items-center gap-1.5">
-                    <!-- 直前のデータ呼び戻しボタン -->
-                    <button id="restoreButton" onclick="restoreCurrentInputs()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-md flex items-center gap-1 min-h-[36px]">
-                        直前のデータ
+                <div class="flex items-center gap-1">
+                    <!-- 下書復元ボタン -->
+                    <button onclick="restoreDraft()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md flex items-center gap-0.5 min-h-[36px]">
+                        下書復元
+                    </button>
+                    <!-- 下書保存ボタン -->
+                    <button onclick="saveDraft()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2 py-1.5 rounded-lg transition shadow-md flex items-center gap-0.5 min-h-[36px]">
+                        下書保存
                     </button>
                     <!-- 保存ボタン -->
-                    <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1.5 min-h-[36px]">
+                    <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1 min-h-[36px]">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
-                        保存 (JPEG)
+                        保存
                     </button>
                 </div>
             </div>
@@ -271,9 +275,9 @@
         let rawImageObj = null;
         let croppedDataUrl = null;
 
-        // --- 参照用コードに準拠した LocalStorage 保存・復元ロジック ---
-        function saveCurrentInputs() {
-            const inputs = {
+        // 【下書保存】ボタンを押したときに端末にデータを保存する関数
+        function saveDraft() {
+            const draftData = {
                 poem: poemInput.value,
                 volNum: volNumInput.value,
                 volTitle: volTitleInput.value,
@@ -285,33 +289,33 @@
                 boxNorm: { ...boxNorm }
             };
             try {
-                localStorage.setItem('lastFormInputs', JSON.stringify(inputs));
+                localStorage.setItem('bleach_poem_user_draft', JSON.stringify(draftData));
+                alert("下書きを保存しました！");
             } catch (e) {
-                console.error("端末内へのデータ保存に失敗しました", e);
+                console.error("下書きの保存に失敗しました", e);
+                alert("保存に失敗しました。");
             }
         }
 
-        function restoreCurrentInputs() {
-            const savedData = localStorage.getItem('lastFormInputs');
-            if (!savedData) {
-                alert('直前の入力データが見つかりません');
+        // 【下書復元】ボタンを押したときに保存されたデータを呼び戻す関数
+        function restoreDraft() {
+            const saved = localStorage.getItem('bleach_poem_user_draft');
+            if (!saved) {
+                alert("保存された下書きがありません。");
                 return;
             }
             try {
-                const inputs = JSON.parse(savedData);
-                poemInput.value = inputs.poem || '';
-                volNumInput.value = inputs.volNum || '';
-                volTitleInput.value = inputs.volTitle || '';
-                poemFontSize.value = inputs.poemFontSize || '16';
-                volNumFontSize.value = inputs.volNumFontSize || '18';
-                titleFontSize.value = inputs.titleFontSize || '12';
-                
-                if (inputs.theme) {
-                    setPreviewBg(inputs.theme);
-                }
+                const draftData = JSON.parse(saved);
+                poemInput.value = draftData.poem;
+                volNumInput.value = draftData.volNum;
+                volTitleInput.value = draftData.volTitle;
+                poemFontSize.value = draftData.poemFontSize;
+                volNumFontSize.value = draftData.volNumFontSize;
+                titleFontSize.value = draftData.titleFontSize;
+                setPreviewBg(draftData.theme);
 
-                if (inputs.croppedDataUrl) {
-                    croppedDataUrl = inputs.croppedDataUrl;
+                if (draftData.croppedDataUrl) {
+                    croppedDataUrl = draftData.croppedDataUrl;
                     previewImg.src = croppedDataUrl;
                     previewImg.classList.remove('hidden');
                     imgPlaceholder.classList.add('hidden');
@@ -321,15 +325,12 @@
                     previewImg.classList.add('hidden');
                     imgPlaceholder.classList.remove('hidden');
                 }
-
-                if (inputs.boxNorm) {
-                    boxNorm = { ...inputs.boxNorm };
-                }
-
+                boxNorm = { ...draftData.boxNorm };
                 updateControls();
+                alert("下書きを復元しました！");
             } catch (e) {
-                console.error("データの復元処理でエラーが発生しました", e);
-                alert("直前のデータの復元に失敗しました");
+                console.error("下書きの復元に失敗しました", e);
+                alert("下書きの復元中にエラーが発生しました。");
             }
         }
 
@@ -380,11 +381,6 @@
             setupOverlayPointerEvents();
         };
 
-        // ページ離脱時・リロード時に編集データを自動同期
-        window.addEventListener('beforeunload', () => {
-            saveCurrentInputs();
-        });
-
         function handleImageDisplayClick() {
             if (!rawImageObj) {
                 document.getElementById('imageInput').click();
@@ -411,7 +407,6 @@
         }
 
         function loadImageFile(file) {
-            saveCurrentInputs(); // 画像変更直前のデータを保存
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -544,7 +539,6 @@
 
         function applyCrop() {
             if (!rawImageObj) return;
-            saveCurrentInputs(); // 切り抜き確定前のデータを保存
 
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
@@ -571,7 +565,6 @@
         }
 
         function applySamplePoem() {
-            saveCurrentInputs(); // サンプル適用前のデータを保存
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
             volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
@@ -604,7 +597,6 @@
         }
 
         function updateControls() {
-            saveCurrentInputs(); // 入力・変更のたびにリアルタイム更新＆同期保存
             previewPoem.innerText = poemInput.value || " ";
             previewVolNum.innerText = volNumInput.value || "";
             previewVolTitle.innerText = volTitleInput.value || "";
