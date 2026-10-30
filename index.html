@@ -93,7 +93,7 @@
                 </div>
                 <div class="flex items-center gap-1.5">
                     <!-- 直前のデータ呼び戻しボタン -->
-                    <button onclick="restorePreviousData()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-md flex items-center gap-1 min-h-[36px]">
+                    <button id="restoreButton" onclick="restoreCurrentInputs()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-md flex items-center gap-1 min-h-[36px]">
                         直前のデータ
                     </button>
                     <!-- 保存ボタン -->
@@ -271,9 +271,9 @@
         let rawImageObj = null;
         let croppedDataUrl = null;
 
-        // LocalStorageを使用して端末内に直前の編集データを常時オートセーブする関数
-        function saveState() {
-            const currentState = {
+        // --- 参照用コードに準拠した LocalStorage 保存・復元ロジック ---
+        function saveCurrentInputs() {
+            const inputs = {
                 poem: poemInput.value,
                 volNum: volNumInput.value,
                 volTitle: volTitleInput.value,
@@ -285,31 +285,33 @@
                 boxNorm: { ...boxNorm }
             };
             try {
-                localStorage.setItem('bleach_poem_previous_state', JSON.stringify(currentState));
+                localStorage.setItem('lastFormInputs', JSON.stringify(inputs));
             } catch (e) {
-                console.error("ストレージへの保存に失敗しました", e);
+                console.error("端末内へのデータ保存に失敗しました", e);
             }
         }
 
-        // 端末のLocalStorageから直前のデータを呼び戻す関数
-        function restorePreviousData() {
-            const saved = localStorage.getItem('bleach_poem_previous_state');
-            if (!saved) {
-                alert("復元できる直前のデータがありません。");
+        function restoreCurrentInputs() {
+            const savedData = localStorage.getItem('lastFormInputs');
+            if (!savedData) {
+                alert('直前の入力データが見つかりません');
                 return;
             }
             try {
-                const previousState = JSON.parse(saved);
-                poemInput.value = previousState.poem;
-                volNumInput.value = previousState.volNum;
-                volTitleInput.value = previousState.volTitle;
-                poemFontSize.value = previousState.poemFontSize;
-                volNumFontSize.value = previousState.volNumFontSize;
-                titleFontSize.value = previousState.titleFontSize;
-                setPreviewBg(previousState.theme);
+                const inputs = JSON.parse(savedData);
+                poemInput.value = inputs.poem || '';
+                volNumInput.value = inputs.volNum || '';
+                volTitleInput.value = inputs.volTitle || '';
+                poemFontSize.value = inputs.poemFontSize || '16';
+                volNumFontSize.value = inputs.volNumFontSize || '18';
+                titleFontSize.value = inputs.titleFontSize || '12';
+                
+                if (inputs.theme) {
+                    setPreviewBg(inputs.theme);
+                }
 
-                if (previousState.croppedDataUrl) {
-                    croppedDataUrl = previousState.croppedDataUrl;
+                if (inputs.croppedDataUrl) {
+                    croppedDataUrl = inputs.croppedDataUrl;
                     previewImg.src = croppedDataUrl;
                     previewImg.classList.remove('hidden');
                     imgPlaceholder.classList.add('hidden');
@@ -319,11 +321,15 @@
                     previewImg.classList.add('hidden');
                     imgPlaceholder.classList.remove('hidden');
                 }
-                boxNorm = { ...previousState.boxNorm };
+
+                if (inputs.boxNorm) {
+                    boxNorm = { ...inputs.boxNorm };
+                }
+
                 updateControls();
             } catch (e) {
-                console.error("データの復元に失敗しました", e);
-                alert("データの復元中にエラーが発生しました。");
+                console.error("データの復元処理でエラーが発生しました", e);
+                alert("直前のデータの復元に失敗しました");
             }
         }
 
@@ -374,9 +380,9 @@
             setupOverlayPointerEvents();
         };
 
-        // ページを離れる・リロードされる直前にも確実に保存
+        // ページ離脱時・リロード時に編集データを自動同期
         window.addEventListener('beforeunload', () => {
-            saveState();
+            saveCurrentInputs();
         });
 
         function handleImageDisplayClick() {
@@ -405,7 +411,7 @@
         }
 
         function loadImageFile(file) {
-            saveState(); // 画像変更前の状態を端末内に保存
+            saveCurrentInputs(); // 画像変更直前のデータを保存
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -538,7 +544,7 @@
 
         function applyCrop() {
             if (!rawImageObj) return;
-            saveState(); // トリミング適用前の状態を端末内に保存
+            saveCurrentInputs(); // 切り抜き確定前のデータを保存
 
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
@@ -565,7 +571,7 @@
         }
 
         function applySamplePoem() {
-            saveState(); // サンプル適用前の状態を端末内に保存
+            saveCurrentInputs(); // サンプル適用前のデータを保存
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
             volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
@@ -573,7 +579,6 @@
         }
 
         function setPreviewBg(mode) {
-            saveState(); // 背景切り替え前の状態を保存
             currentTheme = mode;
             const btnDark = document.getElementById('btnBgDark');
             const btnLight = document.getElementById('btnBgLight');
@@ -599,7 +604,7 @@
         }
 
         function updateControls() {
-            saveState(); // 入力や設定変更のたびに自動で状態をオートセーブ
+            saveCurrentInputs(); // 入力・変更のたびにリアルタイム更新＆同期保存
             previewPoem.innerText = poemInput.value || " ";
             previewVolNum.innerText = volNumInput.value || "";
             previewVolTitle.innerText = volTitleInput.value || "";
