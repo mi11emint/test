@@ -81,7 +81,7 @@
     <!-- Main Container -->
     <main class="max-w-6xl mx-auto px-3 pt-2 flex-1 w-full flex flex-col gap-4">
 
-        <!-- リアルタイムプレビュー画面 -->
+        <!-- プレビュー画面ヘッダー ＆ 操作ボタン -->
         <section class="w-full flex flex-col items-center gap-2 border-b border-zinc-800/80 pb-3 pt-1">
             <div class="w-full max-w-[380px] flex items-center justify-between px-1">
                 <div class="flex items-center gap-1.5">
@@ -89,14 +89,21 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
-                    <h2 class="text-xs sm:text-sm font-bold text-white tracking-wide">リアルタイムプレビュー</h2>
+                    <h2 class="text-xs sm:text-sm font-bold text-white tracking-wide">プレビューのみ</h2>
                 </div>
-                <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1.5 min-h-[36px]">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                    </svg>
-                    保存 (JPEG)
-                </button>
+                <div class="flex items-center gap-1.5">
+                    <!-- 直前のデータ呼び戻しボタン -->
+                    <button onclick="restorePreviousData()" class="bg-[#1270F3] hover:bg-blue-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-md flex items-center gap-1 min-h-[36px]">
+                        直前のデータ
+                    </button>
+                    <!-- 保存ボタン -->
+                    <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1.5 min-h-[36px]">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        保存 (JPEG)
+                    </button>
+                </div>
             </div>
 
             <!-- BLEACH巻頭風ポエムカード本体 (プレビュー) -->
@@ -118,7 +125,7 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（フォント・デザイン） -->
+                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px]">
                             <span id="previewVolNum" class="font-black leading-none shrink-0">1.</span>
@@ -263,6 +270,51 @@
         let currentTheme = 'light';
         let rawImageObj = null;
         let croppedDataUrl = null;
+        let previousState = null; // 直前の編集データを保持する変数
+
+        // 直前のデータを保存する関数
+        function saveState() {
+            previousState = {
+                poem: poemInput.value,
+                volNum: volNumInput.value,
+                volTitle: volTitleInput.value,
+                poemFontSize: poemFontSize.value,
+                volNumFontSize: volNumFontSize.value,
+                titleFontSize: titleFontSize.value,
+                theme: currentTheme,
+                croppedDataUrl: croppedDataUrl,
+                boxNorm: { ...boxNorm }
+            };
+        }
+
+        // 直前のデータを呼び戻す関数
+        function restorePreviousData() {
+            if (!previousState) {
+                alert("復元できる直前のデータがありません。");
+                return;
+            }
+            poemInput.value = previousState.poem;
+            volNumInput.value = previousState.volNum;
+            volTitleInput.value = previousState.volTitle;
+            poemFontSize.value = previousState.poemFontSize;
+            volNumFontSize.value = previousState.volNumFontSize;
+            titleFontSize.value = previousState.titleFontSize;
+            setPreviewBg(previousState.theme);
+
+            if (previousState.croppedDataUrl) {
+                croppedDataUrl = previousState.croppedDataUrl;
+                previewImg.src = croppedDataUrl;
+                previewImg.classList.remove('hidden');
+                imgPlaceholder.classList.add('hidden');
+            } else {
+                croppedDataUrl = null;
+                previewImg.src = '';
+                previewImg.classList.add('hidden');
+                imgPlaceholder.classList.remove('hidden');
+            }
+            boxNorm = { ...previousState.boxNorm };
+            updateControls();
+        }
 
         // プレビューの実際の枠から動的にアスペクト比を取得
         function getPreviewAspect() {
@@ -337,6 +389,7 @@
         }
 
         function loadImageFile(file) {
+            saveState(); // 画像変更前の状態を保存
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -469,6 +522,7 @@
 
         function applyCrop() {
             if (!rawImageObj) return;
+            saveState(); // トリミング適用前の状態を保存
 
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
@@ -495,6 +549,7 @@
         }
 
         function applySamplePoem() {
+            saveState(); // サンプル適用前の状態を保存
             poemInput.value = defaultPoem;
             volNumInput.value = "1.";
             volTitleInput.value = "THE DEATH AND THE STRAWBERRY";
@@ -687,7 +742,7 @@
             if (volNum) {
                 ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
                 const volNumWidth = ctx.measureText(volNum).width;
-                titleStartX = boxX + 20 + volNumWidth + 15; // 巻数とタイトルの間に適切な間隔を確保
+                titleStartX = boxX + 20 + volNumWidth + 15;
             }
 
             // タイトルテキストを描画
