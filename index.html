@@ -13,7 +13,7 @@
                     colors: {
                         darkBg: '#121214',
                         cardBg: '#1e1e24',
-                        accentRed: '#e50914'
+                        accentRed: '#ff2d55'
                     },
                     fontFamily: {
                         serif: ['"Shippori Mincho"', '"Noto Serif JP"', 'serif'],
@@ -27,6 +27,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- html2canvas for precise rendering & font preservation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* 縦書きモード指定 */
         .writing-vertical {
@@ -90,7 +92,7 @@
     <main class="max-w-6xl mx-auto px-3 pt-3 flex-1 w-full flex flex-col gap-6">
 
         <!-- ③ プレビュー画面を上部に配置 (スマホ用にSticky対応＆サイズ自動調整) -->
-       <section class="w-full flex flex-col items-center gap-3 border-b border-zinc-800/80 pb-5 pt-2">
+        <section class="w-full flex flex-col items-center gap-3 border-b border-zinc-800/80 pb-5 sticky top-[53px] z-40 bg-darkBg/95 backdrop-blur-md pt-2">
             <div class="w-full flex items-center justify-between px-1">
                 <div class="flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,6 +146,9 @@
             <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-4 shadow-lg space-y-3">
                 <h3 class="text-xs sm:text-sm font-semibold text-zinc-300 flex items-center justify-between">
                     <span>1. 画像設定 <span class="text-[11px] text-zinc-500 font-normal">(自動モノクロ)</span></span>
+                    <button id="btnOpenCrop" onclick="openCropModal()" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-accentRed border border-zinc-700 px-2 py-1 rounded transition hidden">
+                        ✂ トリミング編集
+                    </button>
                 </h3>
 
                 <!-- アップロードエリア -->
@@ -218,8 +223,53 @@
         </section>
     </main>
 
-    <!-- Canvas (画像生成用非表示キャンバス) -->
-    <canvas id="exportCanvas" class="hidden"></canvas>
+    <!-- 直感的画像クロップ・トリミング用モーダル (上に重ねる画面) -->
+    <div id="cropModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex flex-col items-center justify-center p-4">
+        <div class="bg-cardBg border border-zinc-700 rounded-2xl w-full max-w-md p-4 flex flex-col gap-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <span>✂</span> 画像トリミング・切り抜き調整
+                </h3>
+                <button onclick="closeCropModal()" class="text-zinc-400 hover:text-white text-lg px-2">✕</button>
+            </div>
+            
+            <p class="text-xs text-zinc-400">枠内をドラッグ/スワイプして見せたい位置を合わせてください。</p>
+
+            <!-- クロッププレビューエリア -->
+            <div class="w-full flex justify-center py-2 bg-zinc-950 rounded-lg overflow-hidden">
+                <div id="modalCropBox" class="w-[300px] h-[52px] bg-zinc-900 relative overflow-hidden border-2 border-accentRed shadow-inner cursor-grab active:cursor-grabbing touch-none">
+                    <img id="modalCropImg" src="" alt="クロップ用画像" class="absolute max-w-none w-full object-cover filter grayscale contrast-[1.3] pointer-events-none">
+                </div>
+            </div>
+
+            <!-- モーダル内調整スライダー -->
+            <div class="space-y-3 pt-1">
+                <div>
+                    <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                        <span>上下位置移動</span>
+                        <span id="modalPosVal">50%</span>
+                    </div>
+                    <input type="range" id="modalPosY" min="0" max="100" value="50" class="w-full" oninput="syncModalToState()">
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                        <span>ズーム</span>
+                        <span id="modalZoomVal">1.0x</span>
+                    </div>
+                    <input type="range" id="modalZoom" min="1" max="3" step="0.05" value="1" class="w-full" oninput="syncModalToState()">
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeCropModal()" class="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-lg text-xs transition">
+                    キャンセル
+                </button>
+                <button onclick="applyCropModal()" class="flex-1 py-2.5 bg-accentRed hover:bg-rose-600 text-white font-bold rounded-lg text-xs transition shadow-lg">
+                    トリミング確定
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- App Main Script -->
     <script>
@@ -244,11 +294,17 @@
         const previewTitleBorder = document.getElementById('previewTitleBorder');
         const imageDisplayBox = document.getElementById('imageDisplayBox');
 
+        // Modal Elements
+        const cropModal = document.getElementById('cropModal');
+        const modalCropImg = document.getElementById('modalCropImg');
+        const modalCropBox = document.getElementById('modalCropBox');
+
         // Initialize App
         window.onload = () => {
             poemInput.value = defaultPoem;
             updateControls();
             setupTouchDrag();
+            setupModalTouchDrag();
             
             // Drag and drop setup
             const dropZone = document.getElementById('dropZone');
@@ -268,7 +324,7 @@
             });
         };
 
-        // タッチ / マウスドラッグで画像位置（posY）を直感移動
+        // タッチ / マウスドラッグで画像位置（posY）を直感移動 (メイン枠)
         function setupTouchDrag() {
             let startY = 0;
             let startVal = 50;
@@ -307,6 +363,45 @@
             window.addEventListener('touchend', onEnd);
         }
 
+        // モーダル枠での直感ドラッグ移動
+        function setupModalTouchDrag() {
+            let startY = 0;
+            let startVal = 50;
+            let isDragging = false;
+
+            const onStart = (clientY) => {
+                if (!uploadedImage) return;
+                isDragging = true;
+                startY = clientY;
+                startVal = parseFloat(document.getElementById('modalPosY').value);
+            };
+
+            const onMove = (clientY) => {
+                if (!isDragging) return;
+                const deltaY = clientY - startY;
+                let newVal = startVal - (deltaY * 0.8);
+                newVal = Math.max(0, Math.min(100, newVal));
+                document.getElementById('modalPosY').value = newVal;
+                syncModalToState();
+            };
+
+            const onEnd = () => { isDragging = false; };
+
+            modalCropBox.addEventListener('mousedown', (e) => onStart(e.clientY));
+            window.addEventListener('mousemove', (e) => onMove(e.clientY));
+            window.addEventListener('mouseup', onEnd);
+
+            modalCropBox.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) onStart(e.touches[0].clientY);
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1) onMove(e.touches[0].clientY);
+            }, { passive: true });
+
+            window.addEventListener('touchend', onEnd);
+        }
+
         // Handle Image Upload
         function handleImageSelect(event) {
             const file = event.target.files[0];
@@ -321,13 +416,49 @@
                 uploadedImage = new Image();
                 uploadedImage.onload = () => {
                     previewImg.src = e.target.result;
+                    modalCropImg.src = e.target.result;
                     previewImg.classList.remove('hidden');
                     imgPlaceholder.classList.add('hidden');
+                    document.getElementById('btnOpenCrop').classList.remove('hidden');
                     updateControls();
+                    openCropModal();
                 };
                 uploadedImage.src = e.target.result;
             };
             reader.readAsDataURL(file);
+        }
+
+        // モーダルの開閉と同期
+        function openCropModal() {
+            if (!uploadedImage) return;
+            document.getElementById('modalPosY').value = document.getElementById('posY').value;
+            document.getElementById('modalZoom').value = document.getElementById('zoom').value;
+            syncModalToState();
+            cropModal.classList.remove('hidden');
+        }
+
+        function closeCropModal() {
+            cropModal.classList.add('hidden');
+        }
+
+        function syncModalToState() {
+            const posY = document.getElementById('modalPosY').value;
+            const zoom = document.getElementById('modalZoom').value;
+            const contrast = document.getElementById('contrast').value;
+
+            document.getElementById('modalPosVal').innerText = `${Math.round(posY)}%`;
+            document.getElementById('modalZoomVal').innerText = `${zoom}x`;
+
+            modalCropImg.style.transform = `scale(${zoom})`;
+            modalCropImg.style.objectPosition = `center ${posY}%`;
+            modalCropImg.style.filter = `grayscale(100%) contrast(${contrast}%)`;
+        }
+
+        function applyCropModal() {
+            document.getElementById('posY').value = document.getElementById('modalPosY').value;
+            document.getElementById('zoom').value = document.getElementById('modalZoom').value;
+            updateControls();
+            closeCropModal();
         }
 
         // Apply Sample Poem
@@ -385,141 +516,33 @@
             previewVolTitle.innerText = volTitleInput.value || "";
         }
 
-        // Download HTML Card as High Quality PNG using HTML5 Canvas
-        function downloadImage() {
-            const canvas = document.getElementById('exportCanvas');
-            const ctx = canvas.getContext('2d');
-
-            // High-res canvas dimensions
-            const width = 800;
-            const height = 1200;
-            canvas.width = width;
-            canvas.height = height;
+        // html2canvasを用いてプレビュー（#poemCard）をそのままフォント一致でJPEGダウンロード保存
+        async function downloadImage() {
+            // Webフォント読み込み完了を待機
+            await document.fonts.ready;
 
             const isDark = currentTheme === 'dark';
             const bgColor = isDark ? '#000000' : '#ffffff';
-            const textColor = isDark ? '#ffffff' : '#000000';
 
-            // 1. Fill Background
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, width, height);
-
-            // 2. Render Image Area (細めの横長形状 h=140px)
-            const imgBoxX = 60;
-            const imgBoxY = 60;
-            const imgBoxWidth = width - 120;
-            const imgBoxHeight = 140;
-
-            if (uploadedImage) {
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
-                ctx.clip();
-
-                const contrast = document.getElementById('contrast').value;
-                ctx.filter = `grayscale(100%) contrast(${contrast}%)`;
-
-                const zoom = parseFloat(document.getElementById('zoom').value);
-                const posY = parseFloat(document.getElementById('posY').value) / 100;
-
-                const renderW = imgBoxWidth * zoom;
-                const renderH = (uploadedImage.height * (imgBoxWidth / uploadedImage.width)) * zoom;
-
-                const drawX = imgBoxX + (imgBoxWidth - renderW) / 2;
-                const drawY = imgBoxY + (imgBoxHeight - renderH) * posY;
-
-                ctx.drawImage(uploadedImage, drawX, drawY, renderW, renderH);
-                ctx.restore();
-            } else {
-                ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
-            }
-
-            // 3. Render Vertical Poem Text
-            ctx.fillStyle = textColor;
-            ctx.font = '700 34px "Shippori Mincho", "Noto Serif JP", serif';
-            ctx.textBaseline = 'top';
-
-            const lines = poemInput.value.split('\n');
-            const lineSpacing = 65;
-            const startX = width - 120;
-            const startY = 260;
-
-            lines.forEach((line, lineIndex) => {
-                const currentX = startX - (lineIndex * lineSpacing);
-                let currentY = startY;
-
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (['、', '。'].includes(char)) {
-                        ctx.fillText(char, currentX + 15, currentY - 15);
-                    } else if (['ー', '―', '-'].includes(char)) {
-                        ctx.save();
-                        ctx.translate(currentX + 15, currentY + 15);
-                        ctx.rotate(Math.PI / 2);
-                        ctx.fillText(char, 0, 0);
-                        ctx.restore();
-                    } else {
-                        ctx.fillText(char, currentX, currentY);
+            html2canvas(poemCard, {
+                scale: 3, // 高画質出力
+                backgroundColor: bgColor,
+                useCORS: true,
+                logging: false,
+                onclone: (clonedDoc) => {
+                    const clonedCard = clonedDoc.getElementById('poemCard');
+                    if (clonedCard) {
+                        clonedCard.style.transform = 'none';
+                        clonedCard.style.boxShadow = 'none';
                     }
-                    currentY += 42;
                 }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `bleach_poem_${Date.now()}.jpg`;
+                // JPEG形式で保存
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
             });
-
-            // 4. Render Bottom Title Box (自動折り返し対応)
-            const volNum = volNumInput.value || "";
-            const volTitle = (volTitleInput.value || "").toUpperCase();
-
-            const boxWidth = 480; 
-            const maxTitleTextWidth = 360;
-            
-            ctx.font = '800 22px "Noto Serif JP", sans-serif';
-            
-            const words = volTitle.split(' ');
-            let titleLines = [];
-            let currentLine = '';
-
-            words.forEach(word => {
-                const testLine = currentLine ? currentLine + ' ' + word : word;
-                const metrics = ctx.measureText(testLine);
-                if (metrics.width > maxTitleTextWidth && currentLine) {
-                    titleLines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    currentLine = testLine;
-                }
-            });
-            if (currentLine) titleLines.push(currentLine);
-
-            const titleLineHeight = 28;
-            const computedHeight = Math.max(80, (titleLines.length * titleLineHeight) + 24);
-
-            const boxX = (width - boxWidth) / 2;
-            const boxY = height - computedHeight - 60;
-
-            ctx.strokeStyle = textColor;
-            ctx.lineWidth = 6;
-            ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
-
-            ctx.fillStyle = textColor;
-            ctx.font = '900 32px "Noto Serif JP", sans-serif';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(volNum, boxX + 20, boxY + (computedHeight / 2));
-
-            ctx.font = '800 22px "Noto Serif JP", sans-serif';
-            const titleStartX = boxX + 75;
-            const startTitleY = boxY + (computedHeight - (titleLines.length * titleLineHeight)) / 2 + (titleLineHeight / 2);
-
-            titleLines.forEach((tLine, index) => {
-                ctx.fillText(tLine, titleStartX, startTitleY + (index * titleLineHeight));
-            });
-
-            // 5. Trigger Image Download
-            const link = document.createElement('a');
-            link.download = `bleach_poem_${Date.now()}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
         }
     </script>
 </body>
