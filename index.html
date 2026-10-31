@@ -60,13 +60,12 @@
     <header class="border-b border-zinc-800 bg-zinc-950/90 sticky top-0 z-50 backdrop-blur-md">
         <div class="max-w-6xl mx-auto px-3 py-2 flex items-center justify-between">
             <div class="flex items-center gap-2">
-               
                 <h1 class="text-base sm:text-lg font-bold tracking-wider text-white flex items-center gap-1.5">
                     BLEACH POEM MAKER
                 </h1>
             </div>
 
-            <!-- 利用規約を開くボタン (保存ボタンと同色: bg-accentRed) -->
+            <!-- 利用規約を開くボタン -->
             <button onclick="openTermsModal()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow-md min-h-[32px]">
                 利用規約
             </button>
@@ -80,14 +79,19 @@
         <section class="w-full flex flex-col items-center gap-2 border-b border-zinc-800/80 pb-3 pt-1">
             <div class="w-full max-w-[380px] flex items-center justify-between px-1">
                 <div class="flex items-center gap-1.5">
-                    <!-- 目のアイコンのみ -->
-                    <svg class="w-5 h-5 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
+                    <!-- 目のアイコンボタン（プレビュー開閉トグル） -->
+                    <button onclick="togglePreviewFold()" title="プレビューを折りたたむ/表示" class="p-1 rounded-lg hover:bg-zinc-800 active:scale-95 transition text-accentRed flex items-center justify-center">
+                        <svg id="eyeOpenIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        <svg id="eyeClosedIcon" class="w-6 h-6 text-zinc-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858-5.908a10.025 10.025 0 012.122-.063c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21M3 3l18 18"></path>
+                        </svg>
+                    </button>
                 </div>
                 <div class="flex items-center gap-1">
-                    <!-- 背景色切り替えトグル (下書復元の左に配置) -->
+                    <!-- 背景色切り替えトグル -->
                     <div class="bg-zinc-900 border border-zinc-700/80 p-0.5 rounded-lg flex items-center gap-1 shadow-inner">
                         <button id="btnBgDark" onclick="setPreviewBg('dark')" class="px-2 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]">
                             <span class="w-2 h-2 rounded-full bg-black border border-zinc-500 inline-block"></span> 黒
@@ -105,7 +109,7 @@
                         下書保存
                     </button>
                     <!-- 保存ボタン -->
-                    <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center gap-1 min-h-[36px]">
+                    <button onclick="downloadImage()" class="bg-accentRed hover:bg-rose-600 active:scale-95 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition shadow-lg shadow-rose-950/50 flex items-center justify-center gap-1 min-h-[36px]">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
@@ -115,10 +119,10 @@
             </div>
 
             <!-- BLEACH巻頭風ポエムカード本体 (プレビュー) -->
-            <div class="w-full flex justify-center py-1">
+            <div id="previewWrapper" class="w-full flex flex-col items-center py-1 transition-all duration-300 overflow-hidden">
                 <div id="poemCard" class="poem-card-container bg-white text-black p-4 sm:p-5 transition-colors duration-300 shadow-2xl rounded-sm flex flex-col justify-between border border-zinc-800 relative select-none">
                     
-                    <!-- ① 横長モノクロ画像表示枠（細め: h-14 sm:h-16） -->
+                    <!-- ① 横長モノクロ画像表示枠 -->
                     <div id="imageDisplayBox" onclick="handleImageDisplayClick()" class="w-full h-14 sm:h-16 bg-zinc-900 relative overflow-hidden flex items-center justify-center border border-zinc-800/50 cursor-pointer group z-0">
                         <img id="previewImg" src="" alt="ポエム用画像" class="absolute inset-0 w-full h-full object-cover hidden pointer-events-none transition-all">
                         <div id="imgPlaceholder" class="text-zinc-400 text-[11px] text-center px-2 flex items-center gap-1 group-hover:text-zinc-200">
@@ -135,12 +139,18 @@
 
                     <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
-                        <div id="previewTitleBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center gap-2 font-extrabold tracking-wider max-w-[260px] sm:max-w-[290px] min-h-[48px] overflow-hidden">
-                            <div id="previewVolNum" class="font-black leading-tight shrink-0 whitespace-pre-line text-xs">1.</div>
-                            <div id="previewVolTitle" class="font-extrabold uppercase tracking-widest leading-tight break-words whitespace-pre-line text-xs flex-1">THE DEATH AND THE STRAWBERRY</div>
+                        <div id="previewTitleBorder" class="border-[3px] border-black flex items-stretch max-w-full min-h-[54px] overflow-hidden">
+                            <!-- 巻数表示エリア（縦長拡大） -->
+                            <div class="px-2 py-1 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
+                                <div id="previewVolNum" class="font-black leading-none whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
+                            </div>
+                            <!-- タイトル表示エリア -->
+                            <div class="p-1.5 flex flex-col justify-center shrink-0 overflow-hidden">
+                                <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs">THE BIRTH&#10;AND THE&#10;BLACKBERRY</div>
+                            </div>
                         </div>
                         
-                        <!-- 下部の作者名枠（固定表示: BLEACH POEM MAKER） -->
+                        <!-- 下部の作者名枠 -->
                         <div id="previewAuthorBorder" class="border-[3px] border-black px-2 py-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px] min-h-[26px]">
                             <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px]">BLEACH POEM MAKER</span>
                         </div>
@@ -149,8 +159,8 @@
                     <!-- 長押し保存用リアルタイムオーバーレイ画像 -->
                     <img id="longPressOverlay" alt="Long press to save" class="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer pointer-events-auto" title="長押しまたは右クリックで画像を保存">
                 </div>
+                <p id="previewHintText" class="text-[10px] text-zinc-500 text-center mt-1">※ プレビュー画像を長押し / 右クリックで直接保存も可能です</p>
             </div>
-            <p class="text-[10px] text-zinc-500 text-center">※ プレビュー画像を長押し / 右クリックで直接保存も可能です</p>
         </section>
 
         <!-- 非表示画像インプット -->
@@ -167,8 +177,7 @@
                         サンプル適用
                     </button>
                 </div>
-              <label class="text-[10px] text-zinc-400">サンプル適用を押す度にデフォルトポエムが変わります　　⬆
-                </label>
+                <label class="text-[10px] text-zinc-400">サンプル適用を押す度にデフォルトポエムが変わります  ⬆</label>
                 <textarea id="poemInput" rows="4" placeholder="ここに詩を入力（改行で列変更）"
                     class="w-full flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-accentRed transition leading-relaxed resize-none min-h-[85px]"
                     oninput="updateControls()"></textarea>
@@ -192,14 +201,17 @@
                         <label class="block text-[10px] text-zinc-400 mb-0.5">作品名/巻数（改行可）</label>
                         <textarea id="volNumInput" rows="2" placeholder="あなたの名前や作品名と巻数を入力"
                             class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed resize-none min-h-[42px]"
-                            oninput="updateControls()">1.</textarea>
+                            oninput="updateControls()">BLEACH
+#1</textarea>
                     </div>
 
                     <div>
                         <label class="block text-[10px] text-zinc-400 mb-0.5">詩タイトル（改行可）</label>
-                        <textarea id="volTitleInput" rows="2" placeholder="  "
-                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed resize-none"
-                            oninput="updateControls()">THE BIRTH AND THE BLACKBERRY</textarea>
+                        <textarea id="volTitleInput" rows="3" placeholder="  "
+                            class="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-100 focus:outline-none focus:border-accentRed resize-none min-h-[60px]"
+                            oninput="updateControls()">THE BIRTH
+AND THE
+BLACKBERRY</textarea>
                     </div>
 
                     <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-2 gap-2">
@@ -207,8 +219,8 @@
                             <label class="text-[10px] text-zinc-400">巻数サイズ</label>
                             <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="14">小 (14px)</option>
-                                <option value="18" selected>標準 (18px)</option>
-                                <option value="22">大 (22px)</option>
+                                <option value="18">標準 (18px)</option>
+                                <option value="22" selected>大 (22px)</option>
                                 <option value="30">特大 (30px)</option>
                             </select>
                         </div>
@@ -216,9 +228,9 @@
                             <label class="text-[10px] text-zinc-400">タイトルサイズ</label>
                             <select id="titleFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="updateControls()">
                                 <option value="10">小 (10px)</option>
-                                <option value="12" selected>標準 (12px)</option>
+                                <option value="12">標準 (12px)</option>
                                 <option value="14">大 (14px)</option>
-                                <option value="18">特大 (18px)</option>
+                                <option value="18" selected>特大 (18px)</option>
                             </select>
                         </div>
                     </div>
@@ -245,14 +257,14 @@
 
 このメーカーを政治的活動や扇動、暴言や誹謗中傷の為に使用することを禁じます。
 
-エモいオサレ詩以外にも、今日の心からの気持ちや、誰かに声を当ててもらいたいセリフ、オリジナルの歌詞、自作物語の一文、買い物メモなどを画像にしてSNSへアップしてみてください。#BPMったー
+エモいオサレ詩以外にも、今日の心からの気持ちや、誰かに声を当ててもらいたいセリフ、オリジナルの歌詞、自作物語の一文、買い物メモなどを画像にしてみてください。#BPMったー
 
-【CREDIT】
-霞の視界の詩をご提供頂きました！
-白玉あずき@srtm_azk01様
+【CREDIT】 お名前タップでページ遷移
+              
+<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき様</a> 霞の視界── の詩をご提供頂きました！
 
               
-作者：鳳月 眠人
+サイト作者：<a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
 2026年11月1日</div>
 
             <div class="pt-2 border-t border-zinc-800 flex justify-end">
@@ -266,8 +278,6 @@
     <!-- 画像トリミングモーダル -->
     <div id="cropModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-2 select-none">
         <div class="bg-zinc-900 border border-zinc-800 w-full max-w-lg rounded-2xl p-3 sm:p-4 flex flex-col gap-2 shadow-2xl max-h-[95vh] overflow-y-auto">
-            
-            <!-- 上部ヘッダー ＆ 操作ボタン -->
             <div class="flex flex-col gap-2 border-b border-zinc-800 pb-2.5">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
@@ -292,11 +302,9 @@
 
             <p class="text-[10px] text-zinc-400 text-center">赤枠内をドラッグして移動 / 四隅の丸をドラッグしてサイズ変更</p>
 
-            <!-- 画像全体を表示し、その上でプレビュー枠とミリ単位で一致する枠を動かすコンテナ -->
             <div id="cropContainer" class="w-full relative bg-black overflow-hidden border border-zinc-800 rounded flex items-center justify-center touch-none">
                 <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale">
                 
-                <!-- 動かせるトリミング枠 -->
                 <div id="cropBox" class="absolute border-2 border-accentRed shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move touch-none flex items-center justify-center">
                     <div class="crop-handle absolute -top-2 -left-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nwse-resize" data-handle="tl"></div>
                     <div class="crop-handle absolute -top-2 -right-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nesw-resize" data-handle="tr"></div>
@@ -316,8 +324,8 @@
         let currentTheme = 'light';
         let rawImageObj = null;
         let croppedDataUrl = null;
+        let isPreviewFolded = false;
 
-        // --- 詩本文のサンプルリスト（ここで自由に追加・編集できます） ---
         const poemSamples = [
             `漂白された心と
 脱色された日々に`,
@@ -329,7 +337,7 @@
             `風の色を教えてください
 この涙を止めるすべをください`,
 
-　　　　　　　`廃人になるな
+            `廃人になるな
 目を逸らすな
 力は常に己の中
 夜露を撥け
@@ -345,7 +353,24 @@
         ];
         let currentSampleIndex = 0;
 
-        // 利用規約モーダルの開閉関数
+        // プレビューの折りたたみ・展開トグル関数
+        function togglePreviewFold() {
+            isPreviewFolded = !isPreviewFolded;
+            const wrapper = document.getElementById('previewWrapper');
+            const eyeOpen = document.getElementById('eyeOpenIcon');
+            const eyeClosed = document.getElementById('eyeClosedIcon');
+
+            if (isPreviewFolded) {
+                wrapper.classList.add('hidden');
+                eyeOpen.classList.add('hidden');
+                eyeClosed.classList.remove('hidden');
+            } else {
+                wrapper.classList.remove('hidden');
+                eyeOpen.classList.remove('hidden');
+                eyeClosed.classList.add('hidden');
+            }
+        }
+
         function openTermsModal() {
             document.getElementById('termsModal').classList.remove('hidden');
         }
@@ -354,7 +379,6 @@
             document.getElementById('termsModal').classList.add('hidden');
         }
 
-        // 【下書保存】ボタン用関数
         function saveDraft() {
             const draftData = {
                 poem: poemInput.value,
@@ -376,7 +400,6 @@
             }
         }
 
-        // 【下書復元】ボタン用関数
         function restoreDraft() {
             const saved = localStorage.getItem('bleach_poem_user_draft');
             if (!saved) {
@@ -413,7 +436,6 @@
             }
         }
 
-        // プレビューの実際の枠から動的にアスペクト比を取得
         function getPreviewAspect() {
             const box = document.getElementById('imageDisplayBox');
             if (box && box.clientWidth && box.clientHeight) {
@@ -424,7 +446,6 @@
 
         let boxNorm = { x: 0, y: 0, w: 1, h: 1 };
 
-        // DOM Elements
         const poemInput = document.getElementById('poemInput');
         const volNumInput = document.getElementById('volNumInput');
         const volTitleInput = document.getElementById('volTitleInput');
@@ -443,6 +464,7 @@
         const poemCard = document.getElementById('poemCard');
         const previewTitleBorder = document.getElementById('previewTitleBorder');
         const previewAuthorBorder = document.getElementById('previewAuthorBorder');
+        const previewDivider = document.getElementById('previewDivider');
         const imageDisplayBox = document.getElementById('imageDisplayBox');
 
         const cropModal = document.getElementById('cropModal');
@@ -451,8 +473,12 @@
         const cropBox = document.getElementById('cropBox');
 
         window.onload = () => {
-            // 初期状態はリストの1番目をセット
             poemInput.value = poemSamples[0];
+            volNumInput.value = "BLEACH\n#1";
+            volTitleInput.value = "THE BIRTH\nAND THE\nBLACKBERRY";
+            volNumFontSize.value = "22"; // 大
+            titleFontSize.value = "18";    // 特大
+
             setPreviewBg('light');
             updateControls();
             setupBoxCropInteractions();
@@ -642,7 +668,6 @@
             updateControls();
         }
 
-        // --- サンプル適用ボタン（押すごとに順番に切り替わるローテーション機能） ---
         function applySamplePoem() {
             poemInput.value = poemSamples[currentSampleIndex];
             currentSampleIndex = (currentSampleIndex + 1) % poemSamples.length;
@@ -658,6 +683,7 @@
                 poemCard.style.backgroundColor = '#000000';
                 poemCard.style.color = '#ffffff';
                 previewTitleBorder.style.borderColor = '#ffffff';
+                previewDivider.style.borderColor = '#ffffff';
                 previewAuthorBorder.style.borderColor = '#ffffff';
 
                 btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 bg-zinc-700 text-white shadow-sm min-h-[36px]";
@@ -666,6 +692,7 @@
                 poemCard.style.backgroundColor = '#ffffff';
                 poemCard.style.color = '#000000';
                 previewTitleBorder.style.borderColor = '#000000';
+                previewDivider.style.borderColor = '#000000';
                 previewAuthorBorder.style.borderColor = '#000000';
 
                 btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]";
@@ -680,7 +707,6 @@
             previewVolTitle.innerText = volTitleInput.value || "";
             previewAuthor.innerText = "BLEACH POEM MAKER";
 
-            // フォントサイズ更新
             previewPoem.style.fontSize = `${poemFontSize.value}px`;
             previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
             previewVolTitle.style.fontSize = `${titleFontSize.value}px`;
@@ -703,7 +729,6 @@
             });
         }
 
-        // Canvas描画ロジック（巻数の複数行対応 ＆ 枠内自動収まりオートスケール）
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
             const ctx = canvas.getContext('2d');
@@ -717,7 +742,7 @@
             const bgColor = isDark ? '#000000' : '#ffffff';
             const textColor = isDark ? '#ffffff' : '#000000';
 
-            // 1. 背景色
+            // 1. 背景描画
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
@@ -748,7 +773,7 @@
         function renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight) {
             ctx.fillStyle = textColor;
             
-            // 3. 縦書きポエムテキスト (明朝体)
+            // 3. 縦書きポエムテキスト
             const pSize = Math.round(parseInt(poemFontSize.value) * 2.1);
             ctx.font = `700 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
@@ -782,114 +807,87 @@
                 }
             });
 
-            // 4. 下部タイトルボックス（巻数複数行＆自動枠内収まり対応）
+            // 4. 下部タイトルボックス
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
 
-            const boxWidth = 480; 
-            const boxInnerWidth = boxWidth - 40; // 左右パディング考慮
-            const maxTitleTextWidth = 320;
-            
-            const vnSize = Math.round(parseInt(volNumFontSize.value) * 1.9);
-            const tSize = Math.round(parseInt(titleFontSize.value) * 1.9);
-            
-            // 巻数の行分割
+            const vnBaseSize = Math.round(parseInt(volNumFontSize.value) * 1.6);
+            const tBaseSize = Math.round(parseInt(titleFontSize.value) * 1.9);
+
             const volNumLines = volNumRaw.split('\n');
+            const titleLines = volTitleRaw.split('\n');
 
-            // タイトルの行分割（単語折り返し）
-            ctx.font = `800 ${tSize}px "Inter", sans-serif`;
-            const rawTitleLines = volTitleRaw.split('\n');
-            let titleLines = [];
-
-            rawTitleLines.forEach(rawLine => {
-                const words = rawLine.split(' ');
-                let currentLine = '';
-
-                words.forEach(word => {
-                    const testLine = currentLine ? currentLine + ' ' + word : word;
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > maxTitleTextWidth && currentLine) {
-                        titleLines.push(currentLine);
-                        currentLine = word;
-                    } else {
-                        currentLine = testLine;
-                    }
-                });
-                if (currentLine) titleLines.push(currentLine);
-            });
-            if (titleLines.length === 0) titleLines = [''];
-
-            // 巻数・タイトルの各行の最大幅を計測して、枠内に収まるようオートスケール（自動縮小）を計算
-            ctx.font = `900 ${vnSize}px "Inter", sans-serif`;
-            let maxVolNumWidth = 0;
-            volNumLines.forEach(line => {
-                const w = ctx.measureText(line).width;
-                if (w > maxVolNumWidth) maxVolNumWidth = w;
+            ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
+            let unscaledMaxVnW = 0;
+            volNumLines.forEach(l => {
+                const w = ctx.measureText(l).width;
+                if (w > unscaledMaxVnW) unscaledMaxVnW = w;
             });
 
-            ctx.font = `800 ${tSize}px "Inter", sans-serif`;
-            let maxTitleWidth = 0;
-            titleLines.forEach(line => {
-                const w = ctx.measureText(line).width;
-                if (w > maxTitleWidth) maxTitleWidth = w;
+            ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
+            let maxTitleLineWidth = 0;
+            titleLines.forEach(l => {
+                const w = ctx.measureText(l).width;
+                if (w > maxTitleLineWidth) maxTitleLineWidth = w;
             });
 
-            const gap = 20;
-            const totalContentWidth = maxVolNumWidth + (volNumLines.length > 0 && maxVolNumWidth > 0 ? gap : 0) + maxTitleWidth;
+            const volAreaWidth = Math.max(90, unscaledMaxVnW + 30);
+            const titleAreaWidth = maxTitleLineWidth + 30;
             
-            let scale = 1.0;
-            if (totalContentWidth > boxInnerWidth) {
-                scale = boxInnerWidth / totalContentWidth;
-            }
+            const maxBoxWidth = 680;
+            const computedBoxWidth = Math.min(maxBoxWidth, volAreaWidth + titleAreaWidth);
+            const boxX = (width - computedBoxWidth) / 2;
 
-            const finalVnSize = Math.max(10, Math.round(vnSize * scale));
-            const finalTSize = Math.max(10, Math.round(tSize * scale));
-            const volNumLineHeight = finalVnSize * 1.2;
-            const titleLineHeight = finalTSize * 1.35;
-
-            const volNumBlockHeight = volNumLines.length * volNumLineHeight;
-            const titleBlockHeight = titleLines.length * titleLineHeight;
-            const contentHeight = Math.max(volNumBlockHeight, titleBlockHeight);
-
-            const computedHeight = Math.max(80, contentHeight + 24);
-            const boxX = (width - boxWidth) / 2;
+            const tLineHeight = tBaseSize * 1.35;
+            const titleBlockHeight = titleLines.length * tLineHeight;
+            const computedHeight = Math.max(100, titleBlockHeight + 28);
             const boxY = height - computedHeight - 110;
 
-            // 巻数・タイトル枠描画
+            // 4-1. 外枠
             ctx.strokeStyle = textColor;
             ctx.lineWidth = 6;
-            ctx.strokeRect(boxX, boxY, boxWidth, computedHeight);
+            ctx.strokeRect(boxX, boxY, computedBoxWidth, computedHeight);
 
-            // 巻数複数行を描画
+            // 4-2. 区切り縦線
+            const dividerX = boxX + volAreaWidth;
+            ctx.beginPath();
+            ctx.moveTo(dividerX, boxY);
+            ctx.lineTo(dividerX, boxY + computedHeight);
+            ctx.stroke();
+
+            // 4-3. 巻数の縦長変形描画
+            const vScaleY = 2.2;
+            const scaledVnFontSize = Math.round(vnBaseSize / vScaleY);
+            const vnLineHeight = Math.round((computedHeight - 16) / Math.max(1, volNumLines.length));
+
+            ctx.save();
+            ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
+            ctx.scale(1.0, vScaleY);
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${finalVnSize}px "Inter", sans-serif`;
+            ctx.font = `900 ${scaledVnFontSize}px "Inter", sans-serif`;
+            ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            
-            const startVolNumY = boxY + (computedHeight / 2) - (volNumBlockHeight / 2);
+
+            const startVnUnscaledY = -((volNumLines.length - 1) * (vnLineHeight / vScaleY)) / 2;
             volNumLines.forEach((line, index) => {
-                const lineY = startVolNumY + (index * volNumLineHeight) + (volNumLineHeight / 2);
-                ctx.fillText(line, boxX + 20, lineY);
+                const lineY = startVnUnscaledY + (index * (vnLineHeight / vScaleY));
+                ctx.fillText(line, 0, lineY);
             });
+            ctx.restore();
 
-            // タイトル描画の開始X座標を計算（巻数の最大幅に合わせる）
-            let titleStartX = boxX + 20;
-            if (volNumRaw.trim().length > 0) {
-                let maxW = 0;
-                volNumLines.forEach(l => {
-                    const w = ctx.measureText(l).width;
-                    if (w > maxW) maxW = w;
-                });
-                titleStartX = boxX + 20 + maxW + gap;
-            }
+            // 4-4. タイトル描画
+            ctx.fillStyle = textColor;
+            ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
 
-            // タイトルテキストを描画
-            ctx.font = `800 ${finalTSize}px "Inter", sans-serif`;
-            const startTitleY = boxY + (computedHeight / 2) - (titleBlockHeight / 2);
+            const titleStartX = dividerX + 15;
+            const startTitleY = boxY + (computedHeight / 2) - (titleBlockHeight / 2) + (tLineHeight / 2);
 
             titleLines.forEach((tLine, index) => {
-                const tLineY = startTitleY + (index * titleLineHeight) + (titleLineHeight / 2);
-                ctx.fillText(tLine, titleStartX, tLineY);
+                const lineY = startTitleY + (index * tLineHeight);
+                ctx.fillText(tLine, titleStartX, lineY);
             });
 
             // 5. 作者名枠
@@ -907,7 +905,7 @@
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
-            ctx.textAlign = 'left'; // reset
+            ctx.textAlign = 'left';
         }
 
         let overlayTimer = null;
@@ -921,7 +919,6 @@
             }, 100);
         }
 
-        // JPEG画像ダウンロード
         function downloadImage() {
             renderCardToCanvas((canvas) => {
                 const link = document.createElement('a');
