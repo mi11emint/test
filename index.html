@@ -263,7 +263,7 @@ BLEACH公式と関わりのない非公式のサイトです。
 オリジナルの歌詞
 自作物語の一文
 買い物メモなどを画像にしてみてください。
-SNS投稿は　#BPMったー
+SNS投稿は #BPMったー
 
 <font color=red>【重要事項】
 
@@ -275,7 +275,7 @@ SNS投稿は　#BPMったー
 </font>🌾愛国心はOKです
               
 【CREDIT】 お名前タップでページ遷移
-<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき様</a> 霞む視界── の詩をご提供頂きました！
+<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき様</a> 霞む視界── の詩をご提供頂き
 
               
 サイト作者：<a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
@@ -407,17 +407,17 @@ SNS投稿は　#BPMったー
             };
             try {
                 localStorage.setItem('bleach_poem_user_draft', JSON.stringify(draftData));
-                alert("下書きを保存しました！");
+                alert("下書きを保存完了");
             } catch (e) {
-                console.error("下書きの保存に失敗しました", e);
-                alert("保存に失敗しました。");
+                console.error("下書きの保存に失敗", e);
+                alert("卍卍卍疋殺地蔵卍卍卍");
             }
         }
 
         function restoreDraft() {
             const saved = localStorage.getItem('bleach_poem_user_draft');
             if (!saved) {
-                alert("保存された下書きがありません。");
+                alert("いつから保存済だと錯覚していた？");
                 return;
             }
             try {
@@ -443,13 +443,14 @@ SNS投稿は　#BPMったー
                 }
                 boxNorm = { ...draftData.boxNorm };
                 updateControls();
-                alert("下書きを復元しました！");
+                alert("下書きを復元完了");
             } catch (e) {
-                console.error("下書きの復元に失敗しました", e);
-                alert("下書きの復元中にエラーが発生しました。");
+                console.error("下書きの復元に失敗", e);
+                alert("下書きの復元中にエラーが発生");
             }
         }
 
+        // プレビュー表示枠の実際の比率（幅/高さ）を動的かつ正確に取得
         function getPreviewAspect() {
             const box = document.getElementById('imageDisplayBox');
             if (box && box.clientWidth && box.clientHeight) {
@@ -760,7 +761,7 @@ SNS投稿は　#BPMったー
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画
+            // 2. 画像描画（動的アスペクト比を適用して潰れを完全防止）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -787,41 +788,7 @@ SNS投稿は　#BPMったー
         function renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight) {
             ctx.fillStyle = textColor;
             
-            // 3. 縦書きポエムテキスト
-            const pSize = Math.round(parseInt(poemFontSize.value) * 2.1);
-            ctx.font = `700 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
-            ctx.textBaseline = 'top';
-
-            const lines = (poemInput.value || " ").split('\n');
-            const lineSpacing = pSize * 1.7;
-            const charHeight = pSize * 1.2;
-
-            const totalPoemWidth = (lines.length - 1) * lineSpacing;
-            const startX = (width / 2) + (totalPoemWidth / 2);
-            const startY = 60 + imgBoxHeight + 50;
-
-            lines.forEach((line, lineIndex) => {
-                const currentX = startX - (lineIndex * lineSpacing);
-                let currentY = startY;
-
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (['、', '。'].includes(char)) {
-                        ctx.fillText(char, currentX + 15, currentY - 15);
-                    } else if (['ー', '―', '-'].includes(char)) {
-                        ctx.save();
-                        ctx.translate(currentX + 15, currentY + 15);
-                        ctx.rotate(Math.PI / 2);
-                        ctx.fillText(char, 0, 0);
-                        ctx.restore();
-                    } else {
-                        ctx.fillText(char, currentX, currentY);
-                    }
-                    currentY += charHeight;
-                }
-            });
-
-            // 4. 下部タイトルボックス
+            // 4. 下部タイトルボックスの計算を先に行い、ポエム描画エリアの上下中央位置を正確に算出する
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
@@ -857,6 +824,48 @@ SNS投稿は　#BPMったー
             const titleBlockHeight = titleLines.length * tLineHeight;
             const computedHeight = Math.max(100, titleBlockHeight + 28);
             const boxY = height - computedHeight - 110;
+
+            // 3. 縦書きポエムテキスト（プレビューの leading-[2em] および Flex中央配置と完全同期）
+            const pSize = Math.round(parseInt(poemFontSize.value) * 2.1);
+            ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.textBaseline = 'top';
+
+            const lines = (poemInput.value || " ").split('\n');
+            const lineSpacing = pSize * 2.0; // プレビューの leading-[2em] に一致
+            const charHeight = pSize * 1.2;
+
+            const totalPoemWidth = (lines.length - 1) * lineSpacing;
+            const startX = (width / 2) + (totalPoemWidth / 2);
+
+            const maxCharsInLine = Math.max(...lines.map(l => l.length));
+            const totalPoemHeight = maxCharsInLine * charHeight;
+
+            // プレビューの Flexbox 中央配置ロジックをCanvas上で完全に再現
+            const poemAreaTop = 60 + imgBoxHeight;
+            const poemAreaBottom = boxY;
+            const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
+            const startY = poemAreaCenterY - (totalPoemHeight / 2);
+
+            lines.forEach((line, lineIndex) => {
+                const currentX = startX - (lineIndex * lineSpacing);
+                let currentY = startY;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (['、', '。'].includes(char)) {
+                        ctx.fillText(char, currentX + (pSize * 0.4), currentY - (pSize * 0.3));
+                    } else if (['ー', '―', '-'].includes(char)) {
+                        ctx.save();
+                        ctx.translate(currentX + (pSize * 0.5), currentY + (pSize * 0.5));
+                        ctx.rotate(Math.PI / 2);
+                        ctx.fillText(char, 0, 0);
+                        ctx.restore();
+                    } else {
+                        ctx.fillText(char, currentX, currentY);
+                    }
+                    currentY += charHeight;
+                }
+            });
 
             // 4-1. 外枠
             ctx.strokeStyle = textColor;
