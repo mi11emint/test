@@ -137,19 +137,19 @@
                         </div>
                     </div>
 
-                    <!-- ② 原作風の独立一体型太枠＋薄仕切りレイアウト（文字量・作者名幅に完全自動追従） -->
+                    <!-- ② 原作風の独立一体型太枠＋薄仕切りレイアウト（余白半分＆特大巻数見切れない自動調整） -->
                     <div class="pt-0.5 flex flex-col items-center justify-center font-sans w-full">
-                        <div id="previewOuterBox" class="border-[4px] border-black p-1.5 flex flex-col gap-1.5 box-border" style="width: fit-content; min-width: 180px;">
+                        <div id="previewOuterBox" class="border-[4px] border-black p-[3px] flex flex-col gap-[3px] box-border" style="width: fit-content; min-width: 160px;">
                             <!-- 上段：巻数 ＆ タイトルブロック -->
-                            <div class="flex items-stretch justify-between w-full gap-2">
+                            <div class="flex items-stretch justify-between w-full gap-[6px]">
                                 <!-- 巻数エリア -->
-                                <div class="flex items-center justify-center overflow-hidden px-1">
+                                <div class="flex items-center justify-center overflow-hidden px-[3px] py-[2px]">
                                     <div id="previewVolNum" class="font-black leading-none whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
                                 </div>
                                 <!-- 枠につかない仕切り縦線（外枠の半分の太さ2px） -->
-                                <div id="previewDividerVert" class="w-[2px] bg-black shrink-0 my-0.5"></div>
+                                <div id="previewDividerVert" class="w-[2px] bg-black shrink-0 my-[1px]"></div>
                                 <!-- タイトルエリア -->
-                                <div class="flex flex-col justify-center overflow-hidden px-1">
+                                <div class="flex flex-col justify-center overflow-hidden px-[3px] py-[2px]">
                                     <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs">THE BIRTH&#10;AND THE&#10;GROUNDCHERRY</div>
                                 </div>
                             </div>
@@ -158,7 +158,7 @@
                             <div id="previewDividerHoriz" class="h-[2px] w-full bg-black shrink-0"></div>
 
                             <!-- 下段：作者名エリア（BLEACH ■ POEM MAKER ■） -->
-                            <div class="flex items-center justify-center w-full px-0.5 py-0.5">
+                            <div class="flex items-center justify-center w-full px-[2px] py-[2px]">
                                 <span id="previewAuthor" class="font-extrabold uppercase tracking-wider text-center leading-tight whitespace-nowrap text-[8px]">BLEACH ■ POEM MAKER ■</span>
                             </div>
                         </div>
@@ -756,7 +756,7 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全自動可変対応型Canvas描画エンジン】枠・文字幅自動フィット＆原作二重フレーム
+        // 【完全版Canvas描画エンジン】詩本文・特大巻数見切れ防止・半減余白を完備
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -837,7 +837,7 @@ SNS投稿は #BPMったー
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
-            // --- A. テキスト幅に応じた下部枠の自動可変計算 ---
+            // --- A. テキスト幅に応じた下部枠の自動可変計算（特大巻数対応・見切れ防止） ---
             const vScaleY = 1.5;
             ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
             let maxVnW = 0;
@@ -845,8 +845,7 @@ SNS投稿は #BPMったー
                 const w = ctx.measureText(l).width;
                 if (w > maxVnW) maxVnW = w;
             });
-            // 縦長変形分を考慮
-            const volAreaW = Math.max(130, maxVnW + 40);
+            const volAreaW = Math.max(140, Math.round(maxVnW * 1.15) + 30);
 
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             let maxTitleW = 0;
@@ -854,32 +853,36 @@ SNS投稿は #BPMったー
                 const w = ctx.measureText(l).width;
                 if (w > maxTitleW) maxTitleW = w;
             });
-            const titleAreaW = maxTitleW + 40;
+            const titleAreaW = maxTitleW + 30;
 
             const dividerThick = 4;
-            const innerMargin = 10;
+            const innerMargin = 5; // 半分に圧縮された余白
             const contentWidth = volAreaW + dividerThick + titleAreaW;
             const outerBoxWidth = contentWidth + (innerMargin * 2);
             const outerBoxX = (width - outerBoxWidth) / 2;
 
             const tLineHeight = tBaseSize * 1.25;
             const titleBlockHeight = titleLines.length * tLineHeight;
-            const topBlockHeight = Math.max(130, titleBlockHeight + 24);
+            
+            const vnLineHeight = vnBaseSize * 1.1;
+            const totalVnHeight = (volNumLines.length * vnLineHeight) * vScaleY;
+            
+            const topBlockHeight = Math.max(120, Math.max(titleBlockHeight, totalVnHeight) + 16);
 
-            // 作者名の文字幅に合わせて作者名フォントサイズを自動フィット
+            // 作者名の文字幅自動フィット
             ctx.font = `800 ${Math.round(18 * scale * 0.85)}px "Inter", sans-serif`;
             const authorTextW = ctx.measureText(author).width;
-            const maxAllowedAuthorW = outerBoxWidth - 20;
+            const maxAllowedAuthorW = outerBoxWidth - 10;
             let aSize = Math.round(18 * scale * 0.85);
             if (authorTextW > maxAllowedAuthorW) {
                 aSize = Math.floor(aSize * (maxAllowedAuthorW / authorTextW));
             }
 
-            const authorAreaHeight = Math.max(34, aSize + 14);
+            const authorAreaHeight = Math.max(30, aSize + 10);
             const outerBoxHeight = topBlockHeight + dividerThick + authorAreaHeight + (innerMargin * 2);
             const outerBoxY = height - outerBoxHeight - 80;
 
-            // --- B. 縦書きポエムテキスト描画 ---
+            // --- B. 縦書きポエムテキスト描画（※今回の修復ポイント） ---
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
@@ -939,7 +942,7 @@ SNS投稿は #BPMったー
 
             // 2. 縦仕切り線（巻数とタイトルの間）
             const dividerX = innerX + volAreaW;
-            ctx.fillRect(dividerX, innerY + 4, dividerThick, topBlockHeight - 8);
+            ctx.fillRect(dividerX, innerY + 2, dividerThick, topBlockHeight - 4);
 
             // --- E. 巻数描画（左ブロック・縦長変形） ---
             const volCenterX = innerX + (volAreaW / 2);
@@ -953,9 +956,7 @@ SNS投稿は #BPMったー
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const vnLineHeight = vnBaseSize * 1.1;
-            const totalVnHeight = volNumLines.length * vnLineHeight;
-            const startVnUnscaledY = - (totalVnHeight / 2) + (vnLineHeight / 2);
+            const startVnUnscaledY = - (totalVnHeight / vScaleY / 2) + (vnLineHeight / 2);
 
             volNumLines.forEach((line, index) => {
                 const lineY = startVnUnscaledY + (index * vnLineHeight);
@@ -969,8 +970,8 @@ SNS投稿は #BPMったー
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
 
-            const titleStartX = dividerX + dividerThick + 14;
-            const startTitleY = innerY + 10;
+            const titleStartX = dividerX + dividerThick + 10;
+            const startTitleY = innerY + 6;
 
             titleLines.forEach((tLine, index) => {
                 const lineY = startTitleY + (index * tLineHeight);
