@@ -156,12 +156,12 @@
                                 </div>
                             </div>
 
-                            <!-- 枠につかない仕切り横線（外枠の半分の太さ2px） -->
+                            <!-- 枠につかない仕切り横線（外枠の半分の太さ3px） -->
                             <div id="previewDividerHoriz" class="h-[2px] w-full bg-black shrink-0"></div>
 
                             <!-- 下段：作者名エリア（BLEACH ■ POEM MAKER ■） -->
                             <div class="flex items-center justify-center w-full px-[2px] py-[2px]">
-                                <span id="previewAuthor" class="font-extrabold uppercase tracking-wider text-center leading-tight whitespace-nowrap text-[8px]">BLEACH ■ POEM MAKER ■</span>
+                                <span id="previewAuthor" class="font-extrabold uppercase tracking-wider text-center leading-tight whitespace-nowrap text-[12px]">BLEACH　■ POEM MAKER ■</span>
                             </div>
                         </div>
                     </div>
@@ -767,43 +767,97 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全プレビュー一致保存エンジン (html2canvas使用)】
+        // プレビューと保存画像の描画条件を統一する画像生成処理
         // =========================================================================
-        function downloadImage() {
+
+        // フォント・画像の読み込みとブラウザの描画完了を待つ
+        async function waitForCardRender(card) {
+            if (document.fonts && document.fonts.ready) {
+                await document.fonts.ready;
+            }
+
+            const images = Array.from(card.querySelectorAll('img'));
+            await Promise.all(images.map(async (img) => {
+                if (img.id === 'longPressOverlay' || img.classList.contains('hidden')) return;
+                if (!img.src) return;
+
+                if (typeof img.decode === 'function') {
+                    try {
+                        await img.decode();
+                    } catch (e) {
+                        // 読み込み失敗画像があっても、カード全体の生成は続行
+                    }
+                } else if (!img.complete) {
+                    await new Promise(resolve => {
+                        img.addEventListener('load', resolve, { once: true });
+                        img.addEventListener('error', resolve, { once: true });
+                    });
+                }
+            }));
+
+            // DOM更新とレイアウト計算を2フレーム待つ
+            await new Promise(resolve =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve))
+            );
+        }
+
+        // 保存画像・長押し用画像の両方で同じ描画処理を使う
+        async function renderPoemCard(scale = 3) {
             const card = document.getElementById('poemCard');
-            // 一時的に影や選択状態を整えてから高解像度キャプチャ
-            html2canvas(card, {
-                scale: 3, // 3倍の高解像度でくっきり保存
+            await waitForCardRender(card);
+
+            return html2canvas(card, {
+                scale: scale,
                 useCORS: true,
+                allowTaint: false,
                 backgroundColor: null,
-                logging: false
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `bleach_poem_${Date.now()}.jpg`;
-                link.href = canvas.toDataURL('image/jpeg', 0.95);
-                link.click();
-            }).catch(err => {
-                console.error("画像保存エラー:", err);
-                alert("画像の保存に失敗しました。");
+                logging: false,
+                imageTimeout: 15000,
+                removeContainer: true,
+                onclone: (clonedDocument) => {
+                    const clonedCard = clonedDocument.getElementById('poemCard');
+                    if (clonedCard) {
+                        // キャプチャ時だけアニメーションを止め、見た目の変化を防ぐ
+                        clonedCard.style.transition = 'none';
+                    }
+
+                    // 長押し保存用の透明オーバーレイ自体は画像に含めない
+                    const clonedOverlay = clonedDocument.getElementById('longPressOverlay');
+                    if (clonedOverlay) {
+                        clonedOverlay.style.display = 'none';
+                    }
+                }
             });
         }
 
+        async function downloadImage() {
+            try {
+                const canvas = await renderPoemCard(3);
+                const link = document.createElement('a');
+                link.download = `bleach_poem_${Date.now()}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (err) {
+                console.error("画像保存エラー:", err);
+                alert("画像の保存に失敗しました。ページを再読み込みして、もう一度お試しください。");
+            }
+        }
+
         let overlayTimer = null;
-        function updateOverlayImage() {
+        async function updateOverlayImage() {
             clearTimeout(overlayTimer);
-            overlayTimer = setTimeout(() => {
-                const card = document.getElementById('poemCard');
-                html2canvas(card, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: null,
-                    logging: false
-                }).then(canvas => {
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                    document.getElementById('longPressOverlay').src = dataUrl;
-                }).catch(e => console.log(e));
+            overlayTimer = setTimeout(async () => {
+                try {
+                    const canvas = await renderPoemCard(3);
+                    document.getElementById('longPressOverlay').src = canvas.toDataURL('image/jpeg', 0.95);
+                } catch (e) {
+                    console.error("長押し保存用画像の生成に失敗:", e);
+                }
             }, 300);
         }
+
     </script>
 </body>
 </html>
