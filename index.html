@@ -139,22 +139,22 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
-                    <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
+                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（上下偏り修正版） -->
+                    <div class="pt-0.5 flex flex-col items-center gap-2 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black flex items-stretch max-w-full overflow-hidden">
-                            <!-- 巻数表示エリア -->
-                            <div class="px-2.5 py-2.5 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
-                                <div id="previewVolNum" class="font-black leading-tight whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
+                            <!-- 巻数表示エリア（上下中央を厳密固定） -->
+                            <div class="px-3 py-2 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
+                                <div id="previewVolNum" class="font-black leading-tight whitespace-pre-line text-center origin-center transform scale-y-150 py-1">BLEACH&#10;#1</div>
                             </div>
-                            <!-- タイトル表示エリア -->
-                            <div class="px-2.5 py-2 flex flex-col justify-center shrink-0 overflow-hidden">
-                                <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs">THE BIRTH&#10;AND THE&#10;GROUNDCHERRY</div>
+                            <!-- タイトル表示エリア（上下中央を厳密固定） -->
+                            <div class="px-3 py-2 flex flex-col justify-center shrink-0 overflow-hidden">
+                                <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs py-0.5">THE BIRTH&#10;AND THE&#10;GROUNDCHERRY</div>
                             </div>
                         </div>
                         
-                        <!-- 下部の作者名枠（中央揃え・8pxに完全固定） -->
-                        <div id="previewAuthorBorder" class="border-[3px] border-black px-3 py-1 mx-auto text-center font-extrabold tracking-widest w-fit">
-                            <span id="previewAuthor" class="font-bold uppercase tracking-wider inline-block text-[8px] leading-tight">BLEACH POEM MAKER</span>
+                        <!-- 下部の作者名枠（上下中央を厳密固定・8px指定） -->
+                        <div id="previewAuthorBorder" class="border-[3px] border-black px-3 py-1 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px]">
+                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px] block py-0.5">BLEACH POEM MAKER</span>
                         </div>
                     </div>
 
@@ -448,7 +448,7 @@ SNS投稿は #BPMったー
             if (box && box.clientWidth && box.clientHeight) {
                 return box.clientWidth / box.clientHeight;
             }
-            return 380 / 60;
+            return 380 / 60; // デフォルトのプレビュー表示枠比率に一致
         }
 
         let boxNorm = { x: 0, y: 0, w: 1, h: 1 };
@@ -534,7 +534,7 @@ SNS投稿は #BPMったー
 
         function resetBoxNorm() {
             if (!rawImageObj) return;
-            const aspect = getPreviewAspect();
+            const aspect = getPreviewAspect(); // プレビュー枠の正確な比率
             const imgAspect = rawImageObj.width / rawImageObj.height;
 
             if (imgAspect > aspect) {
@@ -746,6 +746,7 @@ SNS投稿は #BPMったー
             });
         }
 
+        // html2canvasを用いた高精度キャプチャ処理
         function renderCardToCanvas(callback) {
             const targetElement = document.getElementById('poemCard');
             const overlay = document.getElementById('longPressOverlay');
@@ -753,7 +754,7 @@ SNS投稿は #BPMったー
             overlay.style.display = 'none';
 
             html2canvas(targetElement, {
-                scale: 3,
+                scale: 3, // 高精細3倍キャプチャ
                 useCORS: true,
                 backgroundColor: currentTheme === 'dark' ? '#000000' : '#ffffff',
                 logging: false
