@@ -152,7 +152,7 @@
                 </div>
             </div>
 
-            <!-- 2. 巻数 & 詩タイトル（自由改行可）＆ サイズ・余白微調整 -->
+            <!-- 2. 巻数 & 詩タイトル（自由改行可）＆ 行間・サイズ微調整 -->
             <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
                 <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆詩タイトル入力</h3>
                 <div class="space-y-2">
@@ -194,11 +194,11 @@ GROUNDCHERRY</textarea>
                         </div>
                     </div>
 
-                    <!-- 🎛️ パディング・行間調整コントロール -->
+                    <!-- 🎛️ 行間調整コントロール（タイトル行間スライダーに差し替え） -->
                     <div class="pt-2 border-t border-zinc-800/80 space-y-1.5">
                         <div class="flex items-center justify-between">
-                            <label class="text-[10px] text-zinc-400">枠の余白（パディング）</label>
-                            <input type="range" id="boxPadding" min="2" max="15" value="5" class="w-32 accent-rose-500 cursor-pointer" oninput="render()">
+                            <label class="text-[10px] text-zinc-400">タイトルの行間</label>
+                            <input type="range" id="titleLineSpacing" min="10" max="20" value="13" class="w-32 accent-rose-500 cursor-pointer" oninput="render()">
                         </div>
                         <div class="flex items-center justify-between">
                             <label class="text-[10px] text-zinc-400">巻数の行間</label>
@@ -315,11 +315,7 @@ SNS投稿は #BPMったー
             `漂白された心と
 脱色された日々に`,
 
-            `足掻きとて
-届かなかった
-我が牙を
-越ゆる為にて
-プライド捨てん`,
+            `足掻きとて  届かなかった  我が牙を  越ゆる為にて  プライド捨てん`,
           
             `霞む視界
 けぶる雨だと
@@ -337,7 +333,7 @@ SNS投稿は #BPMったー
 微睡む桜に
 眠らぬ結晶
 海の旅果ての一片
-あなたの手に残るは`
+あなたの手に残るは──`
         ];
         let currentSampleIndex = 0;
 
@@ -353,7 +349,7 @@ SNS投稿は #BPMったー
         const volNumFontSize = document.getElementById('volNumFontSize');
         const titleFontSize = document.getElementById('titleFontSize');
 
-        const boxPadding = document.getElementById('boxPadding');
+        const titleLineSpacing = document.getElementById('titleLineSpacing');
         const volLineSpacing = document.getElementById('volLineSpacing');
 
         const cropModal = document.getElementById('cropModal');
@@ -376,11 +372,10 @@ SNS投稿は #BPMったー
             setupBoxCropInteractions();
             setupCanvasClick();
 
-            // Google Fontsの読み込み完了を待ってから初回描画（明朝体確実適用）
             if (document.fonts) {
                 await document.fonts.ready;
             }
-            render();
+            await render();
         };
 
         // プレビューの折りたたみ・展開トグル関数
@@ -417,7 +412,7 @@ SNS投稿は #BPMったー
                 poemFontSize: poemFontSize.value,
                 volNumFontSize: volNumFontSize.value,
                 titleFontSize: titleFontSize.value,
-                boxPadding: boxPadding.value,
+                titleLineSpacing: titleLineSpacing ? titleLineSpacing.value : "13",
                 volLineSpacing: volLineSpacing.value,
                 theme: currentTheme,
                 croppedDataUrl: croppedDataUrl,
@@ -446,7 +441,7 @@ SNS投稿は #BPMったー
                 poemFontSize.value = draftData.poemFontSize;
                 volNumFontSize.value = draftData.volNumFontSize;
                 titleFontSize.value = draftData.titleFontSize;
-                if (draftData.boxPadding) boxPadding.value = draftData.boxPadding;
+                if (draftData.titleLineSpacing && titleLineSpacing) titleLineSpacing.value = draftData.titleLineSpacing;
                 if (draftData.volLineSpacing) volLineSpacing.value = draftData.volLineSpacing;
                 setPreviewBg(draftData.theme);
 
@@ -478,7 +473,6 @@ SNS投稿は #BPMったー
             mainCanvas.addEventListener('click', (e) => {
                 const rect = mainCanvas.getBoundingClientRect();
                 const clickY = ((e.clientY - rect.top) / rect.height) * 1200;
-                // 上部画像枠付近をタップしたら画像選択を開く
                 if (clickY <= 220) {
                     handleImageDisplayClick();
                 }
@@ -688,9 +682,22 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【フルCanvasリアルタイムレンダリングエンジン】100%完全一致・ズレゼロ描画
+        // 【フルCanvasリアルタイムレンダリングエンジン】明朝体リアルタイム確定＆高品位レイアウト
         // =========================================================================
-        function render() {
+        async function render() {
+            const scale = mainCanvas.width / 380;
+            const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
+            
+            // 漢字の明朝体読み込みを確実に完了させてから描画
+            if (document.fonts) {
+                const textToLoad = poemInput.value || " ";
+                try {
+                    await document.fonts.load(`500 ${pSize}px "Shippori Mincho"`, textToLoad);
+                } catch (e) {
+                    console.log("Font load fallback", e);
+                }
+            }
+
             const width = mainCanvas.width;
             const height = mainCanvas.height;
 
@@ -746,7 +753,7 @@ SNS投稿は #BPMったー
                 ctx.lineWidth = 4;
                 ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
 
-                // 画像がない場合のプレースホルダーアイコン＆テキスト
+                // 画像がない場合のプレースホルダーテキスト
                 ctx.fillStyle = isDark ? '#666666' : '#999999';
                 ctx.font = 'bold 24px "Inter", sans-serif';
                 ctx.textAlign = 'center';
@@ -770,8 +777,8 @@ SNS投稿は #BPMったー
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
-            // --- コントロール値の取得 ---
-            const userPadding = parseInt(boxPadding.value);
+            // --- スライダーコントロールの値の取得 ---
+            const userTitleLineSpacingRatio = titleLineSpacing ? (parseInt(titleLineSpacing.value) / 10) : 1.3;
             const userVnLineSpacingRatio = parseInt(volLineSpacing.value) / 10;
 
             // --- A. テキスト幅に応じた下部枠の自動計算（特大巻数見切れ防止） ---
@@ -793,15 +800,15 @@ SNS投稿は #BPMったー
             const titleAreaW = maxTitleW + 30;
 
             const dividerThick = 4;
-            const innerMargin = userPadding; // 調整パディング
+            const innerMargin = 5; // 固定の標準パディング
             const contentWidth = volAreaW + dividerThick + titleAreaW;
             const outerBoxWidth = contentWidth + (innerMargin * 2);
             const outerBoxX = (width - outerBoxWidth) / 2;
 
-            const tLineHeight = tBaseSize * 1.25;
+            const tLineHeight = tBaseSize * userTitleLineSpacingRatio; // タイトル行間スライダー対応
             const titleBlockHeight = titleLines.length * tLineHeight;
             
-            const vnLineHeight = vnBaseSize * userVnLineSpacingRatio; // 調整行間
+            const vnLineHeight = vnBaseSize * userVnLineSpacingRatio; // 巻数学行間スライダー対応
             const totalVnHeight = (volNumLines.length * vnLineHeight) * vScaleY;
             
             const topBlockHeight = Math.max(115, Math.max(titleBlockHeight, totalVnHeight) + 14);
@@ -817,9 +824,9 @@ SNS投稿は #BPMったー
 
             const authorAreaHeight = Math.max(28, aSize + 10);
             const outerBoxHeight = topBlockHeight + dividerThick + authorAreaHeight + (innerMargin * 2);
-            const outerBoxY = height - outerBoxHeight - 80; // 固定の最適な下部位置
+            const outerBoxY = height - outerBoxHeight - 80;
 
-            // --- B. 縦書きポエムテキスト描画（明朝体確実指定） ---
+            // --- B. 縦書きポエムテキスト描画 ---
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
@@ -902,14 +909,16 @@ SNS投稿は #BPMったー
             });
             ctx.restore();
 
-            // --- F. タイトル描画（右ブロック） ---
+            // --- F. タイトル描画（右ブロック：上下中央揃え計算改善） ---
             ctx.fillStyle = textColor;
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
 
             const titleStartX = dividerX + dividerThick + 10;
-            const startTitleY = innerY + 6;
+            const totalActualTitleHeight = titleLines.length * tLineHeight;
+            // タイトル領域の上下中央から描画を開始（上詰め感を解消）
+            const startTitleY = innerY + ((topBlockHeight - totalActualTitleHeight) / 2);
 
             titleLines.forEach((tLine, index) => {
                 const lineY = startTitleY + (index * tLineHeight);
@@ -926,7 +935,7 @@ SNS投稿は #BPMったー
             ctx.textAlign = 'left';
         }
 
-        // 保存ボタン処理（見えているCanvasそのものをダウンロードするため超高速＆ズレゼロ）
+        // 保存ボタン処理（見えているCanvasそのものをダウンロード）
         function downloadImage() {
             const link = document.createElement('a');
             link.download = `bleach_poem_${Date.now()}.jpg`;
