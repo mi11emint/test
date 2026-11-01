@@ -137,22 +137,30 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
-                    <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
-                        <div id="previewTitleBorder" class="border-[3px] border-black flex items-stretch max-w-full overflow-hidden">
-                            <!-- 巻数表示エリア -->
-                            <div class="px-2.5 pt-1 pb-1.5 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
-                                <div id="previewVolNum" class="font-black leading-tight whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
+                    <!-- ② 原作風の独立一体型太枠＋薄仕切りレイアウト（文字量・作者名幅に完全自動追従） -->
+                    <div class="pt-0.5 flex flex-col items-center justify-center font-sans w-full">
+                        <div id="previewOuterBox" class="border-[4px] border-black p-1.5 flex flex-col gap-1.5 box-border" style="width: fit-content; min-width: 180px;">
+                            <!-- 上段：巻数 ＆ タイトルブロック -->
+                            <div class="flex items-stretch justify-between w-full gap-2">
+                                <!-- 巻数エリア -->
+                                <div class="flex items-center justify-center overflow-hidden px-1">
+                                    <div id="previewVolNum" class="font-black leading-none whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
+                                </div>
+                                <!-- 枠につかない仕切り縦線（外枠の半分の太さ2px） -->
+                                <div id="previewDividerVert" class="w-[2px] bg-black shrink-0 my-0.5"></div>
+                                <!-- タイトルエリア -->
+                                <div class="flex flex-col justify-center overflow-hidden px-1">
+                                    <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs">THE BIRTH&#10;AND THE&#10;GROUNDCHERRY</div>
+                                </div>
                             </div>
-                            <!-- タイトル表示エリア -->
-                            <div class="px-2.5 pt-1 pb-1.5 flex flex-col justify-center shrink-0 overflow-hidden">
-                                <div id="previewVolTitle" class="font-extrabold uppercase tracking-wider leading-tight whitespace-pre text-xs">THE BIRTH&#10;AND THE&#10;GROUNDCHERRY</div>
+
+                            <!-- 枠につかない仕切り横線（外枠の半分の太さ2px） -->
+                            <div id="previewDividerHoriz" class="h-[2px] w-full bg-black shrink-0"></div>
+
+                            <!-- 下段：作者名エリア（BLEACH ■ POEM MAKER ■） -->
+                            <div class="flex items-center justify-center w-full px-0.5 py-0.5">
+                                <span id="previewAuthor" class="font-extrabold uppercase tracking-wider text-center leading-tight whitespace-nowrap text-[8px]">BLEACH ■ POEM MAKER ■</span>
                             </div>
-                        </div>
-                        
-                        <!-- 下部の作者名枠 -->
-                        <div id="previewAuthorBorder" class="border-[3px] border-black px-2.5 pt-0.5 pb-0.5 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px]">
-                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px]">BLEACH POEM MAKER</span>
                         </div>
                     </div>
 
@@ -470,9 +478,9 @@ SNS投稿は #BPMったー
         const previewImg = document.getElementById('previewImg');
         const imgPlaceholder = document.getElementById('imgPlaceholder');
         const poemCard = document.getElementById('poemCard');
-        const previewTitleBorder = document.getElementById('previewTitleBorder');
-        const previewAuthorBorder = document.getElementById('previewAuthorBorder');
-        const previewDivider = document.getElementById('previewDivider');
+        const previewOuterBox = document.getElementById('previewOuterBox');
+        const previewDividerVert = document.getElementById('previewDividerVert');
+        const previewDividerHoriz = document.getElementById('previewDividerHoriz');
         const imageDisplayBox = document.getElementById('imageDisplayBox');
 
         const cropModal = document.getElementById('cropModal');
@@ -700,18 +708,18 @@ SNS投稿は #BPMったー
             if (mode === 'dark') {
                 poemCard.style.backgroundColor = '#000000';
                 poemCard.style.color = '#ffffff';
-                previewTitleBorder.style.borderColor = '#ffffff';
-                previewDivider.style.borderColor = '#ffffff';
-                previewAuthorBorder.style.borderColor = '#ffffff';
+                previewOuterBox.style.borderColor = '#ffffff';
+                previewDividerVert.style.backgroundColor = '#ffffff';
+                previewDividerHoriz.style.backgroundColor = '#ffffff';
 
                 btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 bg-zinc-700 text-white shadow-sm min-h-[36px]";
                 btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[36px]";
             } else {
                 poemCard.style.backgroundColor = '#ffffff';
                 poemCard.style.color = '#000000';
-                previewTitleBorder.style.borderColor = '#000000';
-                previewDivider.style.borderColor = '#000000';
-                previewAuthorBorder.style.borderColor = '#000000';
+                previewOuterBox.style.borderColor = '#000000';
+                previewDividerVert.style.backgroundColor = '#000000';
+                previewDividerHoriz.style.backgroundColor = '#000000';
 
                 btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]";
                 btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]";
@@ -723,7 +731,7 @@ SNS投稿は #BPMったー
             previewPoem.innerText = poemInput.value || " ";
             previewVolNum.innerText = volNumInput.value || "";
             previewVolTitle.innerText = volTitleInput.value || "";
-            previewAuthor.innerText = "BLEACH POEM MAKER";
+            previewAuthor.innerText = "BLEACH ■ POEM MAKER ■";
 
             previewPoem.style.fontSize = `${poemFontSize.value}px`;
             previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
@@ -748,7 +756,7 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全同期型Canvas描画エンジン】文字の下寄りバグを物理的にゼロにする描画処理
+        // 【完全自動可変対応型Canvas描画エンジン】枠・文字幅自動フィット＆原作二重フレーム
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -770,7 +778,7 @@ SNS投稿は #BPMったー
             // 2. 上部モノクロ画像枠描画
             const imgBoxX = 60;
             const imgBoxY = 60;
-            const imgBoxWidth = width - 120;
+            const imgBoxWidth = width - 120; // 680px
             const aspect = getPreviewAspect();
             const imgBoxHeight = imgBoxWidth / aspect;
 
@@ -819,42 +827,57 @@ SNS投稿は #BPMったー
         function renderPoemAndBottomBoxes(ctx, width, height, textColor, imgBoxHeight) {
             const scale = width / 380;
 
-            // --- A. 下部タイトルボックスの正確なピクセル描画（文字が上部にぴったり収まる構造） ---
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
-            const author = "BLEACH POEM MAKER";
+            const author = "BLEACH ■ POEM MAKER ■";
 
-            const vnBaseSize = Math.round(parseInt(volNumFontSize.value) * scale);
-            const tBaseSize = Math.round(parseInt(titleFontSize.value) * scale);
+            const vnBaseSize = Math.round(parseInt(volNumFontSize.value) * scale * 0.9);
+            const tBaseSize = Math.round(parseInt(titleFontSize.value) * scale * 0.9);
 
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
+            // --- A. テキスト幅に応じた下部枠の自動可変計算 ---
             const vScaleY = 1.5;
             ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
-            let unscaledMaxVnW = 0;
+            let maxVnW = 0;
             volNumLines.forEach(l => {
                 const w = ctx.measureText(l).width;
-                if (w > unscaledMaxVnW) unscaledMaxVnW = w;
+                if (w > maxVnW) maxVnW = w;
             });
+            // 縦長変形分を考慮
+            const volAreaW = Math.max(130, maxVnW + 40);
 
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
-            let maxTitleLineWidth = 0;
+            let maxTitleW = 0;
             titleLines.forEach(l => {
                 const w = ctx.measureText(l).width;
-                if (w > maxTitleLineWidth) maxTitleLineWidth = w;
+                if (w > maxTitleW) maxTitleW = w;
             });
+            const titleAreaW = maxTitleW + 40;
 
-            const volAreaWidth = Math.max(160, unscaledMaxVnW + 40);
-            const titleAreaWidth = maxTitleLineWidth + 40;
-            const maxBoxWidth = 680;
-            const computedBoxWidth = Math.min(maxBoxWidth, volAreaWidth + titleAreaWidth);
-            const boxX = (width - computedBoxWidth) / 2;
+            const dividerThick = 4;
+            const innerMargin = 10;
+            const contentWidth = volAreaW + dividerThick + titleAreaW;
+            const outerBoxWidth = contentWidth + (innerMargin * 2);
+            const outerBoxX = (width - outerBoxWidth) / 2;
 
             const tLineHeight = tBaseSize * 1.25;
             const titleBlockHeight = titleLines.length * tLineHeight;
-            const computedHeight = Math.max(110, titleBlockHeight + 25);
-            const boxY = height - computedHeight - 110;
+            const topBlockHeight = Math.max(130, titleBlockHeight + 24);
+
+            // 作者名の文字幅に合わせて作者名フォントサイズを自動フィット
+            ctx.font = `800 ${Math.round(18 * scale * 0.85)}px "Inter", sans-serif`;
+            const authorTextW = ctx.measureText(author).width;
+            const maxAllowedAuthorW = outerBoxWidth - 20;
+            let aSize = Math.round(18 * scale * 0.85);
+            if (authorTextW > maxAllowedAuthorW) {
+                aSize = Math.floor(aSize * (maxAllowedAuthorW / authorTextW));
+            }
+
+            const authorAreaHeight = Math.max(34, aSize + 14);
+            const outerBoxHeight = topBlockHeight + dividerThick + authorAreaHeight + (innerMargin * 2);
+            const outerBoxY = height - outerBoxHeight - 80;
 
             // --- B. 縦書きポエムテキスト描画 ---
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
@@ -872,7 +895,7 @@ SNS投稿は #BPMったー
             const totalPoemHeight = maxCharsInLine * charHeight;
 
             const poemAreaTop = 60 + imgBoxHeight;
-            const poemAreaBottom = boxY;
+            const poemAreaBottom = outerBoxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
             const startY = poemAreaCenterY - (totalPoemHeight / 2);
 
@@ -897,20 +920,33 @@ SNS投稿は #BPMったー
                 }
             });
 
-            // --- C. 下部外枠 & 区切り線描画 ---
+            // --- C. 太い外枠の描画（太さ：8px） ---
+            const borderThick = 8;
             ctx.strokeStyle = textColor;
-            ctx.lineWidth = 6;
-            ctx.strokeRect(boxX, boxY, computedBoxWidth, computedHeight);
+            ctx.lineWidth = borderThick;
+            ctx.strokeRect(outerBoxX, outerBoxY, outerBoxWidth, outerBoxHeight);
 
-            const dividerX = boxX + volAreaWidth;
-            ctx.beginPath();
-            ctx.moveTo(dividerX, boxY);
-            ctx.lineTo(dividerX, boxY + computedHeight);
-            ctx.stroke();
+            const innerX = outerBoxX + innerMargin;
+            const innerY = outerBoxY + innerMargin;
+            const innerW = outerBoxWidth - (innerMargin * 2);
 
-            // --- D. 巻数描画（原作の重厚な縦長バランス） ---
+            // --- D. 枠につかない仕切り線（太さ：4px） ---
+            ctx.fillStyle = textColor;
+
+            // 1. 横仕切り線（作者名の上）
+            const horizLineY = innerY + topBlockHeight;
+            ctx.fillRect(innerX, horizLineY, innerW, dividerThick);
+
+            // 2. 縦仕切り線（巻数とタイトルの間）
+            const dividerX = innerX + volAreaW;
+            ctx.fillRect(dividerX, innerY + 4, dividerThick, topBlockHeight - 8);
+
+            // --- E. 巻数描画（左ブロック・縦長変形） ---
+            const volCenterX = innerX + (volAreaW / 2);
+            const volCenterY = innerY + (topBlockHeight / 2);
+
             ctx.save();
-            ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
+            ctx.translate(volCenterX, volCenterY);
             ctx.scale(1.0, vScaleY);
             ctx.fillStyle = textColor;
             ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
@@ -927,35 +963,27 @@ SNS投稿は #BPMったー
             });
             ctx.restore();
 
-            // --- E. タイトル描画（字のすぐ上に枠が来るタイトな上部配置） ---
+            // --- F. タイトル描画（右ブロック） ---
             ctx.fillStyle = textColor;
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
 
-            const titleStartX = dividerX + 20;
-            const startTitleY = boxY + 12; // 上部パディングをタイトに調整し、文字のすぐ上に枠を配置
+            const titleStartX = dividerX + dividerThick + 14;
+            const startTitleY = innerY + 10;
 
             titleLines.forEach((tLine, index) => {
                 const lineY = startTitleY + (index * tLineHeight);
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // --- F. 作者名枠描画（フォントサイズ8px相当） ---
-            const authorBoxWidth = Math.round(230 * (scale / 2.1));
-            const aSize = Math.round(8 * scale * 2.1); // フォントサイズ8px指定
-            const authorBoxHeight = aSize + 16;
-            const authorBoxX = (width - authorBoxWidth) / 2;
-            const authorBoxY = boxY + computedHeight + 25;
-
-            ctx.strokeStyle = textColor;
-            ctx.lineWidth = 6;
-            ctx.strokeRect(authorBoxX, authorBoxY, authorBoxWidth, authorBoxHeight);
+            // --- G. 作者名描画（下段エリア：自動フィットサイズ） ---
+            const authorY = horizLineY + dividerThick + ((outerBoxY + outerBoxHeight - (horizLineY + dividerThick)) / 2);
 
             ctx.font = `800 ${aSize}px "Inter", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
+            ctx.fillText(author, outerBoxX + (outerBoxWidth / 2), authorY);
             ctx.textAlign = 'left';
         }
 
