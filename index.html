@@ -152,7 +152,7 @@
                 </div>
             </div>
 
-            <!-- 2. 巻数 & 詩タイトル（自由改行可）＆ サイズ・位置直感微調整 -->
+            <!-- 2. 巻数 & 詩タイトル（自由改行可）＆ サイズ・余白微調整 -->
             <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
                 <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆詩タイトル入力</h3>
                 <div class="space-y-2">
@@ -194,12 +194,8 @@ GROUNDCHERRY</textarea>
                         </div>
                     </div>
 
-                    <!-- 🎛️ 直感的位置・余白スライダー調整コントロール -->
+                    <!-- 🎛️ パディング・行間調整コントロール -->
                     <div class="pt-2 border-t border-zinc-800/80 space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] text-zinc-400">下部枠の上下位置</label>
-                            <input type="range" id="boxPosY" min="60" max="140" value="85" class="w-32 accent-rose-500 cursor-pointer" oninput="render()">
-                        </div>
                         <div class="flex items-center justify-between">
                             <label class="text-[10px] text-zinc-400">枠の余白（パディング）</label>
                             <input type="range" id="boxPadding" min="2" max="15" value="5" class="w-32 accent-rose-500 cursor-pointer" oninput="render()">
@@ -250,10 +246,13 @@ SNS投稿は #BPMったー
 </font>🌾愛国心はOKです
               
 【CREDIT】 お名前タップでページ遷移
-<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき様</a> 霞む視界── の詩をご提供頂きました！
+
+<a href="https://x.com/Koji4589" target="_blank" rel="noopener" class="underline text-rose-400">Koji I</a>様 足掻きとて── の短歌をご提供頂きました！
+
+<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき</a>様 霞む視界── の詩をご提供頂きました！
 
               
-SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
+【SITE AUTHOR】 <a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
 2026年11月1日</div>
 
             <div class="pt-2 border-t border-zinc-800 flex justify-end">
@@ -316,10 +315,16 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             `漂白された心と
 脱色された日々に`,
 
+            `足掻きとて
+届かなかった
+我が牙を
+越ゆる為にて
+プライド捨てん`,
+          
             `霞む視界
 けぶる雨だと
 言い聞かせ`,
-          
+
             `すれ違う心に道標はなく
 見えもしない風の色が
 この漸近線を支配している`,
@@ -327,8 +332,12 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             `明日から始めます。
 たぶん。知らんけど。`,
           
-            `蓮は散り
-雪は融け`
+            `蓮は朽ち
+雪は融け
+微睡む桜に
+眠らぬ結晶
+海の旅果ての一片
+あなたの手に残るは`
         ];
         let currentSampleIndex = 0;
 
@@ -344,7 +353,6 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
         const volNumFontSize = document.getElementById('volNumFontSize');
         const titleFontSize = document.getElementById('titleFontSize');
 
-        const boxPosY = document.getElementById('boxPosY');
         const boxPadding = document.getElementById('boxPadding');
         const volLineSpacing = document.getElementById('volLineSpacing');
 
@@ -353,7 +361,7 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
         const cropImg = document.getElementById('cropImg');
         const cropBox = document.getElementById('cropBox');
 
-        window.onload = () => {
+        window.onload = async () => {
             poemInput.value = poemSamples[0];
             volNumInput.value = "BLEACH\n#1";
             volTitleInput.value = "THE BIRTH\nAND THE\nGROUNDCHERRY";
@@ -367,6 +375,12 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             setPreviewBg('light');
             setupBoxCropInteractions();
             setupCanvasClick();
+
+            // Google Fontsの読み込み完了を待ってから初回描画（明朝体確実適用）
+            if (document.fonts) {
+                await document.fonts.ready;
+            }
+            render();
         };
 
         // プレビューの折りたたみ・展開トグル関数
@@ -403,7 +417,6 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
                 poemFontSize: poemFontSize.value,
                 volNumFontSize: volNumFontSize.value,
                 titleFontSize: titleFontSize.value,
-                boxPosY: boxPosY.value,
                 boxPadding: boxPadding.value,
                 volLineSpacing: volLineSpacing.value,
                 theme: currentTheme,
@@ -433,7 +446,6 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
                 poemFontSize.value = draftData.poemFontSize;
                 volNumFontSize.value = draftData.volNumFontSize;
                 titleFontSize.value = draftData.titleFontSize;
-                if (draftData.boxPosY) boxPosY.value = draftData.boxPosY;
                 if (draftData.boxPadding) boxPadding.value = draftData.boxPadding;
                 if (draftData.volLineSpacing) volLineSpacing.value = draftData.volLineSpacing;
                 setPreviewBg(draftData.theme);
@@ -758,9 +770,8 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
-            // --- スライダーコントロールの値の取得 ---
+            // --- コントロール値の取得 ---
             const userPadding = parseInt(boxPadding.value);
-            const userBoxPosYOffset = (parseInt(boxPosY.value) - 85) * 2;
             const userVnLineSpacingRatio = parseInt(volLineSpacing.value) / 10;
 
             // --- A. テキスト幅に応じた下部枠の自動計算（特大巻数見切れ防止） ---
@@ -782,7 +793,7 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             const titleAreaW = maxTitleW + 30;
 
             const dividerThick = 4;
-            const innerMargin = userPadding; // スライダー調整パディング
+            const innerMargin = userPadding; // 調整パディング
             const contentWidth = volAreaW + dividerThick + titleAreaW;
             const outerBoxWidth = contentWidth + (innerMargin * 2);
             const outerBoxX = (width - outerBoxWidth) / 2;
@@ -790,7 +801,7 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
             const tLineHeight = tBaseSize * 1.25;
             const titleBlockHeight = titleLines.length * tLineHeight;
             
-            const vnLineHeight = vnBaseSize * userVnLineSpacingRatio; // スライダー調整行間
+            const vnLineHeight = vnBaseSize * userVnLineSpacingRatio; // 調整行間
             const totalVnHeight = (volNumLines.length * vnLineHeight) * vScaleY;
             
             const topBlockHeight = Math.max(115, Math.max(titleBlockHeight, totalVnHeight) + 14);
@@ -806,9 +817,9 @@ SITE AUTHOR: <a href="https://lit.link/mi11emint" target="_blank" rel="noopener"
 
             const authorAreaHeight = Math.max(28, aSize + 10);
             const outerBoxHeight = topBlockHeight + dividerThick + authorAreaHeight + (innerMargin * 2);
-            const outerBoxY = height - outerBoxHeight - 80 + userBoxPosYOffset; // スライダー位置オフセット
+            const outerBoxY = height - outerBoxHeight - 80; // 固定の最適な下部位置
 
-            // --- B. 縦書きポエムテキスト描画 ---
+            // --- B. 縦書きポエムテキスト描画（明朝体確実指定） ---
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
