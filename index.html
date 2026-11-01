@@ -252,7 +252,7 @@ GROUNDCHERRY</textarea>
             </div>
             
             <div class="text-xs text-zinc-300 leading-relaxed space-y-3 whitespace-pre-wrap">
-このBLEACH風ポエムメーカーは
+這個BLEACH風ポエムメーカーは
 BLEACH公式と関わりのない非公式のサイトです。
 公式様に迷惑をかけないよう遊んでください。
 作成した画像は、色をつけたり加工をしても構いません。
@@ -328,6 +328,9 @@ SNS投稿は #BPMったー
             </div>
         </div>
     </div>
+
+    <!-- Canvas (画像生成用非表示キャンバス) -->
+    <canvas id="exportCanvas" class="hidden"></canvas>
 
     <!-- App Main Script -->
     <script>
@@ -440,7 +443,7 @@ SNS投稿は #BPMったー
             }
         }
 
-        // プレビュー表示枠の実際の比率（幅/高さ）を動的かつ正確に取得
+        // プレビュー表示枠の実際の比率（幅/高さ）を正確に取得
         function getPreviewAspect() {
             const box = document.getElementById('imageDisplayBox');
             if (box && box.clientWidth && box.clientHeight) {
@@ -530,29 +533,22 @@ SNS投稿は #BPMったー
             reader.readAsDataURL(file);
         }
 
-        // 【修正】初期トリミング枠のサイズをプレビュー表示枠（imageDisplayBox）の比率と完全に一致させる
+        // 【修正項目2】初期トリミング枠のサイズをプレビューの枠の比率とサイズに完全一致させる
         function resetBoxNorm() {
-            const box = document.getElementById('imageDisplayBox');
-            let boxW = box.clientWidth;
-            let boxH = box.clientHeight;
-            if (!boxW || !boxH) { boxW = 340; boxH = 56; }
+            const aspect = getPreviewAspect();
+            const imgW = rawImageObj.width;
+            const imgH = rawImageObj.height;
+            const imgAspect = imgW / imgH;
 
-            const iw = rawImageObj.width;
-            const ih = rawImageObj.height;
-            const imgAspect = iw / ih;
-            const boxAspect = boxW / boxH;
-
-            if (imgAspect > boxAspect) {
+            if (imgAspect > aspect) {
                 boxNorm.h = 1;
-                boxNorm.w = (boxH * boxAspect) / iw; // 正確なアスペクト比で初期化
-                boxNorm.x = (1 - boxNorm.w) / 2;
-                boxNorm.y = 0;
+                boxNorm.w = (aspect * imgH) / imgW;
             } else {
                 boxNorm.w = 1;
-                boxNorm.h = (boxW / boxAspect) / ih;
-                boxNorm.x = 0;
-                boxNorm.y = (1 - boxNorm.h) / 2;
+                boxNorm.h = (imgW / aspect) / imgH;
             }
+            boxNorm.x = (1 - boxNorm.w) / 2;
+            boxNorm.y = (1 - boxNorm.h) / 2;
         }
 
         function initCropBox() {
@@ -752,7 +748,7 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全同期型Canvas描画エンジン】詩の正確な描画 ＆ フォントサイズ8px相当調整
+        // 【完全同期型Canvas描画エンジン】
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -771,7 +767,7 @@ SNS投稿は #BPMったー
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（object-cover 完全同期）
+            // 2. 画像描画（プレビューの object-cover と完全同期）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -857,27 +853,23 @@ SNS投稿は #BPMったー
             const computedHeight = Math.max(120, titleBlockHeight + 50);
             const boxY = height - computedHeight - 110;
 
-            // =========================================================================
-            // 【修正 1】詩本文の正確な縦書き描画（プレビューと同じフォント・中央より・サイズ反映）
-            // =========================================================================
-            const pSize = Math.round(parseInt(poemFontSize.value) * scale);
+            // 【修正項目1】詩を描画に反映（プレビュー通りの中央配置、指定サイズ、フォント「Shippori Mincho, Noto Serif JP, serif」）
+            const selectPoemSizeVal = parseInt(poemFontSize.value) || 14;
+            const pSize = Math.round(selectPoemSizeVal * scale * 1.45); // プレビューのサイズ感に完全同期
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
 
-            const poemText = poemInput.value || " ";
-            const lines = poemText.split('\n');
+            const lines = (poemInput.value || " ").split('\n');
             const lineSpacing = pSize * 2.0; // プレビューの leading-[2em] と完全同期
             const charHeight = pSize * 1.2;
 
-            // 複数列全体の横幅
             const totalPoemWidth = (lines.length - 1) * lineSpacing;
             const startX = (width / 2) + (totalPoemWidth / 2);
 
-            // 各列の最大文字数から高さを算出
             const maxCharsInLine = Math.max(...lines.map(l => l.length));
             const totalPoemHeight = maxCharsInLine * charHeight;
 
-            // プレビューと同じく、画像枠と下部ボックスの間で上下中央配置
+            // プレビューの Flexbox 中央配置ロジックをCanvas上で完全に再現
             const poemAreaTop = 60 + imgBoxHeight;
             const poemAreaBottom = boxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
@@ -949,14 +941,12 @@ SNS投稿は #BPMったー
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // =========================================================================
-            // 【修正 3】BLEACH POEM MAKER のCanvas描画フォントサイズを 8px 相当に調整（枠内に収める）
-            // =========================================================================
-            const authorBoxWidth = Math.round(210 * (scale / 2.1));
-            const aSize = Math.round(8 * scale); // ご指定通り 8px 相当に縮小
-            const authorBoxHeight = Math.round(26 * scale);
+            // 【修正項目3】BLEACH POEM MAKERのCanvas描画フォントサイズを 8px (スケール換算) に設定
+            const authorBoxWidth = Math.round(145 * scale); // プレビューの max-w-[145px] に一致
+            const aSize = Math.round(8 * scale);             // 指定された 8px フォントサイズ
+            const authorBoxHeight = Math.round(26 * scale);    // プレビューの min-h-[26px] に一致
             const authorBoxX = (width - authorBoxWidth) / 2;
-            const authorBoxY = boxY + computedHeight + 35;
+            const authorBoxY = boxY + computedHeight + 28;
 
             ctx.strokeStyle = textColor;
             ctx.lineWidth = 6;
