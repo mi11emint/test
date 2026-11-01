@@ -28,8 +28,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
-    <!-- html2canvas: プレビューの見た目を完璧に保存するためのライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* 縦書きモード指定 */
         .writing-vertical {
@@ -152,9 +150,9 @@
                             </div>
                         </div>
                         
-                        <!-- 下部の作者名枠（フォントサイズ8px固定指定） -->
+                        <!-- 下部の作者名枠 -->
                         <div id="previewAuthorBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px]">
-                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px]" style="font-size: 8px !important;">BLEACH POEM MAKER</span>
+                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px]">BLEACH POEM MAKER</span>
                         </div>
                     </div>
 
@@ -267,7 +265,7 @@ BLEACH公式と関わりのない非公式のサイトです。
 買い物メモなどを画像にしてみてください。
 SNS投稿は #BPMったー
 
-<font color=red>【重要事項}
+<font color=red>【重要事項】
 
 ① 使用する画像や詩は、知的財産権侵害、著作権侵害、
    その他法律に抵触してはなりません。
@@ -331,6 +329,9 @@ SNS投稿は #BPMったー
         </div>
     </div>
 
+    <!-- Canvas (画像生成用非表示キャンバス) -->
+    <canvas id="exportCanvas" class="hidden"></canvas>
+
     <!-- App Main Script -->
     <script>
         // App State
@@ -349,8 +350,7 @@ SNS投稿は #BPMったー
           
             `すれ違う心に道標はなく
 見えもしない風の色が
-This asymptotic line
-is governed by no one`,
+この漸近線を支配している`,
 
             `明日から始めます。
 たぶん。知らんけど。`,
@@ -533,17 +533,18 @@ is governed by no one`,
             reader.readAsDataURL(file);
         }
 
-        // 初期トリミング枠サイズをプレビュー枠の比率と完全に一致させるように修正
+        // 初期トリミング枠をプレビュー枠の比率(object-cover基準)に完全一致させる修正
         function resetBoxNorm() {
             const aspect = getPreviewAspect();
-            let w = 1.0;
-            let h = w / aspect;
-            if (h > 1.0) {
-                h = 1.0;
-                w = h * aspect;
+            const imgAspect = rawImageObj.width / rawImageObj.height;
+
+            if (imgAspect > aspect) {
+                boxNorm.h = 1;
+                boxNorm.w = aspect / imgAspect;
+            } else {
+                boxNorm.w = 1;
+                boxNorm.h = imgAspect / aspect;
             }
-            boxNorm.w = w;
-            boxNorm.h = h;
             boxNorm.x = (1 - boxNorm.w) / 2;
             boxNorm.y = (1 - boxNorm.h) / 2;
         }
@@ -745,7 +746,7 @@ is governed by no one`,
         }
 
         // =========================================================================
-        // 【完全同期型ハイブリッド描画エンジン】Canvas直接描画による完璧な画像保存
+        // 【完全同期型Canvas描画エンジン】詩・画像・タイトル・巻数・作者名を完璧に同期描画
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -764,7 +765,7 @@ is governed by no one`,
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（プレビューと同じobject-coverの比率を完全に再現）
+            // 2. 画像描画（object-cover 完全同期の正確なクロップ計算）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -812,7 +813,6 @@ is governed by no one`,
         function renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight) {
             const scale = width / 380;
 
-            // 下部タイトルボックスの計算
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH POEM MAKER";
@@ -850,7 +850,7 @@ is governed by no one`,
             const computedHeight = Math.max(120, titleBlockHeight + 50);
             const boxY = height - computedHeight - 110;
 
-            // 3. 【修正点1】縦書きポエムテキストをプレビューのフォント種類（Shippori Mincho / Noto Serif JP）とサイズで完璧に中央配置描画
+            // 3. 縦書きポエムテキスト（プレビューと同じ明朝体フォント＆サイズ・中央位置で描画）
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
@@ -903,7 +903,7 @@ is governed by no one`,
             ctx.lineTo(dividerX, boxY + computedHeight);
             ctx.stroke();
 
-            // 4-3. 巻数の縦長変形描画（【修正点4】タイトルと同じ自然な改行・行間隔に一致させる調整）
+            // 4-3. 巻数の縦長変形描画（改行の隙間をタイトルと同じpx感覚に調整）
             ctx.save();
             ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
             ctx.scale(1.0, vScaleY);
@@ -912,17 +912,17 @@ is governed by no one`,
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const vnLineHeight = vnBaseSize * 1.35;
+            const vnLineHeight = tLineHeight / vScaleY;
             const totalVnHeight = volNumLines.length * vnLineHeight;
             const startVnUnscaledY = - (totalVnHeight / 2) + (vnLineHeight / 2);
 
             volNumLines.forEach((line, index) => {
                 const lineY = startVnUnscaledY + (index * vnLineHeight);
-                ctx.fillText(line, 0, lineY / vScaleY);
+                ctx.fillText(line, 0, lineY);
             });
             ctx.restore();
 
-            // 4-4. タイトル描画（上下中央配置）
+            // 4-4. タイトル描画（完全な上下中央配置）
             ctx.fillStyle = textColor;
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
@@ -936,7 +936,7 @@ is governed by no one`,
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // 5. 作者名枠（【修正点3】Canvas描画時のフォントサイズを厳密に8pxに指定）
+            // 5. 作者名枠（ご指定通りフォントサイズを8px * scaleに修正）
             const authorBoxWidth = Math.round(240 * (scale / 2.1));
             const aSize = Math.round(8 * scale);
             const authorBoxHeight = aSize + 22;
