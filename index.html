@@ -329,9 +329,6 @@ SNS投稿は #BPMったー
         </div>
     </div>
 
-    <!-- Canvas (画像生成用非表示キャンバス) -->
-    <canvas id="exportCanvas" class="hidden"></canvas>
-
     <!-- App Main Script -->
     <script>
         // App State
@@ -533,12 +530,29 @@ SNS投稿は #BPMったー
             reader.readAsDataURL(file);
         }
 
+        // 【修正】初期トリミング枠のサイズをプレビュー表示枠（imageDisplayBox）の比率と完全に一致させる
         function resetBoxNorm() {
-            const aspect = getPreviewAspect();
-            boxNorm.w = 0.9;
-            boxNorm.h = boxNorm.w / aspect;
-            boxNorm.x = (1 - boxNorm.w) / 2;
-            boxNorm.y = (1 - boxNorm.h) / 2;
+            const box = document.getElementById('imageDisplayBox');
+            let boxW = box.clientWidth;
+            let boxH = box.clientHeight;
+            if (!boxW || !boxH) { boxW = 340; boxH = 56; }
+
+            const iw = rawImageObj.width;
+            const ih = rawImageObj.height;
+            const imgAspect = iw / ih;
+            const boxAspect = boxW / boxH;
+
+            if (imgAspect > boxAspect) {
+                boxNorm.h = 1;
+                boxNorm.w = (boxH * boxAspect) / iw; // 正確なアスペクト比で初期化
+                boxNorm.x = (1 - boxNorm.w) / 2;
+                boxNorm.y = 0;
+            } else {
+                boxNorm.w = 1;
+                boxNorm.h = (boxW / boxAspect) / ih;
+                boxNorm.x = 0;
+                boxNorm.y = (1 - boxNorm.h) / 2;
+            }
         }
 
         function initCropBox() {
@@ -738,7 +752,7 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全同期型Canvas描画エンジン】プレビューと100%一致する高精度画像生成
+        // 【完全同期型Canvas描画エンジン】詩の正確な描画 ＆ フォントサイズ8px相当調整
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -757,7 +771,7 @@ SNS投稿は #BPMったー
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（object-cover 完全同期の正確なクロップ計算）
+            // 2. 画像描画（object-cover 完全同期）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -803,7 +817,6 @@ SNS投稿は #BPMったー
         }
 
         function renderTextAndTitle(ctx, width, height, textColor, imgBoxHeight) {
-            // スケールファクター（プレビューとCanvasの解像度比率）
             const scale = width / 380;
 
             // 4. 下部タイトルボックスの計算
@@ -817,7 +830,6 @@ SNS投稿は #BPMったー
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
-            // 巻数フォント & タイトルフォント計測
             const vScaleY = 1.5;
             ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
             let unscaledMaxVnW = 0;
@@ -845,21 +857,27 @@ SNS投稿は #BPMったー
             const computedHeight = Math.max(120, titleBlockHeight + 50);
             const boxY = height - computedHeight - 110;
 
-            // 3. 縦書きポエムテキスト描画
-            const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
+            // =========================================================================
+            // 【修正 1】詩本文の正確な縦書き描画（プレビューと同じフォント・中央より・サイズ反映）
+            // =========================================================================
+            const pSize = Math.round(parseInt(poemFontSize.value) * scale);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
 
-            const lines = (poemInput.value || " ").split('\n');
-            const lineSpacing = pSize * 2.0; 
+            const poemText = poemInput.value || " ";
+            const lines = poemText.split('\n');
+            const lineSpacing = pSize * 2.0; // プレビューの leading-[2em] と完全同期
             const charHeight = pSize * 1.2;
 
+            // 複数列全体の横幅
             const totalPoemWidth = (lines.length - 1) * lineSpacing;
             const startX = (width / 2) + (totalPoemWidth / 2);
 
+            // 各列の最大文字数から高さを算出
             const maxCharsInLine = Math.max(...lines.map(l => l.length));
             const totalPoemHeight = maxCharsInLine * charHeight;
 
+            // プレビューと同じく、画像枠と下部ボックスの間で上下中央配置
             const poemAreaTop = 60 + imgBoxHeight;
             const poemAreaBottom = boxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
@@ -898,7 +916,7 @@ SNS投稿は #BPMったー
             ctx.lineTo(dividerX, boxY + computedHeight);
             ctx.stroke();
 
-            // 4-3. 巻数の縦長変形描画（プレビューの scale-y-150 と完全一致）
+            // 4-3. 巻数の縦長変形描画
             ctx.save();
             ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
             ctx.scale(1.0, vScaleY);
@@ -917,7 +935,7 @@ SNS投稿は #BPMったー
             });
             ctx.restore();
 
-            // 4-4. タイトル描画（完全な上下中央配置）
+            // 4-4. タイトル描画
             ctx.fillStyle = textColor;
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
@@ -931,10 +949,12 @@ SNS投稿は #BPMったー
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // 5. 作者名枠
-            const authorBoxWidth = Math.round(240 * (scale / 2.1));
-            const aSize = Math.round(18 * scale);
-            const authorBoxHeight = aSize + 24;
+            // =========================================================================
+            // 【修正 3】BLEACH POEM MAKER のCanvas描画フォントサイズを 8px 相当に調整（枠内に収める）
+            // =========================================================================
+            const authorBoxWidth = Math.round(210 * (scale / 2.1));
+            const aSize = Math.round(8 * scale); // ご指定通り 8px 相当に縮小
+            const authorBoxHeight = Math.round(26 * scale);
             const authorBoxX = (width - authorBoxWidth) / 2;
             const authorBoxY = boxY + computedHeight + 35;
 
