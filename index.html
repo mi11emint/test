@@ -252,7 +252,7 @@ GROUNDCHERRY</textarea>
             </div>
             
             <div class="text-xs text-zinc-300 leading-relaxed space-y-3 whitespace-pre-wrap">
-這個BLEACH風ポエムメーカーは
+このBLEACH風ポエムメーカーは
 BLEACH公式と関わりのない非公式のサイトです。
 公式様に迷惑をかけないよう遊んでください。
 作成した画像は、色をつけたり加工をしても構いません。
@@ -443,7 +443,7 @@ SNS投稿は #BPMったー
             }
         }
 
-        // プレビュー表示枠の実際の比率（幅/高さ）を正確に取得
+        // プレビュー表示枠の実際の比率（幅/高さ）を動的かつ正確に取得
         function getPreviewAspect() {
             const box = document.getElementById('imageDisplayBox');
             if (box && box.clientWidth && box.clientHeight) {
@@ -533,19 +533,17 @@ SNS投稿は #BPMったー
             reader.readAsDataURL(file);
         }
 
-        // 【修正項目2】初期トリミング枠のサイズをプレビューの枠の比率とサイズに完全一致させる
+        // 修正点2: 初期トリミング枠のサイズをプレビューの縦横比に完全一致させる
         function resetBoxNorm() {
             const aspect = getPreviewAspect();
-            const imgW = rawImageObj.width;
-            const imgH = rawImageObj.height;
-            const imgAspect = imgW / imgH;
+            const imgAspect = rawImageObj.width / rawImageObj.height;
 
             if (imgAspect > aspect) {
                 boxNorm.h = 1;
-                boxNorm.w = (aspect * imgH) / imgW;
+                boxNorm.w = aspect / imgAspect;
             } else {
                 boxNorm.w = 1;
-                boxNorm.h = (imgW / aspect) / imgH;
+                boxNorm.h = imgAspect / aspect;
             }
             boxNorm.x = (1 - boxNorm.w) / 2;
             boxNorm.y = (1 - boxNorm.h) / 2;
@@ -748,7 +746,7 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【完全同期型Canvas描画エンジン】
+        // 【完全同期型Canvas描画エンジン】ご要望の4点を完全に反映
         // =========================================================================
         function renderCardToCanvas(callback) {
             const canvas = document.getElementById('exportCanvas');
@@ -767,7 +765,7 @@ SNS投稿は #BPMったー
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. 画像描画（プレビューの object-cover と完全同期）
+            // 2. 画像描画（object-cover 完全同期の正確なクロップ計算）
             const imgBoxX = 60;
             const imgBoxY = 60;
             const imgBoxWidth = width - 120;
@@ -853,14 +851,13 @@ SNS投稿は #BPMったー
             const computedHeight = Math.max(120, titleBlockHeight + 50);
             const boxY = height - computedHeight - 110;
 
-            // 【修正項目1】詩を描画に反映（プレビュー通りの中央配置、指定サイズ、フォント「Shippori Mincho, Noto Serif JP, serif」）
-            const selectPoemSizeVal = parseInt(poemFontSize.value) || 14;
-            const pSize = Math.round(selectPoemSizeVal * scale * 1.45); // プレビューのサイズ感に完全同期
+            // 修正点1: 詩を描画に正確に反映（指定サイズ・プレビュー通りのフォント・中央揃え位置）
+            const pSize = Math.round(parseInt(poemFontSize.value) * scale);
             ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
             ctx.textBaseline = 'top';
 
             const lines = (poemInput.value || " ").split('\n');
-            const lineSpacing = pSize * 2.0; // プレビューの leading-[2em] と完全同期
+            const lineSpacing = pSize * 2.0; // プレビューの leading-[2em]
             const charHeight = pSize * 1.2;
 
             const totalPoemWidth = (lines.length - 1) * lineSpacing;
@@ -869,7 +866,6 @@ SNS投稿は #BPMったー
             const maxCharsInLine = Math.max(...lines.map(l => l.length));
             const totalPoemHeight = maxCharsInLine * charHeight;
 
-            // プレビューの Flexbox 中央配置ロジックをCanvas上で完全に再現
             const poemAreaTop = 60 + imgBoxHeight;
             const poemAreaBottom = boxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
@@ -908,7 +904,7 @@ SNS投稿は #BPMったー
             ctx.lineTo(dividerX, boxY + computedHeight);
             ctx.stroke();
 
-            // 4-3. 巻数の縦長変形描画
+            // 修正点4: 巻数の改行の隙間をプレビューと完全に一致させる
             ctx.save();
             ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
             ctx.scale(1.0, vScaleY);
@@ -917,7 +913,7 @@ SNS投稿は #BPMったー
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const vnLineHeight = vnBaseSize * 1.15;
+            const vnLineHeight = vnBaseSize * 1.0; 
             const totalVnHeight = volNumLines.length * vnLineHeight;
             const startVnUnscaledY = - (totalVnHeight / 2) + (vnLineHeight / 2);
 
@@ -941,12 +937,12 @@ SNS投稿は #BPMったー
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // 【修正項目3】BLEACH POEM MAKERのCanvas描画フォントサイズを 8px (スケール換算) に設定
-            const authorBoxWidth = Math.round(145 * scale); // プレビューの max-w-[145px] に一致
-            const aSize = Math.round(8 * scale);             // 指定された 8px フォントサイズ
-            const authorBoxHeight = Math.round(26 * scale);    // プレビューの min-h-[26px] に一致
+            // 修正点3: BLEACH POEM MAKERのCanvas描画時のフォントサイズを8px相当に設定
+            const aSize = Math.round(8 * scale);
+            const authorBoxWidth = Math.round(180 * scale);
+            const authorBoxHeight = aSize + 22;
             const authorBoxX = (width - authorBoxWidth) / 2;
-            const authorBoxY = boxY + computedHeight + 28;
+            const authorBoxY = boxY + computedHeight + 35;
 
             ctx.strokeStyle = textColor;
             ctx.lineWidth = 6;
