@@ -655,4 +655,136 @@ SNS投稿は #BPMったー
 
             cropContainer.addEventListener('touchstart', onStart, { passive: true });
             window.addEventListener('touchmove', onMove, { passive: true });
-            window.addEventListener('
+            window.addEventListener('touchend', onEnd);
+        }
+
+        function applyCrop() {
+            if (!rawImageObj) return;
+
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+
+            const sx = boxNorm.x * rawImageObj.width;
+            const sy = boxNorm.y * rawImageObj.height;
+            const sw = boxNorm.w * rawImageObj.width;
+            const sh = boxNorm.h * rawImageObj.height;
+
+            tempCanvas.width = sw;
+            tempCanvas.height = sh;
+
+            tempCtx.filter = 'grayscale(100%) contrast(120%)';
+            tempCtx.drawImage(rawImageObj, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            croppedDataUrl = tempCanvas.toDataURL('image/png');
+
+            previewImg.src = croppedDataUrl;
+            previewImg.classList.remove('hidden');
+            imgPlaceholder.classList.add('hidden');
+
+            closeCropModal();
+            updateControls();
+        }
+
+        function applySamplePoem() {
+            poemInput.value = poemSamples[currentSampleIndex];
+            currentSampleIndex = (currentSampleIndex + 1) % poemSamples.length;
+            updateControls();
+        }
+
+        function setPreviewBg(mode) {
+            currentTheme = mode;
+            const btnDark = document.getElementById('btnBgDark');
+            const btnLight = document.getElementById('btnBgLight');
+
+            if (mode === 'dark') {
+                poemCard.style.backgroundColor = '#000000';
+                poemCard.style.color = '#ffffff';
+                previewTitleBorder.style.borderColor = '#ffffff';
+                previewDivider.style.borderColor = '#ffffff';
+                previewAuthorBorder.style.borderColor = '#ffffff';
+
+                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 bg-zinc-700 text-white shadow-sm min-h-[36px]";
+                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[36px]";
+            } else {
+                poemCard.style.backgroundColor = '#ffffff';
+                poemCard.style.color = '#000000';
+                previewTitleBorder.style.borderColor = '#000000';
+                previewDivider.style.borderColor = '#000000';
+                previewAuthorBorder.style.borderColor = '#000000';
+
+                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]";
+                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]";
+            }
+            updateControls();
+        }
+
+        function updateControls() {
+            previewPoem.innerText = poemInput.value || " ";
+            previewVolNum.innerText = volNumInput.value || "";
+            previewVolTitle.innerText = volTitleInput.value || "";
+            previewAuthor.innerText = "BLEACH POEM MAKER";
+
+            previewPoem.style.fontSize = `${poemFontSize.value}px`;
+            previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
+            previewVolTitle.style.fontSize = `${titleFontSize.value}px`;
+
+            updateOverlayImage();
+        }
+
+        function setupOverlayPointerEvents() {
+            const overlay = document.getElementById('longPressOverlay');
+            overlay.addEventListener('click', (e) => {
+                const rect = imageDisplayBox.getBoundingClientRect();
+                if (
+                    e.clientX >= rect.left &&
+                    e.clientX <= rect.right &&
+                    e.clientY >= rect.top &&
+                    e.clientY <= rect.bottom
+                ) {
+                    handleImageDisplayClick();
+                }
+            });
+        }
+
+        function renderCardToCanvas(callback) {
+            const targetElement = document.getElementById('poemCard');
+            const overlay = document.getElementById('longPressOverlay');
+
+            overlay.style.display = 'none';
+
+            html2canvas(targetElement, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: currentTheme === 'dark' ? '#000000' : '#ffffff',
+                logging: false
+            }).then(canvas => {
+                overlay.style.display = 'block';
+                if (callback) callback(canvas);
+            }).catch(err => {
+                overlay.style.display = 'block';
+                console.error("キャプチャエラー:", err);
+            });
+        }
+
+        let overlayTimer = null;
+        function updateOverlayImage() {
+            clearTimeout(overlayTimer);
+            overlayTimer = setTimeout(() => {
+                renderCardToCanvas((canvas) => {
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                    document.getElementById('longPressOverlay').src = dataUrl;
+                });
+            }, 150);
+        }
+
+        function downloadImage() {
+            renderCardToCanvas((canvas) => {
+                const link = document.createElement('a');
+                link.download = `bleach_poem_${Date.now()}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
