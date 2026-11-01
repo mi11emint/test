@@ -28,8 +28,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;900&family=Noto+Serif+JP:wght@400;700;900&family=Shippori+Mincho:wght@500;700;800&display=swap" rel="stylesheet">
-    <!-- html2canvas: プレビューをそのまま完璧に高解像度画像化するライブラリ -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* 縦書きモード指定 */
         .writing-vertical {
@@ -139,11 +137,11 @@
                         </div>
                     </div>
 
-                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠（上側パディングを詰めて文字が上に寄るよう調整） -->
+                    <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black flex items-stretch max-w-full overflow-hidden">
                             <!-- 巻数表示エリア -->
-                            <div class="px-2.5 pt-1 pb-2 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
+                            <div class="px-2.5 pt-1 pb-1.5 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
                                 <div id="previewVolNum" class="font-black leading-tight whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
                             </div>
                             <!-- タイトル表示エリア -->
@@ -330,6 +328,9 @@ SNS投稿は #BPMったー
             </div>
         </div>
     </div>
+
+    <!-- 画像生成用非表示キャンバス -->
+    <canvas id="exportCanvas" class="hidden"></canvas>
 
     <!-- App Main Script -->
     <script>
@@ -746,25 +747,216 @@ SNS投稿は #BPMったー
             });
         }
 
-        // html2canvasを用いたプレビュー完全同期の画像生成エンジン
+        // =========================================================================
+        // 【完全同期型Canvas描画エンジン】文字の下寄りバグを物理的にゼロにする描画処理
+        // =========================================================================
         function renderCardToCanvas(callback) {
-            const targetElement = document.getElementById('poemCard');
-            const overlay = document.getElementById('longPressOverlay');
+            const canvas = document.getElementById('exportCanvas');
+            const ctx = canvas.getContext('2d');
 
-            overlay.style.display = 'none';
+            const width = 800;
+            const height = 1200;
+            canvas.width = width;
+            canvas.height = height;
 
-            html2canvas(targetElement, {
-                scale: 3, // 高精細画質
-                useCORS: true,
-                backgroundColor: currentTheme === 'dark' ? '#000000' : '#ffffff',
-                logging: false
-            }).then(canvas => {
-                overlay.style.display = 'block';
+            const isDark = currentTheme === 'dark';
+            const bgColor = isDark ? '#000000' : '#ffffff';
+            const textColor = isDark ? '#ffffff' : '#000000';
+
+            // 1. 背景描画
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. 上部モノクロ画像枠描画
+            const imgBoxX = 60;
+            const imgBoxY = 60;
+            const imgBoxWidth = width - 120;
+            const aspect = getPreviewAspect();
+            const imgBoxHeight = imgBoxWidth / aspect;
+
+            if (croppedDataUrl) {
+                const croppedImg = new Image();
+                croppedImg.onload = () => {
+                    const iw = croppedImg.width;
+                    const ih = croppedImg.height;
+                    const boxW = imgBoxWidth;
+                    const boxH = imgBoxHeight;
+
+                    const imgAspect = iw / ih;
+                    const boxAspect = boxW / boxH;
+
+                    let sx, sy, sw, sh;
+                    if (imgAspect > boxAspect) {
+                        sh = ih;
+                        sw = ih * boxAspect;
+                        sx = (iw - sw) / 2;
+                        sy = 0;
+                    } else {
+                        sw = iw;
+                        sh = iw / boxAspect;
+                        sx = 0;
+                        sy = (ih - sh) / 2;
+                    }
+
+                    ctx.drawImage(croppedImg, sx, sy, sw, sh, imgBoxX, imgBoxY, boxW, boxH);
+                    ctx.strokeStyle = textColor;
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+
+                    renderPoemAndBottomBoxes(ctx, width, height, textColor, imgBoxHeight);
+                    if (callback) callback(canvas);
+                };
+                croppedImg.src = croppedDataUrl;
+            } else {
+                ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
+                renderPoemAndBottomBoxes(ctx, width, height, textColor, imgBoxHeight);
                 if (callback) callback(canvas);
-            }).catch(err => {
-                overlay.style.display = 'block';
-                console.error("キャプチャエラー:", err);
+            }
+        }
+
+        function renderPoemAndBottomBoxes(ctx, width, height, textColor, imgBoxHeight) {
+            const scale = width / 380;
+
+            // --- A. 下部タイトルボックスの正確なピクセル描画（文字が上部にぴったり収まる構造） ---
+            const volNumRaw = volNumInput.value || "";
+            const volTitleRaw = (volTitleInput.value || "").toUpperCase();
+            const author = "BLEACH POEM MAKER";
+
+            const vnBaseSize = Math.round(parseInt(volNumFontSize.value) * scale);
+            const tBaseSize = Math.round(parseInt(titleFontSize.value) * scale);
+
+            const volNumLines = volNumRaw.split('\n');
+            const titleLines = volTitleRaw.split('\n');
+
+            const vScaleY = 1.5;
+            ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
+            let unscaledMaxVnW = 0;
+            volNumLines.forEach(l => {
+                const w = ctx.measureText(l).width;
+                if (w > unscaledMaxVnW) unscaledMaxVnW = w;
             });
+
+            ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
+            let maxTitleLineWidth = 0;
+            titleLines.forEach(l => {
+                const w = ctx.measureText(l).width;
+                if (w > maxTitleLineWidth) maxTitleLineWidth = w;
+            });
+
+            const volAreaWidth = Math.max(160, unscaledMaxVnW + 40);
+            const titleAreaWidth = maxTitleLineWidth + 40;
+            const maxBoxWidth = 680;
+            const computedBoxWidth = Math.min(maxBoxWidth, volAreaWidth + titleAreaWidth);
+            const boxX = (width - computedBoxWidth) / 2;
+
+            const tLineHeight = tBaseSize * 1.25;
+            const titleBlockHeight = titleLines.length * tLineHeight;
+            const computedHeight = Math.max(110, titleBlockHeight + 25);
+            const boxY = height - computedHeight - 110;
+
+            // --- B. 縦書きポエムテキスト描画 ---
+            const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
+            ctx.font = `500 ${pSize}px "Shippori Mincho", "Noto Serif JP", serif`;
+            ctx.textBaseline = 'top';
+
+            const lines = (poemInput.value || " ").split('\n');
+            const lineSpacing = pSize * 2.0; 
+            const charHeight = pSize * 1.2;
+
+            const totalPoemWidth = (lines.length - 1) * lineSpacing;
+            const startX = (width / 2) + (totalPoemWidth / 2);
+
+            const maxCharsInLine = Math.max(...lines.map(l => l.length));
+            const totalPoemHeight = maxCharsInLine * charHeight;
+
+            const poemAreaTop = 60 + imgBoxHeight;
+            const poemAreaBottom = boxY;
+            const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
+            const startY = poemAreaCenterY - (totalPoemHeight / 2);
+
+            lines.forEach((line, lineIndex) => {
+                const currentX = startX - (lineIndex * lineSpacing);
+                let currentY = startY;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (['、', '。'].includes(char)) {
+                        ctx.fillText(char, currentX + (pSize * 0.4), currentY - (pSize * 0.3));
+                    } else if (['ー', '―', '-'].includes(char)) {
+                        ctx.save();
+                        ctx.translate(currentX + (pSize * 0.5), currentY + (pSize * 0.5));
+                        ctx.rotate(Math.PI / 2);
+                        ctx.fillText(char, 0, 0);
+                        ctx.restore();
+                    } else {
+                        ctx.fillText(char, currentX, currentY);
+                    }
+                    currentY += charHeight;
+                }
+            });
+
+            // --- C. 下部外枠 & 区切り線描画 ---
+            ctx.strokeStyle = textColor;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(boxX, boxY, computedBoxWidth, computedHeight);
+
+            const dividerX = boxX + volAreaWidth;
+            ctx.beginPath();
+            ctx.moveTo(dividerX, boxY);
+            ctx.lineTo(dividerX, boxY + computedHeight);
+            ctx.stroke();
+
+            // --- D. 巻数描画（原作の重厚な縦長バランス） ---
+            ctx.save();
+            ctx.translate(boxX + (volAreaWidth / 2), boxY + (computedHeight / 2));
+            ctx.scale(1.0, vScaleY);
+            ctx.fillStyle = textColor;
+            ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const vnLineHeight = vnBaseSize * 1.1;
+            const totalVnHeight = volNumLines.length * vnLineHeight;
+            const startVnUnscaledY = - (totalVnHeight / 2) + (vnLineHeight / 2);
+
+            volNumLines.forEach((line, index) => {
+                const lineY = startVnUnscaledY + (index * vnLineHeight);
+                ctx.fillText(line, 0, lineY / vScaleY);
+            });
+            ctx.restore();
+
+            // --- E. タイトル描画（字のすぐ上に枠が来るタイトな上部配置） ---
+            ctx.fillStyle = textColor;
+            ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            const titleStartX = dividerX + 20;
+            const startTitleY = boxY + 12; // 上部パディングをタイトに調整し、文字のすぐ上に枠を配置
+
+            titleLines.forEach((tLine, index) => {
+                const lineY = startTitleY + (index * tLineHeight);
+                ctx.fillText(tLine, titleStartX, lineY);
+            });
+
+            // --- F. 作者名枠描画（フォントサイズ8px相当） ---
+            const authorBoxWidth = Math.round(230 * (scale / 2.1));
+            const aSize = Math.round(8 * scale * 2.1); // フォントサイズ8px指定
+            const authorBoxHeight = aSize + 16;
+            const authorBoxX = (width - authorBoxWidth) / 2;
+            const authorBoxY = boxY + computedHeight + 25;
+
+            ctx.strokeStyle = textColor;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(authorBoxX, authorBoxY, authorBoxWidth, authorBoxHeight);
+
+            ctx.font = `800 ${aSize}px "Inter", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(author, width / 2, authorBoxY + (authorBoxHeight / 2));
+            ctx.textAlign = 'left';
         }
 
         let overlayTimer = null;
