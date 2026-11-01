@@ -142,7 +142,7 @@
                     <!-- ② 巻数＆詩タイトル枠 ＆ 作者名枠 -->
                     <div class="pt-0.5 flex flex-col items-center gap-1.5 font-sans">
                         <div id="previewTitleBorder" class="border-[3px] border-black flex items-stretch max-w-full overflow-hidden">
-                            <!-- 巻数表示エリア（行間・隙間をタイトルと完全一致） -->
+                            <!-- 巻数表示エリア -->
                             <div class="px-2.5 py-2.5 flex items-center justify-center shrink-0 border-r-[3px] border-black overflow-hidden" id="previewDivider">
                                 <div id="previewVolNum" class="font-black leading-tight whitespace-pre-line text-center origin-center transform scale-y-150">BLEACH&#10;#1</div>
                             </div>
@@ -152,9 +152,9 @@
                             </div>
                         </div>
                         
-                        <!-- 下部の作者名枠（フォントサイズ8pxに修正） -->
-                        <div id="previewAuthorBorder" class="border-[3px] border-black px-2.5 py-1 flex items-center justify-center font-extrabold tracking-widest max-w-[130px] sm:max-w-[145px]">
-                            <span id="previewAuthor" class="font-bold uppercase tracking-wider text-center leading-tight break-words text-[8px]">BLEACH POEM MAKER</span>
+                        <!-- 下部の作者名枠（中央揃え・8pxに完全固定） -->
+                        <div id="previewAuthorBorder" class="border-[3px] border-black px-3 py-1 mx-auto text-center font-extrabold tracking-widest w-fit">
+                            <span id="previewAuthor" class="font-bold uppercase tracking-wider inline-block text-[8px] leading-tight">BLEACH POEM MAKER</span>
                         </div>
                     </div>
 
@@ -448,7 +448,7 @@ SNS投稿は #BPMったー
             if (box && box.clientWidth && box.clientHeight) {
                 return box.clientWidth / box.clientHeight;
             }
-            return 380 / 60; // デフォルトのプレビュー表示枠比率に一致
+            return 380 / 60;
         }
 
         let boxNorm = { x: 0, y: 0, w: 1, h: 1 };
@@ -532,10 +532,9 @@ SNS投稿は #BPMったー
             reader.readAsDataURL(file);
         }
 
-        // 【修正④】初期トリミング枠のサイズをプレビューの枠のサイズ比率に完全に一致させる
         function resetBoxNorm() {
             if (!rawImageObj) return;
-            const aspect = getPreviewAspect(); // プレビュー枠の正確な比率
+            const aspect = getPreviewAspect();
             const imgAspect = rawImageObj.width / rawImageObj.height;
 
             if (imgAspect > aspect) {
@@ -656,140 +655,4 @@ SNS投稿は #BPMったー
 
             cropContainer.addEventListener('touchstart', onStart, { passive: true });
             window.addEventListener('touchmove', onMove, { passive: true });
-            window.addEventListener('touchend', onEnd);
-        }
-
-        function applyCrop() {
-            if (!rawImageObj) return;
-
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-
-            const sx = boxNorm.x * rawImageObj.width;
-            const sy = boxNorm.y * rawImageObj.height;
-            const sw = boxNorm.w * rawImageObj.width;
-            const sh = boxNorm.h * rawImageObj.height;
-
-            tempCanvas.width = sw;
-            tempCanvas.height = sh;
-
-            tempCtx.filter = 'grayscale(100%) contrast(120%)';
-            tempCtx.drawImage(rawImageObj, sx, sy, sw, sh, 0, 0, sw, sh);
-
-            croppedDataUrl = tempCanvas.toDataURL('image/png');
-
-            previewImg.src = croppedDataUrl;
-            previewImg.classList.remove('hidden');
-            imgPlaceholder.classList.add('hidden');
-
-            closeCropModal();
-            updateControls();
-        }
-
-        function applySamplePoem() {
-            poemInput.value = poemSamples[currentSampleIndex];
-            currentSampleIndex = (currentSampleIndex + 1) % poemSamples.length;
-            updateControls();
-        }
-
-        function setPreviewBg(mode) {
-            currentTheme = mode;
-            const btnDark = document.getElementById('btnBgDark');
-            const btnLight = document.getElementById('btnBgLight');
-
-            if (mode === 'dark') {
-                poemCard.style.backgroundColor = '#000000';
-                poemCard.style.color = '#ffffff';
-                previewTitleBorder.style.borderColor = '#ffffff';
-                previewDivider.style.borderColor = '#ffffff';
-                previewAuthorBorder.style.borderColor = '#ffffff';
-
-                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 bg-zinc-700 text-white shadow-sm min-h-[36px]";
-                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 text-zinc-400 hover:text-white min-h-[36px]";
-            } else {
-                poemCard.style.backgroundColor = '#ffffff';
-                poemCard.style.color = '#000000';
-                previewTitleBorder.style.borderColor = '#000000';
-                previewDivider.style.borderColor = '#000000';
-                previewAuthorBorder.style.borderColor = '#000000';
-
-                btnLight.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 bg-zinc-200 text-zinc-900 font-bold shadow-sm min-h-[36px]";
-                btnDark.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-0.5 text-zinc-400 hover:text-white min-h-[36px]";
-            }
-            updateControls();
-        }
-
-        function updateControls() {
-            previewPoem.innerText = poemInput.value || " ";
-            previewVolNum.innerText = volNumInput.value || "";
-            previewVolTitle.innerText = volTitleInput.value || "";
-            previewAuthor.innerText = "BLEACH POEM MAKER";
-
-            previewPoem.style.fontSize = `${poemFontSize.value}px`;
-            previewVolNum.style.fontSize = `${volNumFontSize.value}px`;
-            previewVolTitle.style.fontSize = `${titleFontSize.value}px`;
-
-            updateOverlayImage();
-        }
-
-        function setupOverlayPointerEvents() {
-            const overlay = document.getElementById('longPressOverlay');
-            overlay.addEventListener('click', (e) => {
-                const rect = imageDisplayBox.getBoundingClientRect();
-                if (
-                    e.clientX >= rect.left &&
-                    e.clientX <= rect.right &&
-                    e.clientY >= rect.top &&
-                    e.clientY <= rect.bottom
-                ) {
-                    handleImageDisplayClick();
-                }
-            });
-        }
-
-        // =========================================================================
-        // 【修正①〜③対応】html2canvasを用いたプレビュー完全同期の画像生成エンジン
-        // =========================================================================
-        function renderCardToCanvas(callback) {
-            const targetElement = document.getElementById('poemCard');
-            const overlay = document.getElementById('longPressOverlay');
-
-            // キャプチャ時、長押し用オーバーレイを非表示にして干渉を排除
-            overlay.style.display = 'none';
-
-            html2canvas(targetElement, {
-                scale: 3, // 高精細画質
-                useCORS: true,
-                backgroundColor: currentTheme === 'dark' ? '#000000' : '#ffffff',
-                logging: false
-            }).then(canvas => {
-                overlay.style.display = 'block';
-                if (callback) callback(canvas);
-            }).catch(err => {
-                overlay.style.display = 'block';
-                console.error("キャプチャエラー:", err);
-            });
-        }
-
-        let overlayTimer = null;
-        function updateOverlayImage() {
-            clearTimeout(overlayTimer);
-            overlayTimer = setTimeout(() => {
-                renderCardToCanvas((canvas) => {
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-                    document.getElementById('longPressOverlay').src = dataUrl;
-                });
-            }, 150);
-        }
-
-        function downloadImage() {
-            renderCardToCanvas((canvas) => {
-                const link = document.createElement('a');
-                link.download = `bleach_poem_${Date.now()}.jpg`;
-                link.href = canvas.toDataURL('image/jpeg', 0.95);
-                link.click();
-            });
-        }
-    </script>
-</body>
-</html>
+            window.addEventListener('
