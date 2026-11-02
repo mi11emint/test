@@ -175,7 +175,7 @@ GROUNDCHERRY</textarea>
 
                     <div class="pt-1.5 border-t border-zinc-800 grid grid-cols-2 gap-2">
                         <div class="flex flex-col gap-0.5">
-                            <label class="text-[10px] text-zinc-400">巻数サイズ</label>
+                            <label class="text-[10px] text-zinc-400">巻数サイズ基準</label>
                             <select id="volNumFontSize" class="bg-zinc-900 border border-zinc-700 rounded text-xs text-zinc-200 px-1.5 py-1 focus:outline-none focus:border-accentRed" onchange="render()">
                                 <option value="14">小 (14px)</option>
                                 <option value="18">標準 (18px)</option>
@@ -194,7 +194,7 @@ GROUNDCHERRY</textarea>
                         </div>
                     </div>
 
-                    <!-- 🎛️ 行間調整コントロール（タイトル行間スライダーに差し替え） -->
+                    <!-- 🎛️ 行間調整コントロール -->
                     <div class="pt-2 border-t border-zinc-800/80 space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="text-[10px] text-zinc-400">タイトルの行間</label>
@@ -682,13 +682,12 @@ SNS投稿は #BPMったー
         }
 
         // =========================================================================
-        // 【フルCanvasリアルタイムレンダリングエンジン】明朝体リアルタイム確定＆高品位レイアウト
+        // 【フルCanvasリアルタイムレンダリングエンジン】①②③フル適用版
         // =========================================================================
         async function render() {
             const scale = mainCanvas.width / 380;
             const pSize = Math.round(parseInt(poemFontSize.value) * scale * 1.5);
             
-            // 漢字の明朝体読み込みを確実に完了させてから描画
             if (document.fonts) {
                 const textToLoad = poemInput.value || " ";
                 try {
@@ -753,7 +752,6 @@ SNS投稿は #BPMったー
                 ctx.lineWidth = 4;
                 ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
 
-                // 画像がない場合のプレースホルダーテキスト
                 ctx.fillStyle = isDark ? '#666666' : '#999999';
                 ctx.font = 'bold 24px "Inter", sans-serif';
                 ctx.textAlign = 'center';
@@ -771,58 +769,74 @@ SNS投稿は #BPMったー
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
             const author = "BLEACH ■ POEM MAKER ■";
 
-            const vnBaseSize = Math.round(parseInt(volNumFontSize.value) * scale * 0.9);
+            const userVnBaseSize = Math.round(parseInt(volNumFontSize.value) * scale * 0.9);
             const tBaseSize = Math.round(parseInt(titleFontSize.value) * scale * 0.9);
 
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
 
-            // --- スライダーコントロールの値の取得 ---
-            const userTitleLineSpacingRatio = titleLineSpacing ? (parseInt(titleLineSpacing.value) / 10) : 1.3;
-            const userVnLineSpacingRatio = parseInt(volLineSpacing.value) / 10;
+            const vScaleY = 1.5; // BLEACH特有の縦長1.5倍変形
 
-            // --- A. テキスト幅に応じた下部枠の自動計算（特大巻数見切れ防止） ---
-            const vScaleY = 1.5;
-            ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
-            let maxVnW = 0;
-            volNumLines.forEach(l => {
-                const w = ctx.measureText(l).width;
-                if (w > maxVnW) maxVnW = w;
-            });
-            const volAreaW = Math.max(140, Math.round(maxVnW * 1.15) + 30);
-
+            // --- A. タイトル側の高さ・幅計算 ---
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             let maxTitleW = 0;
             titleLines.forEach(l => {
                 const w = ctx.measureText(l).width;
                 if (w > maxTitleW) maxTitleW = w;
             });
-            const titleAreaW = maxTitleW + 30;
+            const titleAreaW = maxTitleW + 20;
 
+            const standardTLineHeight = tBaseSize * 1.25;
+            const standardTitleBlockHeight = titleLines.length * standardTLineHeight;
+
+            // --- ③ 巻数の縦長変形＆枠自動フィット（手動基準サイズ＋行間スライダー対応） ---
+            const userVnLineSpacingRatio = parseInt(volLineSpacing.value) / 10;
+            
+            // 仮描画で文字幅・高さを測定し、自動フィットフォントサイズを決定
+            let vnFontSize = userVnBaseSize;
+            ctx.font = `900 ${vnFontSize}px "Inter", sans-serif`;
+            
+            let maxVnTextWidth = 0;
+            volNumLines.forEach(l => {
+                const w = ctx.measureText(l).width;
+                if (w > maxVnTextWidth) maxVnTextWidth = w;
+            });
+
+            // 巻数エリアの想定幅と固定領域高さ
+            const volAreaW = Math.max(130, Math.round(maxVnTextWidth * 1.1) + 20);
+            const topBlockHeight = Math.max(105, standardTitleBlockHeight + 10);
+            const maxAllowedVnHeight = topBlockHeight - 10;
+
+            // 縦長変形(x1.5)を考慮した高さオーバーチェック＆自動フィット縮小計算
+            let calcTotalVnHeight = (volNumLines.length * (vnFontSize * userVnLineSpacingRatio)) * vScaleY;
+            if (calcTotalVnHeight > maxAllowedVnHeight && volNumLines.length > 0) {
+                const fitScale = maxAllowedVnHeight / calcTotalVnHeight;
+                vnFontSize = Math.max(10, Math.floor(vnFontSize * fitScale));
+            }
+
+            const vnLineHeight = vnFontSize * userVnLineSpacingRatio;
+            const totalVnHeight = (volNumLines.length * vnLineHeight) * vScaleY;
+
+            // --- ② 余白システムキープ＋パディングの1/4極小化 ---
             const dividerThick = 4;
-            const innerMargin = 5; // 固定の標準パディング
+            const innerMargin = 1.5; // 従来の5pxから1/4程度（1.5px）に縮小
             const contentWidth = volAreaW + dividerThick + titleAreaW;
             const outerBoxWidth = contentWidth + (innerMargin * 2);
             const outerBoxX = (width - outerBoxWidth) / 2;
 
-            const tLineHeight = tBaseSize * userTitleLineSpacingRatio; // タイトル行間スライダー対応
-            const titleBlockHeight = titleLines.length * tLineHeight;
-            
-            const vnLineHeight = vnBaseSize * userVnLineSpacingRatio; // 巻数学行間スライダー対応
-            const totalVnHeight = (volNumLines.length * vnLineHeight) * vScaleY;
-            
-            const topBlockHeight = Math.max(115, Math.max(titleBlockHeight, totalVnHeight) + 14);
-
-            // 作者名フォントサイズの自動フィット
-            ctx.font = `800 ${Math.round(18 * scale * 0.85)}px "Inter", sans-serif`;
+            // --- ① タイトルサイズと作者名サイズの完全連動 ---
+            // タイトルサイズ（tBaseSize）に比例して作者名の基準サイズを決定
+            let aSize = Math.round(tBaseSize * 0.7); 
+            ctx.font = `800 ${aSize}px "Inter", sans-serif`;
             const authorTextW = ctx.measureText(author).width;
-            const maxAllowedAuthorW = outerBoxWidth - 10;
-            let aSize = Math.round(18 * scale * 0.85);
+            const maxAllowedAuthorW = outerBoxWidth - 6;
+            
+            // 万が一枠幅をはみ出す場合は安全に自動縮小
             if (authorTextW > maxAllowedAuthorW) {
-                aSize = Math.floor(aSize * (maxAllowedAuthorW / authorTextW));
+                aSize = Math.max(8, Math.floor(aSize * (maxAllowedAuthorW / authorTextW)));
             }
 
-            const authorAreaHeight = Math.max(28, aSize + 10);
+            const authorAreaHeight = Math.max(22, aSize + 6);
             const outerBoxHeight = topBlockHeight + dividerThick + authorAreaHeight + (innerMargin * 2);
             const outerBoxY = height - outerBoxHeight - 80;
 
@@ -889,7 +903,7 @@ SNS投稿は #BPMったー
             const dividerX = innerX + volAreaW;
             ctx.fillRect(dividerX, innerY + 2, dividerThick, topBlockHeight - 4);
 
-            // --- E. 巻数描画（左ブロック・縦長変形） ---
+            // --- E. 巻数描画（左ブロック・自動フィット＆縦長1.5倍変形） ---
             const volCenterX = innerX + (volAreaW / 2);
             const volCenterY = innerY + (topBlockHeight / 2);
 
@@ -897,7 +911,7 @@ SNS投稿は #BPMったー
             ctx.translate(volCenterX, volCenterY);
             ctx.scale(1.0, vScaleY);
             ctx.fillStyle = textColor;
-            ctx.font = `900 ${vnBaseSize}px "Inter", sans-serif`;
+            ctx.font = `900 ${vnFontSize}px "Inter", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
@@ -909,23 +923,25 @@ SNS投稿は #BPMったー
             });
             ctx.restore();
 
-            // --- F. タイトル描画（右ブロック：上下中央揃え計算改善） ---
+            // --- F. タイトル描画（右ブロック：行間スライダー対応） ---
             ctx.fillStyle = textColor;
             ctx.font = `800 ${tBaseSize}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
 
-            const titleStartX = dividerX + dividerThick + 10;
-            const totalActualTitleHeight = titleLines.length * tLineHeight;
-            // タイトル領域の上下中央から描画を開始（上詰め感を解消）
+            const titleStartX = dividerX + dividerThick + 8;
+            const userTitleLineSpacingRatio = titleLineSpacing ? (parseInt(titleLineSpacing.value) / 10) : 1.25;
+            const activeTLineHeight = tBaseSize * userTitleLineSpacingRatio;
+            const totalActualTitleHeight = titleLines.length * activeTLineHeight;
+            
             const startTitleY = innerY + ((topBlockHeight - totalActualTitleHeight) / 2);
 
             titleLines.forEach((tLine, index) => {
-                const lineY = startTitleY + (index * tLineHeight);
+                const lineY = startTitleY + (index * activeTLineHeight);
                 ctx.fillText(tLine, titleStartX, lineY);
             });
 
-            // --- G. 作者名描画（下段エリア） ---
+            // --- G. 作者名描画（下段エリア：タイトル連携サイズ） ---
             const authorY = horizLineY + dividerThick + ((outerBoxY + outerBoxHeight - (horizLineY + dividerThick)) / 2);
 
             ctx.font = `800 ${aSize}px "Inter", sans-serif`;
@@ -935,7 +951,7 @@ SNS投稿は #BPMったー
             ctx.textAlign = 'left';
         }
 
-        // 保存ボタン処理（見えているCanvasそのものをダウンロード）
+        // 保存ボタン処理
         function downloadImage() {
             const link = document.createElement('a');
             link.download = `bleach_poem_${Date.now()}.jpg`;
