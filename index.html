@@ -143,6 +143,7 @@
                             <option value="8">極小 (8px)</option>
                             <option value="10" selected>標準 (10px)</option>
                             <option value="12">大 (12px)</option>
+                          <option value="100">特大 (13km)</option>
                         </select>
                     </div>
                 </div>
@@ -268,7 +269,7 @@ SNS投稿は #BPMったー
                 <div class="flex items-center justify-between">
                     <h3 class="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                         <svg class="w-4 h-4 text-accentRed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        切り抜き範囲の指定
+                        切取範囲の指定
                     </h3>
                     <button onclick="closeCropModal()" class="text-zinc-400 hover:text-white p-1">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -286,7 +287,8 @@ SNS投稿は #BPMったー
                 </div>
             </div>
 
-            <p class="text-[10px] text-zinc-400 text-center">赤枠内をドラッグして移動 / 四隅の丸をドラッグしてサイズ変更</p>
+            <p class="text-[10px] text-zinc-400 text-center">赤枠内をドラッグして移動 / 四隅の丸をドラッグしてサイズ変更。
+            スクリーンショット等の大きい画像の場合、正しく切り取れないことがあります。</p>
 
             <div id="cropContainer" class="w-full relative bg-black overflow-hidden border border-zinc-800 rounded flex items-center justify-center touch-none">
                 <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale">
@@ -329,9 +331,16 @@ SNS投稿は #BPMったー
 
             `明日から始めます
 たぶん 知らんけど`,
+
+`蓮は朽ち
+雪は融け`,
           
-            `蓮は朽ち
-雪は融け`
+            `廃人になるな
+目を逸らすな
+力は常に自分の中
+夜露を撥け　誇りをもて
+たった一つの魂を
+捨てるくらいなら生を撰べ`
         ];
         let currentSampleIndex = 0;
 
@@ -416,7 +425,7 @@ SNS投稿は #BPMったー
             };
             try {
                 localStorage.setItem('bleach_poem_user_draft', JSON.stringify(draftData));
-                alert("下書きを保存完了");
+                alert("完璧とは絶望だヨ");
             } catch (e) {
                 console.error("下書きの保存に失敗", e);
                 alert("卍卍疋殺地蔵卍卍");
@@ -426,7 +435,7 @@ SNS投稿は #BPMったー
         function restoreDraft() {
             const saved = localStorage.getItem('bleach_poem_user_draft');
             if (!saved) {
-                alert("いつから保存済だと錯覚していた？");
+                alert("一体いつから　下書保存済だと錯覚していた？");
                 return;
             }
             try {
