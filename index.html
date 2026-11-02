@@ -226,7 +226,7 @@ GROUNDCHERRY</textarea>
 BLEACH公式と関わりのない非公式のサイトです。
 公式様に迷惑をかけないよう遊んでください。
 作成した画像は、色をつけたり加工をしても構いません。
-
+              
 エモいオサレ詩以外にも
 今日の心からの気持ち
 誰かに声を当ててもらいたいセリフ
@@ -236,21 +236,17 @@ BLEACH公式と関わりのない非公式のサイトです。
 SNS投稿は #BPMったー
 
 <font color=red>【重要事項】
-
 ① 使用する画像や詩は、知的財産権侵害、著作権侵害、
    その他法律に抵触してはなりません。
-
-② このメーカーを政治的活動や扇動、ヘイトスピーチや
+② 商用利用は禁止です。
+③ このメーカーを政治的活動や扇動、ヘイトスピーチや
    誹謗中傷の為に使用することを禁じます。
 </font>🌾愛国心はOKです
               
 【CREDIT】 お名前タップでページ遷移
-
 <a href="https://x.com/Koji4589" target="_blank" rel="noopener" class="underline text-rose-400">Koji I</a>様 足掻きとて── の短歌をご提供頂きました！
-
 <a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき</a>様 霞む視界── の詩をご提供頂きました！
 
-              
 【SITE AUTHOR】 <a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
 2026年11月1日</div>
 
@@ -366,7 +362,7 @@ SNS投稿は #BPMったー
 
         window.onload = async () => {
             poemInput.value = poemSamples[0];
-            volNumInput.value = "BLEACH\n#1";
+            volNumInput.value = "BEACH\n#1";
             volTitleInput.value = "THE BIRTH\nAND THE\nGROUNDCHERRY";
 
             // 高精細Canvasサイズ定義 (800x1200)
@@ -425,7 +421,7 @@ SNS投稿は #BPMったー
             };
             try {
                 localStorage.setItem('bleach_poem_user_draft', JSON.stringify(draftData));
-                alert("完璧とは絶望だヨ");
+                alert("下書を保存完了");
             } catch (e) {
                 console.error("下書きの保存に失敗", e);
                 alert("卍卍疋殺地蔵卍卍");
@@ -456,7 +452,7 @@ SNS投稿は #BPMったー
                 alert("下書きを復元完了");
             } catch (e) {
                 console.error("下書きの復元に失敗", e);
-                alert("下書きの復元中にエラーが発生");
+                alert("下書きの霊圧が消えた……！？");
             }
         }
 
@@ -753,7 +749,7 @@ SNS投稿は #BPMったー
 
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
-            const author = "BLEACH ■ POEM MAKER ■";
+            const author = "OPENING PAGE　■POEM MAKER ■";
 
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
