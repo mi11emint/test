@@ -143,7 +143,7 @@
                             <option value="8">極小 (8px)</option>
                             <option value="10" selected>標準 (10px)</option>
                             <option value="12">大 (12px)</option>
-                          <option value="100">特大 (13km)</option>
+                            <option value="100">特大 (13km)</option>
                         </select>
                     </div>
                 </div>
@@ -153,9 +153,15 @@
                     oninput="render()"></textarea>
             </div>
 
-            <!-- 2. 巻数 & 詩タイトル（横並び入力 ＆ 左右スライダー） -->
+            <!-- 2. 巻数 & 詩タイトル（横並び入力 ＆ 左右スライダー ＆ 右端非表示ボタン） -->
             <div class="bg-cardBg/90 border border-zinc-800 rounded-xl p-3 shadow-lg flex flex-col justify-between space-y-2">
-                <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆詩タイトル入力</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-zinc-300">2. 巻数＆詩タイトル入力</h3>
+                    <!-- 💡 右詰めの非表示/表示切り替えボタン -->
+                    <button id="btnHideBox" onclick="toggleHideBox()" class="text-[11px] text-zinc-400 hover:text-white underline transition shrink-0">
+                        非表示
+                    </button>
+                </div>
                 <div class="space-y-2">
                     
                     <!-- 💡 横並び入力エリア -->
@@ -245,7 +251,9 @@ SNS投稿は #BPMったー
               
 【CREDIT】 お名前タップでページ遷移
 <a href="https://x.com/Koji4589" target="_blank" rel="noopener" class="underline text-rose-400">Koji I</a>様 足掻きとて── の短歌をご提供頂きました！
-<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき</a>様 霞む視界── の詩をご提供頂きました！
+<a href="https://x.com/srtm_azk01" target="_blank" rel="noopener" class="underline text-rose-400">白玉あずき</a>様
+霞む視界── の詩と、毎度 毎度の先送り── の詩を
+ご提供頂きました！
 
 【SITE AUTHOR】 <a href="https://lit.link/mi11emint" target="_blank" rel="noopener" class="underline text-rose-400">鳳月 眠人</a>
 2026年11月1日</div>
@@ -306,6 +314,7 @@ SNS投稿は #BPMったー
         let rawImageObj = null;
         let croppedDataUrl = null;
         let isPreviewFolded = false;
+        let isBoxHidden = false; // 💡 下枠非表示フラグ
 
         const poemSamples = [
             `漂白された心と
@@ -328,13 +337,18 @@ SNS投稿は #BPMったー
             `明日から始めます
 たぶん 知らんけど`,
 
+           `毎度 毎度の先送り
+俺の未来に
+アイツは居ないと
+知らぬがまま`,
+
 `蓮は朽ち
 雪は融け`,
           
             `廃人になるな
 目を逸らすな
 力は常に自分の中
-夜露を撥け　誇りをもて
+夜露を撥け 誇りをもて
 たった一つの魂を
 捨てるくらいなら生を撰べ`
         ];
@@ -379,6 +393,20 @@ SNS投稿は #BPMったー
             await render();
         };
 
+        // 💡 下枠の表示/非表示トグル関数
+        function toggleHideBox() {
+            isBoxHidden = !isBoxHidden;
+            const btn = document.getElementById('btnHideBox');
+            if (isBoxHidden) {
+                btn.textContent = "表示";
+                btn.className = "text-[11px] bg-accentRed text-white px-2 py-0.5 rounded font-bold transition shrink-0";
+            } else {
+                btn.textContent = "非表示";
+                btn.className = "text-[11px] text-zinc-400 hover:text-white underline transition shrink-0";
+            }
+            render();
+        }
+
         // プレビューの折りたたみ・展開トグル関数
         function togglePreviewFold() {
             isPreviewFolded = !isPreviewFolded;
@@ -416,6 +444,7 @@ SNS投稿は #BPMったー
                 titleLineSpacing: titleLineSpacing ? titleLineSpacing.value : "10",
                 volLineSpacing: volLineSpacing ? volLineSpacing.value : "10",
                 theme: currentTheme,
+                isBoxHidden: isBoxHidden,
                 croppedDataUrl: croppedDataUrl,
                 boxNorm: { ...boxNorm }
             };
@@ -431,7 +460,7 @@ SNS投稿は #BPMったー
         function restoreDraft() {
             const saved = localStorage.getItem('bleach_poem_user_draft');
             if (!saved) {
-                alert("一体いつから　下書保存済だと錯覚していた？");
+                alert("一体いつから 下書保存済だと錯覚していた？");
                 return;
             }
             try {
@@ -445,6 +474,16 @@ SNS投稿は #BPMったー
                 if (draftData.titleLineSpacing && titleLineSpacing) titleLineSpacing.value = draftData.titleLineSpacing;
                 if (draftData.volLineSpacing && volLineSpacing) volLineSpacing.value = draftData.volLineSpacing;
                 setPreviewBg(draftData.theme);
+
+                isBoxHidden = !!draftData.isBoxHidden;
+                const btn = document.getElementById('btnHideBox');
+                if (isBoxHidden) {
+                    btn.textContent = "表示";
+                    btn.className = "text-[11px] bg-accentRed text-white px-2 py-0.5 rounded font-bold transition shrink-0";
+                } else {
+                    btn.textContent = "非表示";
+                    btn.className = "text-[11px] text-zinc-400 hover:text-white underline transition shrink-0";
+                }
 
                 croppedDataUrl = draftData.croppedDataUrl || null;
                 boxNorm = draftData.boxNorm ? { ...draftData.boxNorm } : { x: 0, y: 0, w: 1, h: 1 };
@@ -749,7 +788,7 @@ SNS投稿は #BPMったー
 
             const volNumRaw = volNumInput.value || "";
             const volTitleRaw = (volTitleInput.value || "").toUpperCase();
-            const author = "OPENING PAGE　■POEM MAKER ■";
+            const author = "OPENING PAGE ■POEM MAKER■";
 
             const volNumLines = volNumRaw.split('\n');
             const titleLines = volTitleRaw.split('\n');
@@ -819,8 +858,9 @@ SNS投稿は #BPMったー
             const maxCharsInLine = Math.max(...lines.map(l => l.length));
             const totalPoemHeight = maxCharsInLine * charHeight;
 
+            // 💡 下枠が非表示の場合はポエムを画面中央やや下寄りまで広々と配置
             const poemAreaTop = 60 + imgBoxHeight;
-            const poemAreaBottom = outerBoxY;
+            const poemAreaBottom = isBoxHidden ? height - 80 : outerBoxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
             const startY = poemAreaCenterY - (totalPoemHeight / 2);
 
@@ -844,6 +884,9 @@ SNS投稿は #BPMったー
                     currentY += charHeight;
                 }
             });
+
+            // 💡 非表示フラグがオンの場合は下枠全体の描画をスキップ
+            if (isBoxHidden) return;
 
             // --- C. 太い外枠の描画（太さ：8px） ---
             const borderThick = 8;
