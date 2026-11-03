@@ -284,6 +284,10 @@ SNS投稿は #BPMったー
                     <button onclick="document.getElementById('imageInput').click()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]">
                         別の画像を選択
                     </button>
+                    <!-- 💡 トリミング画面の「切り抜きを適用」の左横に【カラー/モノクロ】ボタンを追加 -->
+                    <button id="btnColorToggle" onclick="toggleColorMode()" class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]">
+                        モノクロ
+                    </button>
                     <button onclick="applyCrop()" class="flex-1 bg-accentRed hover:bg-rose-600 text-white text-xs font-bold py-1.5 rounded-lg transition min-h-[34px] shadow-lg shadow-rose-950/50 flex items-center justify-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         切り抜きを適用
@@ -295,7 +299,8 @@ SNS投稿は #BPMったー
             スクリーンショット等の大きい画像の場合、正しく切り取れないことがあります。</p>
 
             <div id="cropContainer" class="w-full relative bg-black overflow-hidden border border-zinc-800 rounded flex items-center justify-center touch-none">
-                <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale">
+                <!-- 💡 デフォルトはモノクロ（グレースケール）フィルター適用 -->
+                <img id="cropImg" src="" alt="Crop target" class="w-full h-auto block pointer-events-none select-none filter grayscale transition-all duration-200">
                 
                 <div id="cropBox" class="absolute border-2 border-accentRed shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] cursor-move touch-none flex items-center justify-center">
                     <div class="crop-handle absolute -top-2 -left-2 w-4 h-4 bg-accentRed border-2 border-white rounded-full cursor-nwse-resize" data-handle="tl"></div>
@@ -314,7 +319,8 @@ SNS投稿は #BPMったー
         let rawImageObj = null;
         let croppedDataUrl = null;
         let isPreviewFolded = false;
-        let isBoxHidden = false; // 💡 下枠非表示フラグ
+        let isBoxHidden = false; // 下枠非表示フラグ
+        let isColorMode = false; // 💡 カラーモード切替フラグ（デフォルトfalse＝モノクロ）
 
         const poemSamples = [
             `漂白された心と
@@ -393,7 +399,22 @@ SNS投稿は #BPMったー
             await render();
         };
 
-        // 💡 下枠の表示/非表示トグル関数
+        // 💡 カラー/モノクロ切替ボタンの処理
+        function toggleColorMode() {
+            isColorMode = !isColorMode;
+            const btn = document.getElementById('btnColorToggle');
+            if (isColorMode) {
+                btn.textContent = "カラー";
+                btn.className = "bg-accentRed hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition min-h-[34px] shadow-md";
+                cropImg.classList.remove('filter', 'grayscale'); // モーダルプレビューもカラーに
+            } else {
+                btn.textContent = "モノクロ";
+                btn.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
+                cropImg.classList.add('filter', 'grayscale'); // モーダルプレビューもモノクロに
+            }
+        }
+
+        // 下枠の表示/非表示トグル関数
         function toggleHideBox() {
             isBoxHidden = !isBoxHidden;
             const btn = document.getElementById('btnHideBox');
@@ -445,6 +466,7 @@ SNS投稿は #BPMったー
                 volLineSpacing: volLineSpacing ? volLineSpacing.value : "10",
                 theme: currentTheme,
                 isBoxHidden: isBoxHidden,
+                isColorMode: isColorMode,
                 croppedDataUrl: croppedDataUrl,
                 boxNorm: { ...boxNorm }
             };
@@ -476,13 +498,25 @@ SNS投稿は #BPMったー
                 setPreviewBg(draftData.theme);
 
                 isBoxHidden = !!draftData.isBoxHidden;
-                const btn = document.getElementById('btnHideBox');
+                const btnHide = document.getElementById('btnHideBox');
                 if (isBoxHidden) {
-                    btn.textContent = "表示";
-                    btn.className = "text-[11px] bg-accentRed text-white px-2 py-0.5 rounded font-bold transition shrink-0";
+                    btnHide.textContent = "表示";
+                    btnHide.className = "text-[11px] bg-accentRed text-white px-2 py-0.5 rounded font-bold transition shrink-0";
                 } else {
-                    btn.textContent = "非表示";
-                    btn.className = "text-[11px] text-zinc-400 hover:text-white underline transition shrink-0";
+                    btnHide.textContent = "非表示";
+                    btnHide.className = "text-[11px] text-zinc-400 hover:text-white underline transition shrink-0";
+                }
+
+                isColorMode = !!draftData.isColorMode;
+                const btnColor = document.getElementById('btnColorToggle');
+                if (isColorMode) {
+                    btnColor.textContent = "カラー";
+                    btnColor.className = "bg-accentRed hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition min-h-[34px] shadow-md";
+                    cropImg.classList.remove('filter', 'grayscale');
+                } else {
+                    btnColor.textContent = "モノクロ";
+                    btnColor.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
+                    cropImg.classList.add('filter', 'grayscale');
                 }
 
                 croppedDataUrl = draftData.croppedDataUrl || null;
@@ -543,6 +577,13 @@ SNS投稿は #BPMったー
                 img.onload = () => {
                     rawImageObj = img;
                     cropImg.src = e.target.result;
+                    // 新規画像選択時はデフォルトのモノクロにリセット
+                    isColorMode = false;
+                    const btnColor = document.getElementById('btnColorToggle');
+                    btnColor.textContent = "モノクロ";
+                    btnColor.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
+                    cropImg.classList.add('filter', 'grayscale');
+
                     resetBoxNorm();
                     openCropModal();
                 };
@@ -677,7 +718,7 @@ SNS投稿は #BPMったー
             window.addEventListener('touchend', onEnd);
         }
 
-        // ズレバグ修正：画像の指定トリミング領域をそのまま抽出する処理
+        // 💡 適用時：カラーモードの状態に応じてフィルターを切り替えて描画
         function applyCrop() {
             if (!rawImageObj) return;
 
@@ -692,7 +733,11 @@ SNS投稿は #BPMったー
             tempCanvas.width = sw;
             tempCanvas.height = sh;
 
-            tempCtx.filter = 'grayscale(100%) contrast(120%)';
+            if (isColorMode) {
+                tempCtx.filter = 'none'; // カラー
+            } else {
+                tempCtx.filter = 'grayscale(100%) contrast(120%)'; // モノクロ
+            }
             tempCtx.drawImage(rawImageObj, sx, sy, sw, sh, 0, 0, sw, sh);
 
             croppedDataUrl = tempCanvas.toDataURL('image/png');
@@ -759,7 +804,6 @@ SNS投稿は #BPMったー
             if (croppedDataUrl) {
                 const croppedImg = new Image();
                 croppedImg.onload = () => {
-                    // ズレバグ修正：トリミング済みの画像データをそのままぴったり画像枠全体に描画
                     ctx.drawImage(croppedImg, 0, 0, croppedImg.width, croppedImg.height, imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
                     ctx.strokeStyle = textColor;
                     ctx.lineWidth = 4;
@@ -858,7 +902,6 @@ SNS投稿は #BPMったー
             const maxCharsInLine = Math.max(...lines.map(l => l.length));
             const totalPoemHeight = maxCharsInLine * charHeight;
 
-            // 💡 下枠が非表示の場合はポエムを画面中央やや下寄りまで広々と配置
             const poemAreaTop = 60 + imgBoxHeight;
             const poemAreaBottom = isBoxHidden ? height - 80 : outerBoxY;
             const poemAreaCenterY = poemAreaTop + (poemAreaBottom - poemAreaTop) / 2;
@@ -885,7 +928,6 @@ SNS投稿は #BPMったー
                 }
             });
 
-            // 💡 非表示フラグがオンの場合は下枠全体の描画をスキップ
             if (isBoxHidden) return;
 
             // --- C. 太い外枠の描画（太さ：8px） ---
