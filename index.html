@@ -286,7 +286,7 @@ SNS投稿は #BPMったー
                     </button>
                     <!-- 💡 トリミング画面の「切り抜きを適用」の左横に【カラー/モノクロ】ボタンを追加 -->
                     <button id="btnColorToggle" onclick="toggleColorMode()" class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]">
-                        脱色
+                        脱色中
                     </button>
                     <button onclick="applyCrop()" class="flex-1 bg-accentRed hover:bg-rose-600 text-white text-xs font-bold py-1.5 rounded-lg transition min-h-[34px] shadow-lg shadow-rose-950/50 flex items-center justify-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
@@ -404,11 +404,11 @@ SNS投稿は #BPMったー
             isColorMode = !isColorMode;
             const btn = document.getElementById('btnColorToggle');
             if (isColorMode) {
-                btn.textContent = "彩色";
+                btn.textContent = "彩色中";
                 btn.className = "bg-accentRed hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition min-h-[34px] shadow-md";
                 cropImg.classList.remove('filter', 'grayscale'); // モーダルプレビューもカラーに
             } else {
-                btn.textContent = "脱色";
+                btn.textContent = "脱色中";
                 btn.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
                 cropImg.classList.add('filter', 'grayscale'); // モーダルプレビューもモノクロに
             }
@@ -510,11 +510,11 @@ SNS投稿は #BPMったー
                 isColorMode = !!draftData.isColorMode;
                 const btnColor = document.getElementById('btnColorToggle');
                 if (isColorMode) {
-                    btnColor.textContent = "彩色";
+                    btnColor.textContent = "彩色中";
                     btnColor.className = "bg-accentRed hover:bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition min-h-[34px] shadow-md";
                     cropImg.classList.remove('filter', 'grayscale');
                 } else {
-                    btnColor.textContent = "脱色";
+                    btnColor.textContent = "脱色中";
                     btnColor.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
                     cropImg.classList.add('filter', 'grayscale');
                 }
@@ -580,7 +580,7 @@ SNS投稿は #BPMったー
                     // 新規画像選択時はデフォルトのモノクロにリセット
                     isColorMode = false;
                     const btnColor = document.getElementById('btnColorToggle');
-                    btnColor.textContent = "脱色";
+                    btnColor.textContent = "脱色中";
                     btnColor.className = "bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition min-h-[34px]";
                     cropImg.classList.add('filter', 'grayscale');
 
@@ -806,7 +806,7 @@ SNS投稿は #BPMったー
                 croppedImg.onload = () => {
                     ctx.drawImage(croppedImg, 0, 0, croppedImg.width, croppedImg.height, imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
                     ctx.strokeStyle = textColor;
-                    ctx.lineWidth = 4;
+                    ctx.lineWidth = 1;
                     ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
 
                     renderContent(width, height, textColor, imgBoxHeight);
@@ -814,7 +814,7 @@ SNS投稿は #BPMったー
                 croppedImg.src = croppedDataUrl;
             } else {
                 ctx.strokeStyle = isDark ? '#333333' : '#cccccc';
-                ctx.lineWidth = 4;
+                ctx.lineWidth = 1;
                 ctx.strokeRect(imgBoxX, imgBoxY, imgBoxWidth, imgBoxHeight);
 
                 ctx.fillStyle = isDark ? '#666666' : '#999999';
